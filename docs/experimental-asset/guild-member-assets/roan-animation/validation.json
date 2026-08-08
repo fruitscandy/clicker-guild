@@ -1,0 +1,62 @@
+{
+  "idle": {
+    "sourceSize": [
+      1254,
+      1254
+    ],
+    "transparentPixels": 963363,
+    "partialAlphaPixels": 17463,
+    "visibleGreenSpillPixels": 40,
+    "cornerAlpha": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "run": {
+    "sourceSize": [
+      1536,
+      1024
+    ],
+    "transparentPixels": 1163167,
+    "partialAlphaPixels": 19307,
+    "visibleGreenSpillPixels": 75,
+    "cornerAlpha": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "attack": {
+    "sourceSize": [
+      1536,
+      1024
+    ],
+    "transparentPixels": 1035946,
+    "partialAlphaPixels": 17779,
+    "visibleGreenSpillPixels": 85,
+    "cornerAlpha": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "heavy-strike": {
+    "sourceSize": [
+      1983,
+      793
+    ],
+    "transparentPixels": 1039358,
+    "partialAlphaPixels": 50947,
+    "visibleGreenSpillPixels": 67,
+    "cornerAlpha": [
+      0,
+      0,
+      0,
+      0
+    ]
+  }
+}

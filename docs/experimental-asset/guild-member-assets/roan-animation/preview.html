@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>견습 전사 로안 애니메이션 미리보기</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, "Noto Sans KR", system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #14100e; color: #f4e9dc; }
+    main { width: min(1040px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 56px; }
+    h1 { margin: 0; font-size: clamp(26px, 5vw, 44px); letter-spacing: -.04em; }
+    .lead { margin: 10px 0 28px; color: #cbb9a7; }
+    .panel { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(260px, .8fr); gap: 24px; padding: 24px; border: 1px solid #493a31; border-radius: 22px; background: #211a16; box-shadow: 0 18px 70px #0007; }
+    .stage { min-height: 440px; display: grid; place-items: center; border-radius: 16px; overflow: hidden; background-color: #776554; background-image: linear-gradient(45deg,#695949 25%,transparent 25%),linear-gradient(-45deg,#695949 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#695949 75%),linear-gradient(-45deg,transparent 75%,#695949 75%); background-size: 28px 28px; background-position: 0 0,0 14px,14px -14px,-14px 0; }
+    #sprite { width: 256px; height: 256px; transform: scale(1.45); transform-origin: 50% 76%; background-repeat: no-repeat; }
+    .controls { display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+    button { width: 100%; padding: 14px 16px; border: 1px solid #5f4b3d; border-radius: 12px; background: #30251f; color: inherit; font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+    button:hover, button.active { background: #a3472c; border-color: #e78658; }
+    .meta { margin-top: 10px; padding: 14px 16px; border-radius: 12px; background: #17120f; color: #d4c2b1; line-height: 1.55; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 24px; }
+    figure { margin: 0; padding: 14px; border: 1px solid #493a31; border-radius: 16px; background: #211a16; text-align: center; }
+    figure img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 10px; background: #776554; }
+    figcaption { margin-top: 10px; font-weight: 700; }
+    figure.connected { grid-column: 1 / -1; }
+    figure.connected img { width: min(100%, 420px); margin: 0 auto; }
+    @media (max-width: 760px) { .panel { grid-template-columns: 1fr; } .stage { min-height: 360px; } #sprite { transform: scale(1.2); } .grid { grid-template-columns: repeat(2,1fr); } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>견습 전사 로안</h1>
+    <p class="lead">웹게임용 256×256px 투명 스프라이트 애니메이션</p>
+    <section class="panel">
+      <div class="stage"><div id="sprite" aria-label="로안 애니메이션"></div></div>
+      <div class="controls" id="controls"></div>
+    </section>
+    <section class="grid">
+      <figure class="connected"><img src="previews/roan-connected-animation.webp" alt="전체 연결 애니메이션" /><figcaption>연결 재생 · 대기 → 이동 → 기본 공격 → 대기 → 강타 → 대기</figcaption></figure>
+      <figure><img src="previews/roan-idle-preview.webp" alt="대기 애니메이션" /><figcaption>대기 · 6프레임</figcaption></figure>
+      <figure><img src="previews/roan-run-preview.webp" alt="이동 애니메이션" /><figcaption>이동 · 8프레임</figcaption></figure>
+      <figure><img src="previews/roan-attack-preview.webp" alt="기본 공격 애니메이션" /><figcaption>기본 공격 · 8프레임</figcaption></figure>
+      <figure><img src="previews/roan-heavy-strike-preview.webp" alt="강타 애니메이션" /><figcaption>강타 · 10프레임</figcaption></figure>
+    </section>
+  </main>
+  <script>
+    const motions = {
+      idle: { label: "대기", sheet: "sheets/roan-idle-256.png", frames: 6, times: [140,140,140,140,140,140], loop: true },
+      run: { label: "이동", sheet: "sheets/roan-run-256.png", frames: 8, times: [90,90,90,90,90,90,90,90], loop: true },
+      attack: { label: "기본 공격", sheet: "sheets/roan-attack-256.png", frames: 8, times: [110,90,70,55,55,80,100,120], loop: false },
+      "heavy-strike": { label: "강타", sheet: "sheets/roan-heavy-strike-256.png", frames: 10, times: [130,120,110,120,160,75,90,110,130,140], loop: false }
+    };
+    const sprite = document.querySelector("#sprite");
+    const controls = document.querySelector("#controls");
+    let token = 0;
+    function play(name) {
+      token += 1;
+      const ownToken = token;
+      const motion = motions[name];
+      document.querySelectorAll("button").forEach(button => button.classList.toggle("active", button.dataset.motion === name));
+      sprite.style.backgroundImage = `url('${motion.sheet}')`;
+      sprite.style.backgroundSize = `${motion.frames * 256}px 256px`;
+      let frame = 0;
+      const tick = () => {
+        if (ownToken !== token) return;
+        sprite.style.backgroundPosition = `${-frame * 256}px 0`;
+        const delay = motion.times[frame];
+        frame += 1;
+        if (frame >= motion.frames) {
+          if (motion.loop) frame = 0;
+          else { setTimeout(() => play("idle"), delay + 180); return; }
+        }
+        setTimeout(tick, delay);
+      };
+      tick();
+    }
+    Object.entries(motions).forEach(([name, motion]) => {
+      const button = document.createElement("button");
+      button.dataset.motion = name;
+      button.textContent = `${motion.label} · ${motion.frames}프레임`;
+      button.onclick = () => play(name);
+      controls.appendChild(button);
+    });
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.innerHTML = "프레임 256×256px<br>권장 표시 크기 128–192px<br>기준점 x 0.5 / y 0.96";
+    controls.appendChild(meta);
+    play("idle");
+  </script>
+</body>
+</html>
