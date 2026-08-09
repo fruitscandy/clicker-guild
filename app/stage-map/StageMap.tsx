@@ -1,14 +1,17 @@
 "use client";
 
 import {
+  type CSSProperties,
   type KeyboardEvent,
   type PointerEvent,
   useEffect,
   useId,
   useMemo,
   useRef,
+  useState,
 } from "react";
 
+import { fieldAssetForRegion } from "../field-assets";
 import { getStage } from "../game-data";
 import styles from "./StageMap.module.css";
 
@@ -29,17 +32,22 @@ const ROUTE_POINTS = [
 ] as const;
 
 const REGION_DETAILS = [
-  { subtitle: "새싹길과 오래된 수호수", symbols: ["♣", "⌂", "♠"] },
-  { subtitle: "모래바람이 지우는 대상로", symbols: ["△", "☀", "◇"] },
-  { subtitle: "희미한 횃불이 잇는 수로", symbols: ["♨", "♧", "◌"] },
-  { subtitle: "수레 자국을 따라가는 갱도", symbols: ["◆", "⚒", "⬟"] },
-  { subtitle: "빙벽 사이의 좁은 순례길", symbols: ["❄", "△", "✦"] },
-  { subtitle: "용암강을 건너는 잿빛 능선", symbols: ["♨", "▲", "✹"] },
-  { subtitle: "망자의 등불이 남은 묘역", symbols: ["†", "☾", "♜"] },
-  { subtitle: "부유석을 잇는 마력 항로", symbols: ["✦", "◈", "☄"] },
-  { subtitle: "흑철 성문으로 향하는 공성로", symbols: ["♜", "⚑", "♞"] },
-  { subtitle: "구름 위 고룡의 마지막 성역", symbols: ["♛", "✧", "▲"] },
+  { subtitle: "새싹길과 오래된 수호수" },
+  { subtitle: "모래바람이 지우는 대상로" },
+  { subtitle: "희미한 횃불이 잇는 수로" },
+  { subtitle: "수레 자국을 따라가는 갱도" },
+  { subtitle: "빙벽 사이의 좁은 순례길" },
+  { subtitle: "용암강을 건너는 잿빛 능선" },
+  { subtitle: "망자의 등불이 남은 묘역" },
+  { subtitle: "부유석을 잇는 마력 항로" },
+  { subtitle: "흑철 성문으로 향하는 공성로" },
+  { subtitle: "구름 위 고룡의 마지막 성역" },
 ] as const;
+
+type RegionImageStyle = CSSProperties & {
+  "--region-image": string;
+  "--region-image-position": string;
+};
 
 type StageState = "current" | "cleared" | "available" | "locked";
 
@@ -94,9 +102,11 @@ export function StageMap({
   const titleId = `stage-map-title-${generatedId.replace(/:/g, "")}`;
   const dialogRef = useRef<HTMLDivElement>(null);
   const stageRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const regionRefs = useRef<Array<HTMLElement | null>>([]);
+  const pendingFocusStage = useRef<number | null>(null);
   const safeCurrentStage = clampStage(currentStage);
   const safeUnlockedStage = clampStage(unlockedStage);
+  const currentRegionIndex = Math.floor((safeCurrentStage - 1) / STAGES_PER_REGION);
+  const [activeRegionIndex, setActiveRegionIndex] = useState(currentRegionIndex);
   const clearedSet = useMemo(
     () => new Set(clearedStages.filter((stage) => stage >= 1 && stage <= STAGE_COUNT)),
     [clearedStages],
@@ -114,6 +124,17 @@ export function StageMap({
       previousFocus?.focus();
     };
   }, [developerMode, safeCurrentStage, safeUnlockedStage]);
+
+  useEffect(() => {
+    const destination = pendingFocusStage.current;
+    if (destination === null) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      stageRefs.current[destination]?.focus();
+      pendingFocusStage.current = null;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeRegionIndex]);
 
   function closeFromBackdrop(event: PointerEvent<HTMLDivElement>) {
     if (event.currentTarget === event.target) onClose();
@@ -159,7 +180,13 @@ export function StageMap({
 
     if (destination === undefined) return;
     event.preventDefault();
-    stageRefs.current[destination]?.focus();
+    const destinationRegion = Math.floor((destination - 1) / STAGES_PER_REGION);
+    if (destinationRegion === activeRegionIndex) {
+      stageRefs.current[destination]?.focus();
+    } else {
+      pendingFocusStage.current = destination;
+      setActiveRegionIndex(destinationRegion);
+    }
   }
 
   function selectStage(stageNumber: number) {
@@ -169,15 +196,38 @@ export function StageMap({
   }
 
   function visitRegion(regionIndex: number) {
-    regionRefs.current[regionIndex]?.scrollIntoView({ behavior: "smooth", block: "start" });
     const regionStart = regionIndex * STAGES_PER_REGION + 1;
     const focusTarget = developerMode
       ? regionStart
       : Math.min(safeUnlockedStage, regionStart + STAGES_PER_REGION - 1);
+    setActiveRegionIndex(regionIndex);
     if (focusTarget >= regionStart) {
-      window.setTimeout(() => stageRefs.current[focusTarget]?.focus(), 260);
+      pendingFocusStage.current = focusTarget;
+      if (regionIndex === activeRegionIndex) {
+        window.requestAnimationFrame(() => {
+          stageRefs.current[focusTarget]?.focus();
+          pendingFocusStage.current = null;
+        });
+      }
     }
   }
+
+  const activeFirstStage = activeRegionIndex * STAGES_PER_REGION + 1;
+  const activeDetails = REGION_DETAILS[activeRegionIndex];
+  const activeRegion = getStage(activeFirstStage).region;
+  const activeRegionAsset = fieldAssetForRegion(activeRegion.hue);
+  const activeRegionStages = Array.from(
+    { length: STAGES_PER_REGION },
+    (_, localIndex) => activeFirstStage + localIndex,
+  );
+  const activeUnlockedCount = developerMode
+    ? STAGES_PER_REGION
+    : Math.max(0, Math.min(STAGES_PER_REGION, safeUnlockedStage - activeFirstStage + 1));
+  const activeClearedCount = activeRegionStages.filter((stageNumber) => clearedSet.has(stageNumber)).length;
+  const activeImageStyle = {
+    "--region-image": `url("${activeRegionAsset.source}")`,
+    "--region-image-position": activeRegionAsset.objectPosition,
+  } as RegionImageStyle;
 
   return (
     <div className={styles.backdrop} onPointerDown={closeFromBackdrop}>
@@ -209,21 +259,28 @@ export function StageMap({
           {developerMode && <strong>DEV · 전체 경로 임시 해금</strong>}
         </div>
 
-        <nav className={styles.regionOverview} aria-label="지역 빠른 이동">
+        <nav className={styles.regionOverview} aria-label="원정 지역 선택">
           {REGION_DETAILS.map((_, regionIndex) => {
             const firstStage = regionIndex * STAGES_PER_REGION + 1;
             const region = getStage(firstStage).region;
+            const regionAsset = fieldAssetForRegion(region.hue);
             const unlockedCount = developerMode
               ? STAGES_PER_REGION
               : Math.max(0, Math.min(STAGES_PER_REGION, safeUnlockedStage - firstStage + 1));
             const completed = Array.from({ length: STAGES_PER_REGION }, (_, index) => firstStage + index)
               .every((stageNumber) => clearedSet.has(stageNumber));
-            const active = safeCurrentStage >= firstStage && safeCurrentStage < firstStage + STAGES_PER_REGION;
+            const active = activeRegionIndex === regionIndex;
+            const currentRegion = currentRegionIndex === regionIndex;
+            const regionImageStyle = {
+              "--region-image": `url("${regionAsset.source}")`,
+              "--region-image-position": regionAsset.objectPosition,
+            } as RegionImageStyle;
 
             return (
               <button
                 key={region.name}
                 type="button"
+                style={regionImageStyle}
                 className={classNames(
                   styles.regionJump,
                   active && styles.regionJumpActive,
@@ -231,125 +288,115 @@ export function StageMap({
                   unlockedCount === 0 && styles.regionJumpLocked,
                 )}
                 onClick={() => visitRegion(regionIndex)}
-                aria-label={`${regionIndex + 1}지역 ${region.name}, ${unlockedCount}/10 해금${active ? ", 현재 지역" : ""}`}
+                aria-current={active ? "true" : undefined}
+                aria-label={`${regionIndex + 1}지역 ${region.name}, ${unlockedCount}/10 해금${currentRegion ? ", 현재 목표 지역" : ""}${active ? ", 지도 표시 중" : ""}`}
               >
-                <b>{String(regionIndex + 1).padStart(2, "0")}</b>
-                <span>{region.name}</span>
-                <i><em style={{ width: `${unlockedCount * 10}%` }} /></i>
+                <span className={styles.regionJumpShade} aria-hidden="true" />
+                <span className={styles.regionJumpContent}>
+                  <b>{String(regionIndex + 1).padStart(2, "0")}</b>
+                  <span>{region.name}</span>
+                  <small>{currentRegion ? "현재 원정" : unlockedCount === 0 ? "미개척" : `${unlockedCount}/10 탐사`}</small>
+                  <i><em style={{ width: `${unlockedCount * 10}%` }} /></i>
+                </span>
               </button>
             );
           })}
         </nav>
 
         <div className={styles.atlas}>
-          {REGION_DETAILS.map((details, regionIndex) => {
-            const firstStage = regionIndex * STAGES_PER_REGION + 1;
-            const region = getStage(firstStage).region;
-            const regionStages = Array.from(
-              { length: STAGES_PER_REGION },
-              (_, localIndex) => firstStage + localIndex,
-            );
-            const unlockedCount = developerMode
-              ? STAGES_PER_REGION
-              : Math.max(0, Math.min(STAGES_PER_REGION, safeUnlockedStage - firstStage + 1));
+          <section
+            className={classNames(styles.region, styles[`theme_${activeRegion.hue}`])}
+            key={activeRegion.name}
+            style={activeImageStyle}
+            aria-labelledby={`region-${activeRegionIndex + 1}-${generatedId}`}
+          >
+            <div className={styles.regionHeading}>
+              <span className={styles.regionNumber}>{String(activeRegionIndex + 1).padStart(2, "0")}</span>
+              <div>
+                <span>EXPEDITION AREA · REGION {activeRegionIndex + 1}</span>
+                <h3 id={`region-${activeRegionIndex + 1}-${generatedId}`}>{activeRegion.name}</h3>
+                <p>{activeDetails.subtitle}</p>
+              </div>
+              <strong>{activeUnlockedCount}<small>/ 10 해금</small></strong>
+            </div>
 
-            return (
-              <section
-                className={classNames(styles.region, styles[`theme_${region.hue}`])}
-                key={region.name}
-                ref={(node) => { regionRefs.current[regionIndex] = node; }}
-                aria-labelledby={`region-${regionIndex + 1}-${generatedId}`}
-              >
-                <div className={styles.regionHeading}>
-                  <span className={styles.regionNumber}>{String(regionIndex + 1).padStart(2, "0")}</span>
-                  <div>
-                    <span>REGION {regionIndex + 1}</span>
-                    <h3 id={`region-${regionIndex + 1}-${generatedId}`}>{region.name}</h3>
-                    <p>{details.subtitle}</p>
-                  </div>
-                  <strong>{unlockedCount}<small>/ 10 해금</small></strong>
-                </div>
+            <div className={styles.mapCanvas}>
+              <div className={styles.mapStatus} aria-hidden="true">
+                <span>FIELD MAP</span>
+                <strong>{activeClearedCount} / 10 토벌 완료</strong>
+              </div>
+              <div className={styles.compass} aria-hidden="true"><b>N</b><i /></div>
+              <svg className={styles.route} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                {ROUTE_POINTS.slice(1).map(([x, y], index) => {
+                  const [previousX, previousY] = ROUTE_POINTS[index];
+                  const targetStage = activeFirstStage + index + 1;
+                  const targetState = stageState(
+                    targetStage,
+                    safeCurrentStage,
+                    safeUnlockedStage,
+                    clearedSet,
+                    developerMode,
+                  );
+                  const traveled = developerMode || clearedSet.has(targetStage - 1);
+                  return (
+                    <line
+                      key={targetStage}
+                      x1={previousX}
+                      y1={previousY}
+                      x2={x}
+                      y2={y}
+                      className={classNames(
+                        styles.routeSegment,
+                        targetState !== "locked" && styles.routeSegmentOpen,
+                        traveled && styles.routeSegmentTraveled,
+                        developerMode && styles.routeSegmentDeveloper,
+                      )}
+                    />
+                  );
+                })}
+              </svg>
 
-                <div className={styles.mapCanvas}>
-                  <div className={styles.compass} aria-hidden="true"><b>N</b><i /></div>
-                  <div className={styles.terrain} aria-hidden="true">
-                    {details.symbols.map((symbol, index) => (
-                      <span key={`${symbol}-${index}`} className={styles[`landmark${index + 1}`]}>{symbol}</span>
-                    ))}
-                  </div>
-                  <svg className={styles.route} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                    {ROUTE_POINTS.slice(1).map(([x, y], index) => {
-                      const [previousX, previousY] = ROUTE_POINTS[index];
-                      const targetStage = firstStage + index + 1;
-                      const targetState = stageState(
-                        targetStage,
-                        safeCurrentStage,
-                        safeUnlockedStage,
-                        clearedSet,
-                        developerMode,
-                      );
-                      const traveled = developerMode || clearedSet.has(targetStage - 1);
-                      return (
-                        <line
-                          key={targetStage}
-                          x1={previousX}
-                          y1={previousY}
-                          x2={x}
-                          y2={y}
-                          className={classNames(
-                            styles.routeSegment,
-                            targetState !== "locked" && styles.routeSegmentOpen,
-                            traveled && styles.routeSegmentTraveled,
-                            developerMode && styles.routeSegmentDeveloper,
-                          )}
-                        />
-                      );
-                    })}
-                  </svg>
+              {activeRegionStages.map((stageNumber, localIndex) => {
+                const stage = getStage(stageNumber);
+                const state = stageState(
+                  stageNumber,
+                  safeCurrentStage,
+                  safeUnlockedStage,
+                  clearedSet,
+                  developerMode,
+                );
+                const label = stateLabel(state, developerMode);
+                const [x, y] = ROUTE_POINTS[localIndex];
 
-                  {regionStages.map((stageNumber, localIndex) => {
-                    const stage = getStage(stageNumber);
-                    const state = stageState(
-                      stageNumber,
-                      safeCurrentStage,
-                      safeUnlockedStage,
-                      clearedSet,
-                      developerMode,
-                    );
-                    const label = stateLabel(state, developerMode);
-                    const [x, y] = ROUTE_POINTS[localIndex];
-
-                    return (
-                      <button
-                        key={stageNumber}
-                        type="button"
-                        ref={(node) => { stageRefs.current[stageNumber] = node; }}
-                        className={classNames(
-                          styles.stageNode,
-                          styles[`state_${state}`],
-                          stage.boss && styles.bossNode,
-                          developerMode && state !== "locked" && styles.developerNode,
-                        )}
-                        style={{ left: `${x}%`, top: `${y}%` }}
-                        disabled={state === "locked"}
-                        aria-current={state === "current" ? "step" : undefined}
-                        aria-label={`스테이지 ${stageNumber}, ${stage.name}, ${stage.boss ? "지역 보스, " : ""}${label}`}
-                        title={`${stage.name} · ${label}`}
-                        onClick={() => selectStage(stageNumber)}
-                        onKeyDown={(event) => handleStageKeyDown(event, stageNumber)}
-                      >
-                        <span className={styles.nodeCore} aria-hidden="true">
-                          <b>{stage.boss ? "♛" : stage.localStage}</b>
-                          <i>{state === "cleared" ? "✓" : state === "locked" ? "×" : ""}</i>
-                        </span>
-                        <small aria-hidden="true">{stage.boss ? "BOSS" : label}</small>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
+                return (
+                  <button
+                    key={stageNumber}
+                    type="button"
+                    ref={(node) => { stageRefs.current[stageNumber] = node; }}
+                    className={classNames(
+                      styles.stageNode,
+                      styles[`state_${state}`],
+                      stage.boss && styles.bossNode,
+                      developerMode && state !== "locked" && styles.developerNode,
+                    )}
+                    style={{ left: `${x}%`, top: `${y}%` }}
+                    disabled={state === "locked"}
+                    aria-current={state === "current" ? "step" : undefined}
+                    aria-label={`스테이지 ${stageNumber}, ${stage.name}, ${stage.boss ? "지역 보스, " : ""}${label}`}
+                    title={`${stage.name} · ${label}`}
+                    onClick={() => selectStage(stageNumber)}
+                    onKeyDown={(event) => handleStageKeyDown(event, stageNumber)}
+                  >
+                    <span className={styles.nodeCore} aria-hidden="true">
+                      <b>{stage.boss ? "♛" : stage.localStage}</b>
+                      <i>{state === "cleared" ? "✓" : state === "locked" ? "×" : ""}</i>
+                    </span>
+                    <small aria-hidden="true">{stage.boss ? "BOSS" : label}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
         </div>
 
         <footer className={styles.footer}>
@@ -360,4 +407,3 @@ export function StageMap({
     </div>
   );
 }
-
