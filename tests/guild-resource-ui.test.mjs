@@ -19,6 +19,10 @@ test("guild screens share one resource HUD and keep forge actions focused", asyn
   assert.match(inventoryStyles, /\.trigger \{[\s\S]*?background: transparent;[\s\S]*?border: 0;[\s\S]*?box-shadow: none;/);
   assert.match(inventoryStyles, /\.iconStack i \{[\s\S]*?border: 0;[\s\S]*?box-shadow: none;/);
   assert.match(inventoryStyles, /\.iconStack i::after \{ display: none; \}/);
+  assert.match(inventoryStyles, /\.materialIcon \{[\s\S]*?background-color: transparent;[\s\S]*?border: 0;[\s\S]*?border-radius: 0;[\s\S]*?box-shadow: none;/);
+  assert.match(inventoryStyles, /\.materialIcon::after \{ display: none; \}/);
+  assert.match(globalStyles, /\.stage-material-icon \{[\s\S]*?background-color: transparent;[\s\S]*?border: 0;[\s\S]*?border-radius: 0;[\s\S]*?box-shadow: none;/);
+  assert.match(globalStyles, /\.stage-material-icon::after \{ display: none; \}/);
 
   assert.doesNotMatch(forge, /styles\.(?:resources|recipeResource|equippedSummary|materialVault)/);
   assert.doesNotMatch(forge, /10종 강화 소재|다음 제작 재료|PLAYER WEAPON · CURRENT/);
@@ -27,4 +31,6 @@ test("guild screens share one resource HUD and keep forge actions focused", asyn
   assert.match(details, /styles\.craftButton/);
   assert.ok(details.indexOf("styles.craftButton") > details.indexOf("</dl>"));
   assert.match(forgeStyles, /\.craftButton,.masterwork \{[\s\S]*?linear-gradient[\s\S]*?box-shadow:/);
+  assert.match(forgeStyles, /\.costMaterialIcon \{[\s\S]*?background-color: transparent;[\s\S]*?border: 0;[\s\S]*?box-shadow: none;/);
+  assert.match(forgeStyles, /\.costMaterialIcon::after \{ display: none; \}/);
 });
