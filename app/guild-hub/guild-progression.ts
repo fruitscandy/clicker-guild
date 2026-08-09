@@ -1,4 +1,4 @@
-export type GuildFacility = "hall" | "tavern" | "forge" | "research" | "training";
+export type GuildFacility = "hall" | "tavern" | "forge" | "research";
 
 export type GuildHallStage = {
   level: number;
@@ -67,10 +67,9 @@ export const GUILD_FACILITIES: ReadonlyArray<{
   glyph: string;
 }> = [
   { id: "hall", title: "길드 본관", subtitle: "건물 승급과 해금 관리", glyph: "G" },
-  { id: "tavern", title: "방랑자의 잔", subtitle: "새 길드원 고용", glyph: "잔" },
+  { id: "tavern", title: "방랑자의 잔", subtitle: "고용과 파티 편성", glyph: "잔" },
   { id: "forge", title: "불꽃 대장간", subtitle: "무기 제작과 강화", glyph: "鍛" },
   { id: "research", title: "길드 강화소", subtitle: "4방향 발전 연구", glyph: "✦" },
-  { id: "training", title: "토벌 훈련장", subtitle: "파티 편성과 전술", glyph: "⚔" },
 ] as const;
 
 export function guildHallStage(level: number) {
@@ -94,4 +93,3 @@ export function inferHallLevelFromNodes(nodeIds: string[]) {
   const deepestNode = nodeIds.reduce((deepest, nodeId) => Math.max(deepest, researchDepthForNodeId(nodeId)), 0);
   return GUILD_HALL_STAGES.find((stage) => stage.researchDepth >= deepestNode)?.level ?? GUILD_HALL_STAGES.length;
 }
-

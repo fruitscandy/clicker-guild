@@ -107,7 +107,6 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
 .building i { position: absolute; bottom: 0; width: 30%; height: 42%; background: #754d38; border: 3px solid var(--line); border-bottom: 0; border-radius: 10px 10px 0 0; }
 .guild-hall { left: 32%; width: 240px; height: 180px; }
 .tavern-building { left: 7%; width: 145px; height: 120px; background: #d99b61; }
-.training-building { right: 7%; width: 135px; height: 105px; background: #e6c47f; }
 .flag { position: absolute; left: calc(32% + 112px); bottom: 256px; display: grid; place-items: center; width: 42px; height: 55px; color: #fff; background: var(--green); border: 3px solid var(--line); clip-path: polygon(0 0, 100% 0, 100% 80%, 50% 100%, 0 80%); font-weight: 1000; }
 .territory-caption { position: absolute; left: 18px; right: 18px; bottom: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 14px; background: rgba(255, 251, 242, .9); border: 2px solid var(--line); border-radius: 12px; }
 .territory-caption strong { font-size: 16px; }.territory-caption span { font-size: 11px; color: var(--ink-soft); }
@@ -273,7 +272,7 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
   .topbar { flex-wrap: wrap; gap: 12px; }.brand { min-width: 0; }.resources { order: 3; width: 100%; justify-content: stretch; }.resources > span { flex: 1; justify-content: center; }.reset-button { margin-left: auto; }
   .main-tabs { justify-content: stretch; padding-left: 0; padding-right: 0; }.main-tabs button { flex: 1; justify-content: center; padding: 10px 6px; font-size: 12px; }.main-tabs button span { display: none; }
   .section-heading, .field-toolbar { align-items: stretch; flex-direction: column; }.section-heading .primary-button { width: 100%; }.field-actions, .heading-actions { justify-content: stretch; }.field-actions > *, .heading-actions > * { flex: 1; text-align: center; justify-content: center; }
-  .territory { min-height: 390px; }.guild-hall { left: 31%; width: 190px; }.tavern-building { left: 4%; width: 120px; }.training-building { right: 4%; width: 115px; }.flag { left: calc(31% + 88px); }
+  .territory { min-height: 390px; }.guild-hall { left: 31%; width: 190px; }.tavern-building { left: 4%; width: 120px; }.flag { left: calc(31% + 88px); }
   .upgrade-list, .roster-grid, .special-grid { grid-template-columns: 1fr; }.member-card { min-height: 95px; }
   .arena { min-height: 600px; }.fighters { inset: 88px 0 66px; }.fighter { --fighter-scale: .62; }.fighter-1 { left: 9%; top: 37%; }.fighter-2 { left: 27%; top: 20%; --fighter-scale: .58; }.fighter-3 { left: 23%; top: 60%; --fighter-scale: .59; }.fighter-4 { left: 41%; top: 42%; --fighter-scale: .55; }.monster-target { right: 2%; top: 20%; bottom: auto; transform: scale(.66); transform-origin: center; }
   .battle-sidebar { grid-template-columns: 1fr; }.click-power { grid-column: auto; }
@@ -287,7 +286,7 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
   .resources { gap: 5px; }.resources > span { min-height: 34px; padding: 5px; font-size: 8px; }.resources strong { font-size: 11px; }.resource-dot { width: 12px; height: 12px; }
   .main-tabs { gap: 4px; }.main-tabs button { min-height: 45px; border-radius: 11px 11px 0 0; font-size: 10px; }.live-dot { display: none; }.toast { font-size: 10px; }
   .screen { padding-top: 17px; }.section-heading h2, .field-toolbar h2 { font-size: 28px; }.section-heading p { font-size: 11px; }
-  .territory { min-height: 340px; }.guild-hall { left: 29%; width: 150px; height: 140px; }.tavern-building { width: 95px; height: 90px; }.training-building { width: 88px; height: 82px; }.flag { left: calc(29% + 69px); bottom: 218px; }.territory-caption { align-items: flex-start; flex-direction: column; }
+  .territory { min-height: 340px; }.guild-hall { left: 29%; width: 150px; height: 140px; }.tavern-building { width: 95px; height: 90px; }.flag { left: calc(29% + 69px); bottom: 218px; }.territory-caption { align-items: flex-start; flex-direction: column; }
   .roster-section, .special-section, .upgrade-panel { padding: 13px; }.member-card { grid-template-columns: 50px 1fr; }.portrait { width: 48px; height: 58px; }.party-check { position: absolute; right: 7px; top: 7px; }
   .arena { min-height: 530px; }.battle-banner { max-width: 90%; }.board-ground { left: 2%; right: 2%; top: 70px; bottom: 55px; }.terrain-layer { left: 4%; right: 4%; top: 98px; bottom: 85px; }.terrain-object { width: 31px; height: 31px; }.environment-tag { left: 10px; bottom: 10px; max-width: 210px; }.fighters { inset: 74px 0 55px; }.fighter { --fighter-scale: .45; }.fighter-1 { left: 2%; top: 38%; }.fighter-2 { left: 22%; top: 18%; --fighter-scale: .42; }.fighter-3 { left: 17%; top: 62%; --fighter-scale: .43; }.fighter-4 { left: 38%; top: 41%; --fighter-scale: .4; }.monster-target { right: -13%; top: 17%; bottom: auto; transform: scale(.52); }.click-callout { display: none; }
   .candidate-card { grid-template-columns: 86px 1fr; }.candidate-portrait { width: 86px; height: 102px; }.candidate-card dl { grid-template-columns: 1fr 1fr; }.rank-progress { grid-template-columns: repeat(2, 1fr); }
@@ -1146,10 +1145,6 @@ body {
 .district-window { position: absolute; left: 14px; top: 25px; width: 20px; height: 23px; background: #e3b95e; border: 3px solid #443027; box-shadow: 0 0 10px rgba(231,185,91,.28); }
 .tavern-district { left: 4%; width: calc(108px + var(--tavern-level, 0px)); background: #966744; }
 .tavern-district.district-level-1 { width: 126px; height: 98px; }.tavern-district.district-level-2 { width: 143px; height: 108px; }.tavern-district.district-level-3 { width: 158px; height: 120px; background: #a47348; }
-.training-district { right: 4%; background: #8a7857; }
-.training-district.district-level-1 { width: 124px; }.training-district.district-level-2 { width: 132px; height: 96px; }.training-district.district-level-3 { width: 140px; height: 103px; }.training-district.district-level-4 { width: 148px; height: 110px; }.training-district.district-level-5 { width: 158px; height: 120px; background: #84714a; }
-.training-target { position: absolute; left: 17px; top: 28px; width: 29px; height: 29px; background: radial-gradient(circle,#b7412e 0 18%,#e8d3a2 20% 43%,#b7412e 45% 65%,#e8d3a2 67%); border: 2px solid #39271f; border-radius: 50%; }
-.training-target::after { content: ""; position: absolute; left: 11px; top: 25px; width: 4px; height: 32px; background: #432d22; }
 .weapon-rack { position: absolute; right: 14px; top: 28px; width: 28px; height: 35px; border-left: 4px solid #4b3528; border-right: 4px solid #4b3528; }
 .weapon-rack::before, .weapon-rack::after { content: ""; position: absolute; left: -7px; right: -7px; height: 4px; background: #4b3528; }.weapon-rack::before { top: 7px; }.weapon-rack::after { top: 25px; }
 .vault-district { left: 18%; bottom: 101px; z-index: 4; width: 88px; height: 65px; opacity: 0; transform: translateY(15px); }
@@ -1204,7 +1199,7 @@ body {
   .guild-territory .sun { width: 52px; height: 52px; }
   .guild-complex { bottom: 98px; width: 78%; height: 220px; transform: translateX(-50%) scale(.72); }
   .district-building { bottom: 94px; transform: scale(.64); }
-  .tavern-district { left: -1%; }.training-district { right: -1%; }
+  .tavern-district { left: -1%; }
   .vault-district, .watchtower { display: none; }
   .territory-stage-badge small { display: none; }
   .territory-life { left: 7%; right: 7%; bottom: 82px; }

@@ -17,7 +17,6 @@ import { ForgeWorkshop } from "./guild-hub/ForgeWorkshop";
 import { GuildBuildingHub } from "./guild-hub/GuildBuildingHub";
 import { ResearchMap, type ResearchNodeView } from "./guild-hub/ResearchMap";
 import { TavernHall } from "./guild-hub/TavernHall";
-import { TrainingGround } from "./guild-hub/TrainingGround";
 import { GUILD_HALL_STAGES, guildHallStage, inferHallLevelFromNodes, requiredHallLevelForNode, type GuildFacility } from "./guild-hub/guild-progression";
 import { WeaponCursor } from "./guild-hub/WeaponArt";
 import { memberAnimationSource, type MemberMotion } from "./member-animations";
@@ -265,11 +264,6 @@ function memberById(id: string) {
 function attackFor(member: MemberDefinition, progress: MemberProgress | undefined) {
   const state = progress ?? { level: 1, xp: 0, gear: 0 };
   return member.attack + member.growth * (state.level - 1) + state.gear * (4 + RANK_ORDER.indexOf(member.rank) * 5);
-}
-
-function trainingCostFor(member: MemberDefinition, progress: MemberProgress) {
-  const rankTier = RANK_ORDER.indexOf(member.rank) + 1;
-  return Math.round((22 + rankTier * 18) * (1 + progress.level * .28));
 }
 
 function randomCandidates(state: SaveState, count = 3) {
@@ -904,27 +898,6 @@ export default function Game() {
     });
   }
 
-  function trainMember(id: string) {
-    const member = memberById(id);
-    const before = save.progress[id] ?? { level: 1, xp: 0, gear: 0 };
-    if (before.level >= member.maxLevel) return setToast(`${member.name}은(는) 이미 훈련을 완성했습니다.`);
-    const cost = trainingCostFor(member, before);
-    if (save.gold < cost) return setToast(`집중 훈련에 필요한 골드가 ${compactNumber(cost - save.gold)} 부족합니다.`);
-
-    const gainedXp = Math.ceil(before.level * 55 * .45);
-    let level = before.level;
-    let xp = before.xp + gainedXp;
-    while (level < member.maxLevel && xp >= level * 55) {
-      xp -= level * 55;
-      level += 1;
-    }
-    if (level >= member.maxLevel) xp = 0;
-
-    setSave((current) => ({ ...current, gold: current.gold - cost, progress: { ...current.progress, [id]: { ...before, level, xp } } }));
-    setTerritoryPulse((current) => current + 1);
-    setToast(level > before.level ? `${member.name} 집중 훈련 완료! Lv.${level}로 성장했습니다.` : `${member.name}이(가) 집중 훈련으로 경험치 ${compactNumber(gainedXp)}을(를) 얻었습니다.`);
-  }
-
   function unlockSpecial(key: SpecialKey) {
     if (save.specials[key]) return;
     if (save.bossTokens < 1) return setToast("보스 증표가 필요합니다. 10번째 스테이지 보스를 처치하세요.");
@@ -1072,40 +1045,30 @@ export default function Game() {
             </div>
           </>}
 
-          {activeFacility === "training" && <>
-          <TrainingGround
-            members={save.owned.map(memberById)}
+          {activeFacility === "tavern" && <>
+          <TavernHall
+            candidates={save.candidates.map(memberById)}
+            members={MEMBERS}
+            ownedIds={save.owned}
             progress={save.progress}
             partyIds={save.party}
+            tavernLevel={save.upgrades.tavern}
             gold={save.gold}
+            refreshCost={Math.max(20, 60 - save.upgrades.tavern * 5)}
             formatNumber={compactNumber}
             getAttack={(member, progress) => attackFor(member, progress)}
-            getTrainingCost={trainingCostFor}
+            onRefresh={refreshCandidates}
+            onRandomHire={randomHire}
+            onHire={hire}
             onToggleParty={toggleParty}
-            onTrain={trainMember}
-            onOpenTavern={() => setActiveFacility("tavern")}
           />
-
           <div className="special-section panel">
-            <div className="panel-title"><div><span className="eyebrow">BOSS TACTICS</span><h3>특수 전술</h3></div><span className="level-chip token-level">증표 {save.bossTokens}</span></div>
+            <div className="panel-title"><div><span className="eyebrow">EXPEDITION TACTICS</span><h3>파티 특수 전술</h3></div><span className="level-chip token-level">증표 {save.bossTokens}</span></div>
             <div className="special-grid">{(Object.keys(specialInfo) as SpecialKey[]).map((key) => <button key={key} className={`special-card ${save.specials[key] ? "unlocked" : ""}`} onClick={() => unlockSpecial(key)}>
               <span>{save.specials[key] ? "✓" : "◆"}</span><strong>{specialInfo[key].title}</strong><small>{specialInfo[key].description}</small><b>{save.specials[key] ? "해금 완료" : "보스 증표 1"}</b>
             </button>)}</div>
           </div>
           </>}
-
-          {activeFacility === "tavern" && <TavernHall
-            candidates={save.candidates.map(memberById)}
-            members={MEMBERS}
-            ownedIds={save.owned}
-            tavernLevel={save.upgrades.tavern}
-            gold={save.gold}
-            refreshCost={Math.max(20, 60 - save.upgrades.tavern * 5)}
-            formatNumber={compactNumber}
-            onRefresh={refreshCandidates}
-            onRandomHire={randomHire}
-            onHire={hire}
-          />}
           </div>
         </section>
       )}

@@ -118,10 +118,9 @@
 .facility:focus-visible,
 .facility.active { transform: translateY(-6px); }
 
-.tavern { left: 4%; bottom: 95px; --building: #9c6842; --roof: #8a3d31; --glow: #ffc65c; }
+.tavern { left: 2%; bottom: 82px; width: 190px; --building: #9c6842; --roof: #8a3d31; --glow: #ffc65c; }
 .forge { right: 4%; bottom: 95px; --building: #695c52; --roof: #433a36; --glow: #ff784d; }
 .research { right: 14%; top: 62px; --building: #647071; --roof: #415c68; --glow: #73e0e6; }
-.training { left: 14%; top: 62px; --building: #786a4f; --roof: #65432f; --glow: #f0b85d; }
 
 .facilityBuilding {
   position: absolute;
@@ -176,6 +175,23 @@
   background: var(--glow);
   border: 3px solid #3e3026;
   box-shadow: 0 0 11px color-mix(in srgb, var(--glow), transparent 35%);
+}
+
+.tavernBuildingArt {
+  bottom: 2px;
+  width: 206px;
+  height: 142px;
+  background: url("/assets/guild/tavern/wandering-mug-tavern-v1.png") center bottom / contain no-repeat;
+  border: 0;
+  box-shadow: none;
+  filter: drop-shadow(7px 9px 5px rgba(20, 13, 10, .38));
+}
+
+.tavernBuildingArt::before { display: none; }
+.tavern:hover .tavernBuildingArt,
+.tavern:focus-visible .tavernBuildingArt,
+.tavern.active .tavernBuildingArt {
+  filter: brightness(1.08) drop-shadow(7px 9px 5px rgba(20, 13, 10, .38)) drop-shadow(0 0 18px rgba(255, 188, 82, .38));
 }
 
 .forgeBuildingArt {
@@ -257,7 +273,7 @@
   .mainHall { width: min(62%, 470px); }
   .facility { transform: scale(.86); }
   .facility:hover, .facility:focus-visible, .facility.active { transform: translateY(-5px) scale(.86); }
-  .training { left: 6%; }.research { right: 6%; }
+  .research { right: 6%; }
 }
 
 @media (max-width: 620px) {
@@ -265,8 +281,8 @@
   .mainHall { bottom: 112px; width: 90%; }
   .facility { width: 128px; transform: scale(.72); }
   .facility:hover, .facility:focus-visible, .facility.active { transform: translateY(-4px) scale(.72); }
-  .training { left: -2%; top: 76px; }.research { right: -2%; top: 76px; }
-  .tavern { left: -2%; bottom: 126px; }.forge { right: -2%; bottom: 126px; }
+  .research { right: -2%; top: 76px; }
+  .tavern { left: -5%; bottom: 126px; }.forge { right: -2%; bottom: 126px; }
   .sceneHint { left: 12px; right: 12px; bottom: 10px; max-width: none; }
   .mainHall .buildingLabel { bottom: 5%; }
 }
