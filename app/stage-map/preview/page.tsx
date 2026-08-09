@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { getStage } from "../../game-data";
+import { getStage, STAGE_COUNT, STAGES_PER_REGION } from "../../game-data";
 import { StageMap } from "../StageMap";
 import styles from "./page.module.css";
 
@@ -24,11 +24,11 @@ export default function StageMapPreviewPage() {
     setClearedStages((current) => current.includes(currentStage)
       ? current
       : [...current, currentStage].sort((left, right) => left - right));
-    setUnlockedStage((current) => Math.min(100, Math.max(current, currentStage + 1)));
+    setUnlockedStage((current) => Math.min(STAGE_COUNT, Math.max(current, currentStage + 1)));
   }
 
   function unlockNextStage() {
-    setUnlockedStage((current) => Math.min(100, current + 1));
+    setUnlockedStage((current) => Math.min(STAGE_COUNT, current + 1));
   }
 
   function resetPreview() {
@@ -53,9 +53,9 @@ export default function StageMapPreviewPage() {
           <strong>{stage.region.name}</strong>
           <h2>스테이지 {stage.stage} · {stage.name}</h2>
           <div>
-            <b>{stage.boss ? "지역 보스" : `${stage.localStage}/10 구역`}</b>
+            <b>{stage.boss ? "군주 웨이브" : `${stage.localStage}/${STAGES_PER_REGION} 웨이브`}</b>
             <b>{isCleared ? "토벌 완료" : "도전 가능"}</b>
-            <b>{unlockedStage}/100 해금</b>
+            <b>{unlockedStage}/{STAGE_COUNT} 해금</b>
           </div>
         </article>
 
@@ -66,7 +66,7 @@ export default function StageMapPreviewPage() {
           <button type="button" onClick={clearCurrentStage} disabled={isCleared}>
             {isCleared ? "현재 스테이지 완료됨" : "현재 스테이지 클리어"}
           </button>
-          <button type="button" onClick={unlockNextStage} disabled={unlockedStage >= 100}>
+          <button type="button" onClick={unlockNextStage} disabled={unlockedStage >= STAGE_COUNT}>
             다음 스테이지 해금
           </button>
           <button

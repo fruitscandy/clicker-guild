@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState, type CSSProperties } from "react";
-import { RANK_COLORS, RANK_ORDER, type MemberDefinition } from "../game-data";
+import { combatTraitFor, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "../game-data";
 import styles from "./TavernHall.module.css";
 
 type MemberProgress = { level: number; xp: number; gear: number };
@@ -46,13 +46,14 @@ export function TavernHall({ candidates, members, ownedIds, progress, partyIds, 
   const ownedMembers = ownedIds.map((id) => members.find((member) => member.id === id)).filter((member): member is MemberDefinition => Boolean(member));
   const partyMembers = partyIds.map((id) => members.find((member) => member.id === id)).filter((member): member is MemberDefinition => Boolean(member));
   const maxRank = RANK_ORDER[Math.min(RANK_ORDER.length - 1, 1 + tavernLevel)];
+  const selectedTrait = selected ? combatTraitFor(selected) : null;
 
   return <section className={`${styles.tavern} panel facility-first-panel`} aria-label="방랑자의 잔 여관 고용과 파티 편성">
     <header className={styles.header}>
       <div>
-        <span className="eyebrow">THE WANDERING MUG · RECRUIT & PARTY</span>
+        <span className="eyebrow">THE WANDERING MUG · BUILD YOUR SWARM</span>
         <h3>방랑자의 잔 여관</h3>
-        <p>새 동료를 계약하고 보유 길드원으로 토벌대를 편성하는 길드의 만남터입니다.</p>
+        <p>고용한 길드원은 필드에 몸이 나타나지 않고 각자의 무기와 스킬을 자동 발동합니다. 최대 4명의 패시브 전투원을 편성하세요.</p>
       </div>
       <div className={styles.headerStats}>
         <span><small>모집 허가</small><strong>{maxRank} RANK</strong></span>
@@ -84,7 +85,7 @@ export function TavernHall({ candidates, members, ownedIds, progress, partyIds, 
             <div><dt>공격 주기</dt><dd>{selected.interval}초</dd></div>
             <div><dt>최대 레벨</dt><dd>Lv.{selected.maxLevel}</dd></div>
           </dl>
-          <div className={styles.skillCard}><span>{selected.glyph}</span><div><small>고유 스킬</small><strong>{selected.skill}</strong><em>{selected.skillCooldown}초마다 공격력 {selected.skillMultiplier}배</em></div></div>
+          {selectedTrait && <div className={styles.skillCard}><span>{selected.glyph}</span><div><small>고용 즉시 해금되는 패시브 공격</small><strong>{selectedTrait.title}</strong><em>{selectedTrait.description}</em></div></div>}
           <button className={styles.hireButton} onClick={() => onHire(selected.id)} disabled={gold < selected.cost}>
             <span>{gold >= selected.cost ? "길드 계약서 서명" : "고용 자금 부족"}</span>
             <strong>{formatNumber(selected.cost)} G로 고용</strong>
@@ -101,7 +102,7 @@ export function TavernHall({ candidates, members, ownedIds, progress, partyIds, 
             const active = selected?.id === member.id;
             return <button key={member.id} className={`${styles.candidateCard} ${active ? styles.selected : ""}`} style={portraitStyle(member)} onClick={() => setSelectedId(member.id)} aria-pressed={active}>
               <span className={styles.cardPortrait}><Image className={styles.portraitImage} src={portraitSource(member.id)} alt={`${member.name} 초상화`} fill sizes="102px" unoptimized draggable={false} /></span>
-              <span className={styles.cardCopy}><small>{member.rank} RANK · {member.job}</small><strong>{member.name}</strong><em>{member.skill}</em></span>
+              <span className={styles.cardCopy}><small>{member.rank} RANK · {member.job}</small><strong>{member.name}</strong><em>{combatTraitFor(member).title}</em></span>
               <b className={styles.cardCost}>{formatNumber(member.cost)} G</b>
             </button>;
           })}
@@ -111,31 +112,31 @@ export function TavernHall({ candidates, members, ownedIds, progress, partyIds, 
 
     <div className={styles.partySection}>
       <div className={styles.partyHeading}>
-        <div><span>EXPEDITION PARTY</span><strong>토벌대 편성</strong><small>보유 길드원을 눌러 최대 4명의 출전 파티를 구성하세요.</small></div>
-        <b>{partyIds.length}/4 READY</b>
+        <div><span>GUILD PASSIVE ARSENAL</span><strong>편성 길드원 패시브</strong><small>최대 4명을 편성합니다. 필드에는 본체 없이 각자의 무기 공격과 스킬만 자동 발동합니다.</small></div>
+        <b>{partyIds.length}/4 EQUIPPED</b>
       </div>
       <div className={styles.partySlots} aria-label="현재 토벌 파티">
         {Array.from({ length: 4 }, (_, index) => {
           const member = partyMembers[index];
-          if (!member) return <div className={styles.emptySlot} key={`empty-${index}`}><span>{index + 1}</span><strong>빈 파티 슬롯</strong><small>아래 명부에서 길드원을 선택하세요</small></div>;
+          if (!member) return <div className={styles.emptySlot} key={`empty-${index}`}><span>{index + 1}</span><strong>빈 패시브 슬롯</strong><small>아래 명부에서 길드원을 편성하세요</small></div>;
           const memberProgress = progress[member.id] ?? fallbackProgress;
           return <button className={styles.partySlot} key={member.id} style={portraitStyle(member)} onClick={() => onToggleParty(member.id)} aria-label={`${member.name} 파티에서 제외`}>
             <span className={styles.partyPortrait}><Image className={styles.portraitImage} src={portraitSource(member.id)} alt={`${member.name} 파티 초상화`} fill sizes="128px" unoptimized draggable={false} /></span>
-            <span><small>{member.rank} RANK · {member.job}</small><strong>{member.name}</strong><em>Lv.{memberProgress.level} · 공격 {formatNumber(getAttack(member, memberProgress))}</em></span>
-            <b>제외</b>
+            <span><small>{member.rank} RANK · {member.job}</small><strong>{member.name}</strong><em>{combatTraitFor(member).title} · 공격 {formatNumber(getAttack(member, memberProgress))}</em></span>
+            <b>해제</b>
           </button>;
         })}
       </div>
 
-      <div className={styles.rosterHeading}><span><small>OWNED MEMBERS</small><strong>보유 길드원 명부</strong></span><em>초상화를 눌러 파티에 편성하거나 제외합니다.</em></div>
+      <div className={styles.rosterHeading}><span><small>OWNED PASSIVE MEMBERS</small><strong>보유 길드원 패시브</strong></span><em>초상화를 눌러 자동 전투 슬롯에 편성하거나 해제합니다.</em></div>
       <div className={styles.ownedRoster} role="list" aria-label="보유 길드원 목록">
         {ownedMembers.map((member) => {
           const memberProgress = progress[member.id] ?? fallbackProgress;
           const inParty = partyIds.includes(member.id);
           return <button key={member.id} className={`${styles.rosterCard} ${inParty ? styles.inParty : ""}`} style={portraitStyle(member)} onClick={() => onToggleParty(member.id)} aria-pressed={inParty}>
             <span className={styles.rosterPortrait}><Image className={styles.portraitImage} src={portraitSource(member.id)} alt={`${member.name} 보유 초상화`} fill sizes="90px" unoptimized draggable={false} /></span>
-            <span><small>{member.rank} RANK · {member.job}</small><strong>{member.name}</strong><em>Lv.{memberProgress.level} · 장비 +{memberProgress.gear}</em></span>
-            <b>{inParty ? "출전 중 ✓" : "편성 +"}</b>
+            <span><small>{member.rank} RANK · {member.job}</small><strong>{member.name}</strong><em>{combatTraitFor(member).title} · Lv.{memberProgress.level}</em></span>
+            <b>{inParty ? "장착 중 ✓" : "장착 +"}</b>
           </button>;
         })}
       </div>

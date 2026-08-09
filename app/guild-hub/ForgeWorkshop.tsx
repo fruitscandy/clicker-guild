@@ -48,7 +48,7 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materia
       <div>
         <span className="eyebrow">FLAME FORGE · MASTERWORK ARSENAL</span>
         <h3>불꽃 대장간</h3>
-        <p>무기 강화는 기본 공격력과 무기 외형만 올립니다. 공격 범위와 부가 효과는 길드 강화 연구에서 따로 성장합니다.</p>
+        <p>대장간은 플레이어의 클릭 무기 공격력과 외형만 올립니다. 길드원 패시브 공격력은 길드 강화 연구에서 따로 성장합니다.</p>
       </div>
       <div className={styles.resources} aria-label="대장간 보유 자원">
         <span><i className={styles.gold} />골드<strong>{formatNumber(gold)}</strong></span>
@@ -83,7 +83,7 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materia
         <h4>{previewUnlocked || previewCraftable ? preview.weaponName : "미확인 무기 도면"}</h4>
         <p>{previewUnlocked || previewCraftable ? preview.subtitle : "앞 단계 무기를 완성해야 이 도면을 해독할 수 있습니다."}</p>
         <dl>
-          <div><dt>기본 공격력</dt><dd>{previewUnlocked || previewCraftable ? formatNumber(Math.round(12 * preview.damageScale)) : "???"}</dd></div>
+          <div><dt>클릭 공격력</dt><dd>{previewUnlocked || previewCraftable ? formatNumber(Math.round(12 * preview.damageScale)) : "???"}</dd></div>
           <div><dt>공격 연출</dt><dd>{previewUnlocked || previewCraftable ? `${preview.visualHits} HIT` : "???"}</dd></div>
           <div><dt>강화 효과</dt><dd>공격력만 상승</dd></div>
         </dl>
@@ -103,7 +103,7 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materia
     <div className={styles.craftBar}>
       <div className={styles.equippedSummary}>
         <WeaponArt tier={current.tier} glyph={current.glyph} label={current.weaponName} className={styles.equippedWeapon} />
-        <span><small>CURRENT WEAPON · +{current.tier}</small><strong>{current.weaponName}</strong><em>{current.title} · 기본 공격력 {formatNumber(Math.round(12 * current.damageScale))}</em></span>
+        <span><small>PLAYER WEAPON · +{current.tier}</small><strong>{current.weaponName}</strong><em>{current.title} · 클릭 공격력 {formatNumber(Math.round(12 * current.damageScale))}</em></span>
       </div>
       {next ? <button className={styles.craftButton} onClick={craftNextWeapon} disabled={!canAffordNext}>
         <span>다음 무기 제작</span>

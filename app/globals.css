@@ -759,7 +759,7 @@ body {
 
 .permadeath-warning { display: block; margin-top: 5px; color: #a93227; font-size: 9px; font-weight: 1000; letter-spacing: .03em; }
 .hack-arena { --click-primary: #d46a48; --click-secondary: #ffe0a0; --click-glow: rgba(255,190,103,.55); position: relative; cursor: crosshair; touch-action: manipulation; user-select: none; }
-@media (pointer: fine) { .hack-arena.has-forge-cursor { cursor: none; } }
+@media (pointer: fine) { .hack-arena.has-forge-cursor, .hack-arena.has-command-cursor { cursor: none; } }
 .field-background-art { z-index: 0; object-fit: cover; object-position: var(--field-art-position, 50% 50%); filter: saturate(.92) contrast(1.035) brightness(.94); pointer-events: none; user-select: none; }
 .hack-arena::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at 53% 49%, transparent 34%, rgba(12,18,17,.08) 70%, rgba(8,13,13,.24) 100%), linear-gradient(90deg, rgba(13,20,18,.08), transparent 31%, transparent 72%, rgba(13,17,18,.08)); box-shadow: inset 0 0 72px rgba(10,16,15,.2); pointer-events: none; }
 .field-tone-bright .field-background-art { filter: saturate(.88) contrast(1.04) brightness(.91); }
@@ -774,9 +774,68 @@ body {
 .field-click-guide b { font-size: 10px; }.field-click-guide span { color: #d7d4c5; font-size: 8px; }
 @keyframes guidePulse { 50% { transform: translateX(-50%) translateY(-2px); box-shadow: 0 5px 22px rgba(255,210,104,.2); } }
 
+.swarm-hud { position:absolute; left:14px; top:58px; z-index:15; display:grid; gap:5px; width:150px; padding:8px 10px; color:#fff2cc; background:linear-gradient(145deg,rgba(83,31,27,.94),rgba(38,24,24,.94)); border:1px solid #d18b4e; border-radius:7px; box-shadow:0 5px 18px rgba(19,10,8,.32); pointer-events:none; }
+.swarm-hud span { display:flex; align-items:end; justify-content:space-between; gap:8px; }.swarm-hud small { color:#f0a269; font-size:7px; font-weight:1000; letter-spacing:.14em; }.swarm-hud strong { font:1000 20px/1 Georgia,"Noto Serif KR",serif; }.swarm-hud strong em { color:#b99c88; font-size:9px; font-style:normal; }.swarm-hud > i { display:block; height:4px; overflow:hidden; background:#271b1a; border-radius:99px; }.swarm-hud > i b { display:block; height:100%; background:linear-gradient(90deg,#ef653f,#ffd66b); box-shadow:0 0 8px #f18746; transition:width .18s ease-out; }
+
+/* Equipped guild members are the weapons: no field character bodies or legacy weapon cursor. */
+.member-weapon-layer { position:absolute; inset:0; z-index:16; overflow:hidden; pointer-events:none; }
+.member-weapon-fx { --weapon-color:#f1c45f; position:absolute; width:1px; height:1px; color:var(--weapon-color); pointer-events:none; }
+.member-weapon-fx > b { position:absolute; left:-16px; top:-16px; z-index:4; display:grid; place-items:center; width:32px; height:32px; color:#fff8da; background:color-mix(in srgb,var(--weapon-color) 72%,#261d19); border:2px solid #fff2bd; border-radius:50%; box-shadow:0 0 16px var(--weapon-color); opacity:0; font-size:10px; animation:memberWeaponBadge .7s ease-out both; }
+.member-weapon-fx > small { position:absolute; left:50%; top:-56px; z-index:5; padding:4px 7px; color:#fff4d4; background:rgba(37,26,23,.9); border:1px solid var(--weapon-color); border-radius:4px; box-shadow:0 3px 9px rgba(0,0,0,.3); opacity:0; transform:translateX(-50%); white-space:nowrap; font-size:7px; font-weight:1000; animation:memberWeaponLabel .72s ease-out both; }
+.member-projectile,.member-weapon-impact { position:absolute; left:0; top:0; display:block; opacity:0; }
+.member-weapon-fx.is-skill { filter:brightness(1.18) saturate(1.2); }.member-weapon-fx.is-skill > b { width:40px; height:40px; margin:-4px; font-size:13px; }
+
+.weapon-style-vanguard .member-projectile { width:13px; height:112px; margin:-56px -6px; background:linear-gradient(90deg,transparent,#fff 25% 48%,var(--weapon-color) 70%,transparent); clip-path:polygon(50% 0,100% 17%,68% 82%,91% 89%,50% 100%,9% 89%,32% 82%,0 17%); filter:drop-shadow(0 0 7px #fff) drop-shadow(0 0 15px var(--weapon-color)); transform-origin:center; }
+.weapon-style-vanguard .member-projectile.primary { animation:memberSwordOne .58s cubic-bezier(.12,.72,.18,1) both; }.weapon-style-vanguard .member-projectile.secondary { animation:memberSwordTwo .58s .08s cubic-bezier(.12,.72,.18,1) both; }
+.weapon-style-vanguard .member-weapon-impact { width:130px; height:54px; margin:-27px -65px; border:5px solid var(--weapon-color); border-left-color:transparent; border-right-color:transparent; border-radius:50%; filter:drop-shadow(0 0 9px var(--weapon-color)); animation:memberSlashRing .62s .14s ease-out both; }
+
+.weapon-style-marksman .member-projectile { width:126px; height:5px; margin:-2px 0 0 -118px; background:linear-gradient(90deg,transparent,var(--weapon-color) 34%,#fff 76%,#fff5c8); border-radius:99px; box-shadow:0 0 8px var(--weapon-color); transform-origin:right center; }
+.weapon-style-marksman .member-projectile::after { content:""; position:absolute; right:-4px; top:-6px; width:15px; height:15px; background:#fff5ce; clip-path:polygon(0 0,100% 50%,0 100%,30% 50%); filter:drop-shadow(0 0 5px var(--weapon-color)); }
+.weapon-style-marksman .member-projectile.primary { transform:rotate(-10deg); animation:memberArrowPrimary .48s ease-out both; }.weapon-style-marksman .member-projectile.secondary { top:14px; transform:rotate(9deg); animation:memberArrowSecondary .5s .06s ease-out both; }
+.weapon-style-marksman .member-weapon-impact { width:46px; height:46px; margin:-23px; border:2px dashed #fff3bd; border-radius:50%; box-shadow:0 0 15px var(--weapon-color); animation:memberTargetPop .56s .16s ease-out both; }
+
+.weapon-style-assassin .member-projectile { width:10px; height:76px; margin:-38px -5px; background:linear-gradient(#fff,var(--weapon-color) 58%,#35223e); clip-path:polygon(50% 0,100% 27%,66% 82%,86% 100%,50% 91%,14% 100%,34% 82%,0 27%); filter:drop-shadow(0 0 8px var(--weapon-color)); }
+.weapon-style-assassin .member-projectile.primary { animation:memberDaggerOne .46s ease-out both; }.weapon-style-assassin .member-projectile.secondary { animation:memberDaggerTwo .46s .05s ease-out both; }
+.weapon-style-assassin .member-weapon-impact { width:95px; height:95px; margin:-48px; background:conic-gradient(from 25deg,transparent 0 16%,rgba(255,255,255,.78) 18% 20%,transparent 22% 48%,var(--weapon-color) 50% 53%,transparent 55%); border-radius:50%; animation:memberAssassinBurst .55s ease-out both; }
+
+.weapon-style-arcane .member-projectile.primary { width:72px; height:72px; margin:-36px; background:radial-gradient(circle,#fff 0 8%,#d9b9ff 10% 22%,var(--weapon-color) 30% 52%,transparent 70%); border-radius:50%; filter:drop-shadow(0 0 18px var(--weapon-color)); animation:memberArcaneOrb .7s ease-out both; }.weapon-style-arcane .member-projectile.secondary { width:118px; height:118px; margin:-59px; border:4px double #e8d1ff; border-radius:50%; box-shadow:inset 0 0 21px var(--weapon-color),0 0 18px var(--weapon-color); animation:memberArcaneRune .78s ease-out both; }
+.weapon-style-arcane .member-weapon-impact { width:150px; height:150px; margin:-75px; background:radial-gradient(circle,rgba(255,255,255,.72),color-mix(in srgb,var(--weapon-color) 42%,transparent) 26%,transparent 66%); border-radius:50%; animation:memberArcaneImpact .82s .12s ease-out both; }
+
+.weapon-style-support .member-projectile.primary,.weapon-style-support .member-projectile.secondary { width:132px; height:50px; margin:-25px -66px; border:5px solid #fff3a8; border-radius:50%; box-shadow:0 0 14px var(--weapon-color),inset 0 0 14px var(--weapon-color); animation:memberHalo .8s ease-out both; }.weapon-style-support .member-projectile.secondary { width:88px; height:88px; margin:-44px; border-width:3px; animation-delay:.11s; }
+.weapon-style-support .member-weapon-impact { width:14px; height:116px; margin:-58px -7px; background:linear-gradient(transparent,#fff 24% 72%,transparent); box-shadow:0 0 22px var(--weapon-color); animation:memberLightColumn .82s ease-out both; }
+
+.weapon-style-breaker .member-projectile.primary,.weapon-style-breaker .member-projectile.secondary { width:74px; height:74px; margin:-37px; border:9px solid var(--weapon-color); border-radius:50%; box-shadow:inset 0 0 18px var(--weapon-color),0 0 17px var(--weapon-color); animation:memberBreakerWave .66s ease-out both; }.weapon-style-breaker .member-projectile.secondary { animation-delay:.12s; }
+.weapon-style-breaker .member-weapon-impact { width:44px; height:44px; margin:-22px; background:radial-gradient(circle,#fff,var(--weapon-color) 45%,transparent 72%); border-radius:44% 56% 39% 61%; animation:memberBreakerCore .55s ease-out both; }
+
+.guild-command-feedback { position:absolute; z-index:18; display:grid; justify-items:center; gap:3px; pointer-events:none; transform:translate(-50%,-50%); animation:guildCommandFloat .7s ease-out both; }.guild-command-feedback strong { color:#fff4c4; text-shadow:0 2px #6a281d,0 0 7px #fff,0 0 18px #ef8e4e; font:1000 30px Georgia,"Noto Serif KR",serif; }.guild-command-feedback small { padding:3px 6px; color:#ffe8b4; background:rgba(43,27,23,.86); border:1px solid #d69a58; border-radius:99px; white-space:nowrap; font-size:7px; font-weight:1000; }.guild-command-feedback.is-critical strong { color:#fff39b; font-size:39px; }.guild-command-feedback.is-combo small { border-color:#ffe06f; box-shadow:0 0 12px rgba(255,211,77,.6); }
+
+.equipped-member-weapons { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:9px 0; }.equipped-member-weapon { display:grid; grid-template-columns:30px 1fr; align-items:center; gap:1px 6px; min-width:0; padding:7px; color:#f8edd4; background:linear-gradient(145deg,#40342d,#28221f); border:1px solid color-mix(in srgb,var(--weapon-color) 62%,#806852); border-radius:7px; text-align:left; box-shadow:inset 0 0 12px color-mix(in srgb,var(--weapon-color) 9%,transparent); }.equipped-member-weapon > b { grid-row:1 / 3; display:grid; place-items:center; width:30px; height:30px; color:#231c19; background:var(--weapon-color); border:1px solid #fff0ba; border-radius:50%; box-shadow:0 0 10px color-mix(in srgb,var(--weapon-color) 55%,transparent); font-size:10px; }.equipped-member-weapon > small,.equipped-member-weapon > strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.equipped-member-weapon > small { color:#cbbca6; font-size:7px; }.equipped-member-weapon > strong { font-size:9px; }
+
+@keyframes memberWeaponBadge { 0%{opacity:0;transform:scale(.2)} 24%{opacity:1;transform:scale(1.08)} 100%{opacity:0;transform:scale(.72)} }
+@keyframes memberWeaponLabel { 0%{opacity:0;transform:translate(-50%,10px)} 24%,70%{opacity:1;transform:translate(-50%,0)} 100%{opacity:0;transform:translate(-50%,-18px)} }
+@keyframes memberSwordOne { 0%{opacity:0;transform:translate(-80px,-65px) rotate(-45deg) scale(.45)} 24%,65%{opacity:1} 100%{opacity:0;transform:translate(76px,68px) rotate(-45deg) scale(1.25)} }
+@keyframes memberSwordTwo { 0%{opacity:0;transform:translate(75px,-72px) rotate(44deg) scale(.45)} 24%,65%{opacity:1} 100%{opacity:0;transform:translate(-72px,70px) rotate(44deg) scale(1.2)} }
+@keyframes memberSlashRing { 0%{opacity:0;transform:scale(.2) rotate(-25deg)} 35%{opacity:1} 100%{opacity:0;transform:scale(1.45) rotate(20deg)} }
+@keyframes memberArrowPrimary { 0%{opacity:0;transform:translateX(-95px) rotate(-10deg)} 18%,72%{opacity:1} 100%{opacity:0;transform:translateX(70px) rotate(-10deg)} }
+@keyframes memberArrowSecondary { 0%{opacity:0;transform:translateX(-105px) rotate(9deg)} 18%,72%{opacity:1} 100%{opacity:0;transform:translateX(76px) rotate(9deg)} }
+@keyframes memberTargetPop { 0%{opacity:0;transform:scale(1.8) rotate(-35deg)} 30%{opacity:1;transform:scale(.72)} 100%{opacity:0;transform:scale(1.25) rotate(60deg)} }
+@keyframes memberDaggerOne { 0%{opacity:0;transform:translate(-70px,-55px) rotate(-48deg)} 25%,70%{opacity:1} 100%{opacity:0;transform:translate(55px,52px) rotate(-48deg)} }
+@keyframes memberDaggerTwo { 0%{opacity:0;transform:translate(65px,-62px) rotate(46deg)} 25%,70%{opacity:1} 100%{opacity:0;transform:translate(-58px,56px) rotate(46deg)} }
+@keyframes memberAssassinBurst { 0%{opacity:0;transform:scale(.2) rotate(-55deg)} 35%{opacity:1} 100%{opacity:0;transform:scale(1.45) rotate(80deg)} }
+@keyframes memberArcaneOrb { 0%{opacity:0;transform:scale(.15)} 28%{opacity:1;transform:scale(.72)} 68%{opacity:.9;transform:scale(1.12)} 100%{opacity:0;transform:scale(1.65)} }
+@keyframes memberArcaneRune { 0%{opacity:0;transform:scale(1.4) rotate(-65deg)} 28%{opacity:.9;transform:scale(.7)} 100%{opacity:0;transform:scale(1.3) rotate(90deg)} }
+@keyframes memberArcaneImpact { 0%,22%{opacity:0;transform:scale(.2)} 48%{opacity:.9} 100%{opacity:0;transform:scale(1.35)} }
+@keyframes memberHalo { 0%{opacity:0;transform:scale(.25) rotateX(58deg)} 28%,68%{opacity:1} 100%{opacity:0;transform:scale(1.55) rotateX(58deg)} }
+@keyframes memberLightColumn { 0%{opacity:0;transform:scaleY(.1)} 28%{opacity:1;transform:scaleY(1.25)} 100%{opacity:0;transform:scale(1.5,.35)} }
+@keyframes memberBreakerWave { 0%{opacity:0;transform:scale(.1)} 30%{opacity:1} 100%{opacity:0;transform:scale(2.3)} }
+@keyframes memberBreakerCore { 0%{opacity:0;transform:scale(.2) rotate(-20deg)} 30%{opacity:1;transform:scale(1.3)} 100%{opacity:0;transform:scale(.4) rotate(35deg)} }
+@keyframes guildCommandFloat { 0%{opacity:0;transform:translate(-50%,-20%) scale(.7)} 24%,65%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%,-115%) scale(.9)} }
+
 .hack-arena .fighters { z-index: 7; pointer-events: none; }
 .monster-pack { position: absolute; inset: 0; z-index: 4; overflow: hidden; pointer-events: none; }
 .pack-monster { --monster-scale: 1; position: absolute; width: 88px; height: 116px; transform: translate(-50%,-50%) scale(var(--monster-scale)); transform-origin: center bottom; transition: filter .12s ease; }
+.mass-swarm .pack-monster { width:72px; height:98px; }
+.mass-swarm .pack-monster-art-frame { width:108px; height:108px; }
 .pack-monster .pack-shadow { position: absolute; left: 50%; bottom: 8px; width: 58px; height: 15px; background: rgba(19,31,27,.32); border-radius: 50%; transform: translateX(-50%); }
 .pack-monster-art-frame { position: absolute; left: 50%; bottom: 2px; width: 126px; height: 126px; transform: translateX(-50%); }
 .pack-monster-art { object-fit: contain; object-position: center bottom; filter: drop-shadow(0 5px 2px rgba(15,25,20,.36)); transform: scale(var(--monster-art-scale)); transform-origin: center bottom; animation: packMonsterArtIdle 1.8s ease-in-out infinite; user-select: none; }
@@ -915,6 +974,17 @@ body {
 .attack-upgrade-monitor > span.triggered { color:#fff5b2; border-color:#ffe678; filter:brightness(1.16); animation:attackUpgradeTriggered .72s ease-out both; }.attack-upgrade-monitor > span.triggered > img { filter:drop-shadow(0 0 7px #fff) drop-shadow(0 0 12px #6ce9ff); }.attack-upgrade-monitor > span.triggered > em { color:#fff3a1; }
 .battle-click-count { display:block; margin:0 0 8px; color:#867360; font-size:7px; line-height:1.4; }
 @keyframes attackUpgradeTriggered { 28%{transform:translateY(-2px) scale(1.025);box-shadow:inset 0 0 18px rgba(255,235,103,.3),0 0 16px rgba(90,229,255,.32)} }
+.click-combat-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; margin: 9px 0; }
+.click-combat-stats span { display: grid; gap: 3px; padding: 7px 3px; color: #6a4b34; background: #ead8b8; border: 1px solid #b79b72; border-radius: 5px; }.click-combat-stats b { font-size: 7px; }.click-combat-stats em { font-size: 10px; font-style: normal; font-weight: 1000; }
+.combat-proc-strip { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; margin-bottom: 9px; }
+.combat-proc-strip span { display: grid; gap: 2px; padding: 6px 3px; color: #d8cbb7; background: #302820; border: 1px solid #725d47; border-radius: 4px; }
+.combat-proc-strip span.active { color: #fff1a6; border-color: #d19a3c; box-shadow: inset 0 0 12px rgba(255,194,70,.14); }
+.combat-proc-strip b { font-size: 7px; }.combat-proc-strip em { font-size: 8px; font-style: normal; font-weight: 1000; }
+.combat-trait-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; margin:9px 0; }
+.combat-trait-chip { position:relative; display:grid; grid-template-columns:24px 1fr auto; grid-template-rows:auto auto; align-items:center; gap:1px 4px; min-width:0; padding:6px; color:#857665; background:#e4d9c5; border:1px solid #c4b397; border-radius:6px; text-align:left; opacity:.56; }
+.combat-trait-chip > b { grid-row:1 / 3; display:grid; place-items:center; width:24px; height:24px; color:#6d5b49; background:#d1c2aa; border-radius:50%; font-size:10px; }.combat-trait-chip > small { overflow:hidden; font-size:7px; font-weight:1000; text-overflow:ellipsis; white-space:nowrap; }.combat-trait-chip > strong { font-size:9px; }.combat-trait-chip > em { grid-column:2 / 4; overflow:hidden; font-size:6px; font-style:normal; text-overflow:ellipsis; white-space:nowrap; }
+.combat-trait-chip.active { color:#fff1d2; background:linear-gradient(145deg,#493a31,#2b2724); border-color:#c49353; box-shadow:inset 0 0 12px rgba(255,205,111,.08),0 0 8px rgba(137,89,50,.12); opacity:1; }.combat-trait-chip.active > b { color:#2c211d; background:#f1c665; box-shadow:0 0 9px rgba(240,190,90,.4); }.combat-trait-chip.active > em { color:#cbb99d; }
+.combat-trait-chip.trait-marksman.active > b { background:#94d5a7; }.combat-trait-chip.trait-assassin.active > b { color:#f5e9ff; background:#745d8f; }.combat-trait-chip.trait-arcane.active > b { color:#f7efff; background:#8c62bd; }.combat-trait-chip.trait-support.active > b { background:#8fd5d1; }.combat-trait-chip.trait-breaker.active > b { background:#e78c64; }
 .defeat-copy span { display: block; width: 100%; }.defeat-copy span:not(:last-child) { color: #7f2924; font-weight: 900; }
 
 /* Weapon tiers 6–15: layered CC0 particles and increasingly dense finishers */
@@ -1093,6 +1163,7 @@ body {
   .permadeath-warning { line-height: 1.4; }
   .field-click-guide { top: 15%; width: max-content; max-width: 78%; }
   .field-click-guide span { display: none; }
+  .swarm-hud { left:8px; top:54px; width:124px; padding:6px 8px; }.swarm-hud strong { font-size:16px; }
   .pack-monster { width: 58px; height: 86px; }
   .pack-monster .monster-sprite { bottom: -2px; transform: translateX(-50%) scale(.22); }
   @keyframes packMonsterIdle { 50% { transform: translateX(-50%) translateY(-7px) scale(.22) rotate(-2deg); } }

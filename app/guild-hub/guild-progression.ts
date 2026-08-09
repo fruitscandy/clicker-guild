@@ -68,7 +68,7 @@ export const GUILD_FACILITIES: ReadonlyArray<{
 }> = [
   { id: "hall", title: "길드 본관", subtitle: "건물 승급과 해금 관리", glyph: "G" },
   { id: "tavern", title: "방랑자의 잔", subtitle: "고용과 파티 편성", glyph: "잔" },
-  { id: "forge", title: "불꽃 대장간", subtitle: "무기 제작과 강화", glyph: "鍛" },
+  { id: "forge", title: "불꽃 대장간", subtitle: "플레이어 무기 제작과 강화", glyph: "鍛" },
   { id: "research", title: "길드 강화소", subtitle: "4방향 발전 연구", glyph: "✦" },
 ] as const;
 

@@ -12,14 +12,13 @@ import {
   type BattleLootDrop,
 } from "./battle-loot";
 import { fieldAssetForRegion } from "./field-assets";
-import { compactNumber, getStage, MEMBERS, RANK_ORDER, type MemberDefinition } from "./game-data";
+import { combatTraitFor, compactNumber, getStage, MEMBERS, RANK_ORDER, STAGE_COUNT, STAGES_PER_REGION, type CombatStyle, type MemberDefinition } from "./game-data";
 import { ForgeWorkshop } from "./guild-hub/ForgeWorkshop";
 import { GuildBuildingHub } from "./guild-hub/GuildBuildingHub";
 import { ResearchMap, type ResearchNodeView } from "./guild-hub/ResearchMap";
 import { TavernHall } from "./guild-hub/TavernHall";
 import { GUILD_HALL_STAGES, guildHallStage, inferHallLevelFromNodes, requiredHallLevelForNode, type GuildFacility } from "./guild-hub/guild-progression";
 import { WeaponCursor } from "./guild-hub/WeaponArt";
-import { memberAnimationSource, type MemberMotion } from "./member-animations";
 import { monsterAssetForStage } from "./monster-assets";
 import { StageMap } from "./stage-map";
 import { canAffordWeaponRecipe, consumeWeaponRecipe, materialIconVars, stageMaterialById, stageMaterialFor, weaponMaterialRecipe } from "./stage-materials";
@@ -64,6 +63,17 @@ type ClickAttackFx = {
   radius: number;
 };
 
+type MemberWeaponFx = {
+  id: number;
+  memberId: string;
+  style: CombatStyle;
+  glyph: string;
+  color: string;
+  x: number;
+  y: number;
+  skill: boolean;
+};
+
 type FieldMonster = {
   id: string;
   x: number;
@@ -98,30 +108,30 @@ type SaveState = {
 };
 
 const SAVE_KEY = "guildmaster-clicker-save-v1";
-const NORMAL_BATTLE_SECONDS = 45;
-const BOSS_BATTLE_SECONDS = 60;
+const NORMAL_BATTLE_SECONDS = 30;
+const BOSS_BATTLE_SECONDS = 45;
 const DEV_BATTLE_SECONDS = 300;
 const DEV_GEAR_LEVEL = 99;
 const DEV_POWER_MULTIPLIER = 500;
-const MEMBER_ASSIST_FACTOR = .24;
+const MEMBER_ASSIST_FACTOR = .32;
 const AUTO_ATTACK_FACTOR = .35;
 
 const CLICK_ATTACK_PATTERNS: ClickAttackPattern[] = [
   { key: "training-strike", weaponName: "훈련용 장검", title: "견습 타격", subtitle: "묵직한 기본 일격", glyph: "검", tier: 0, visualHits: 1, variants: 1, duration: 620, cost: 0, damageScale: 1 },
   { key: "crescent-slash", weaponName: "초승달 도", title: "반월참", subtitle: "검기를 실은 넓은 베기", glyph: "◒", tier: 1, visualHits: 1, variants: 2, duration: 720, cost: 90, damageScale: 1.28 },
-  { key: "cross-cut", weaponName: "쌍날검", title: "교차참", subtitle: "엇갈리는 2연속 참격", glyph: "×", tier: 2, visualHits: 2, variants: 2, duration: 820, cost: 220, damageScale: 1.68 },
-  { key: "weakpoint-break", weaponName: "룬 파쇄검", title: "약점 파쇄", subtitle: "표식을 꿰뚫는 3단 베기", glyph: "◎", tier: 3, visualHits: 3, variants: 3, duration: 980, cost: 520, damageScale: 2.18 },
-  { key: "sky-sword-array", weaponName: "천공검", title: "천공검진", subtitle: "길드마스터의 5연속 오의", glyph: "劍", tier: 4, visualHits: 5, variants: 4, duration: 1180, cost: 1100, damageScale: 2.85 },
-  { key: "nebula-dance", weaponName: "성운도", title: "성운 난무", subtitle: "별빛 잔상을 남기는 7연참", glyph: "星", tier: 5, visualHits: 7, variants: 4, duration: 1320, cost: 2200, damageScale: 3.72 },
-  { key: "dragon-vein-break", weaponName: "용맥검", title: "용맥 붕괴", subtitle: "번개와 검풍으로 전장을 가르는 9연격", glyph: "龍", tier: 6, visualHits: 9, variants: 4, duration: 1480, cost: 4200, damageScale: 4.88 },
-  { key: "celestial-ruin", weaponName: "천상검", title: "천상 종언", subtitle: "천공의 룬과 낙검이 겹치는 12연 오의", glyph: "天", tier: 7, visualHits: 12, variants: 4, duration: 1680, cost: 7800, damageScale: 6.5 },
-  { key: "blood-moon-eclipse", weaponName: "혈월도", title: "붉은 월식", subtitle: "핏빛 초승달이 겹쳐지는 13연참", glyph: "月", tier: 8, visualHits: 13, variants: 4, duration: 1740, cost: 14000, damageScale: 8.6 },
-  { key: "storm-twin-dance", weaponName: "폭풍쌍검", title: "뇌광 연무", subtitle: "번개 궤적을 남기는 쌍검 난무", glyph: "雷", tier: 9, visualHits: 15, variants: 4, duration: 1800, cost: 24000, damageScale: 11.4 },
-  { key: "radiant-judgment", weaponName: "성휘 대검", title: "성광 심판", subtitle: "빛의 기둥과 대검이 함께 낙하", glyph: "光", tier: 10, visualHits: 16, variants: 4, duration: 1880, cost: 40000, damageScale: 15.1 },
-  { key: "abyss-sever", weaponName: "심연검", title: "공허 절단", subtitle: "전장을 가르는 검은 균열의 일격", glyph: "闇", tier: 11, visualHits: 18, variants: 4, duration: 1940, cost: 65000, damageScale: 20 },
-  { key: "time-collapse", weaponName: "시간절단검", title: "찰나 붕괴", subtitle: "멈춘 시간 위로 모든 참격이 겹침", glyph: "時", tier: 12, visualHits: 20, variants: 4, duration: 2020, cost: 105000, damageScale: 26.5 },
-  { key: "world-tree-wave", weaponName: "세계수 성검", title: "생명의 파동", subtitle: "거대한 생명 룬이 전장을 휩씀", glyph: "樹", tier: 13, visualHits: 22, variants: 4, duration: 2100, cost: 170000, damageScale: 35 },
-  { key: "myriad-blades-one", weaponName: "길드마스터 신검", title: "만검귀일", subtitle: "수천 검광이 하나의 종언으로 수렴", glyph: "神", tier: 14, visualHits: 25, variants: 4, duration: 2200, cost: 280000, damageScale: 46.5 },
+  { key: "cross-cut", weaponName: "쌍날검", title: "교차참", subtitle: "엇갈리는 2연속 참격", glyph: "×", tier: 2, visualHits: 2, variants: 2, duration: 820, cost: 180, damageScale: 1.68 },
+  { key: "weakpoint-break", weaponName: "룬 파쇄검", title: "약점 파쇄", subtitle: "표식을 꿰뚫는 3단 베기", glyph: "◎", tier: 3, visualHits: 3, variants: 3, duration: 980, cost: 360, damageScale: 2.18 },
+  { key: "sky-sword-array", weaponName: "천공검", title: "천공검진", subtitle: "길드마스터의 5연속 오의", glyph: "劍", tier: 4, visualHits: 5, variants: 4, duration: 1180, cost: 650, damageScale: 2.85 },
+  { key: "nebula-dance", weaponName: "성운도", title: "성운 난무", subtitle: "별빛 잔상을 남기는 7연참", glyph: "星", tier: 5, visualHits: 7, variants: 4, duration: 1320, cost: 1100, damageScale: 3.72 },
+  { key: "dragon-vein-break", weaponName: "용맥검", title: "용맥 붕괴", subtitle: "번개와 검풍으로 전장을 가르는 9연격", glyph: "龍", tier: 6, visualHits: 9, variants: 4, duration: 1480, cost: 1800, damageScale: 4.88 },
+  { key: "celestial-ruin", weaponName: "천상검", title: "천상 종언", subtitle: "천공의 룬과 낙검이 겹치는 12연 오의", glyph: "天", tier: 7, visualHits: 12, variants: 4, duration: 1680, cost: 2900, damageScale: 6.5 },
+  { key: "blood-moon-eclipse", weaponName: "혈월도", title: "붉은 월식", subtitle: "핏빛 초승달이 겹쳐지는 13연참", glyph: "月", tier: 8, visualHits: 13, variants: 4, duration: 1740, cost: 4500, damageScale: 8.6 },
+  { key: "storm-twin-dance", weaponName: "폭풍쌍검", title: "뇌광 연무", subtitle: "번개 궤적을 남기는 쌍검 난무", glyph: "雷", tier: 9, visualHits: 15, variants: 4, duration: 1800, cost: 6800, damageScale: 11.4 },
+  { key: "radiant-judgment", weaponName: "성휘 대검", title: "성광 심판", subtitle: "빛의 기둥과 대검이 함께 낙하", glyph: "光", tier: 10, visualHits: 16, variants: 4, duration: 1880, cost: 10000, damageScale: 15.1 },
+  { key: "abyss-sever", weaponName: "심연검", title: "공허 절단", subtitle: "전장을 가르는 검은 균열의 일격", glyph: "闇", tier: 11, visualHits: 18, variants: 4, duration: 1940, cost: 15000, damageScale: 20 },
+  { key: "time-collapse", weaponName: "시간절단검", title: "찰나 붕괴", subtitle: "멈춘 시간 위로 모든 참격이 겹침", glyph: "時", tier: 12, visualHits: 20, variants: 4, duration: 2020, cost: 22000, damageScale: 26.5 },
+  { key: "world-tree-wave", weaponName: "세계수 성검", title: "생명의 파동", subtitle: "거대한 생명 룬이 전장을 휩씀", glyph: "樹", tier: 13, visualHits: 22, variants: 4, duration: 2100, cost: 32000, damageScale: 35 },
+  { key: "myriad-blades-one", weaponName: "길드마스터 신검", title: "만검귀일", subtitle: "수천 검광이 하나의 종언으로 수렴", glyph: "神", tier: 14, visualHits: 25, variants: 4, duration: 2200, cost: 46000, damageScale: 46.5 },
 ];
 
 const CLICK_EFFECT_SPARKS = Array.from({ length: 12 }, (_, index) => index);
@@ -132,6 +142,15 @@ const WEAPON_MAX_LEVEL = CLICK_ATTACK_PATTERNS.length - 1;
 function clickAttackPattern(level: number) {
   return CLICK_ATTACK_PATTERNS[Math.min(CLICK_ATTACK_PATTERNS.length - 1, Math.max(0, level))];
 }
+
+const COMBAT_STYLE_LABELS: Record<CombatStyle, { name: string; glyph: string; effect: string }> = {
+  vanguard: { name: "선봉", glyph: "盾", effect: "근거리 자동 검격" },
+  marksman: { name: "사격", glyph: "➶", effect: "원거리 자동 투사체" },
+  assassin: { name: "암살", glyph: "刃", effect: "빠른 자동 연타" },
+  arcane: { name: "비전", glyph: "✦", effect: "주기적 광역 스킬" },
+  support: { name: "지원", glyph: "+", effect: "길드원 공격 주기 단축" },
+  breaker: { name: "돌파", glyph: "拳", effect: "묵직한 자동 강타" },
+};
 
 const initialState: SaveState = {
   gold: 160,
@@ -153,11 +172,11 @@ const initialState: SaveState = {
 };
 
 const upgradeInfo: Record<UpgradeKey, { title: string; description: string; base: number; accent: string }> = {
-  range: { title: "참격 범위", description: "클릭 공격 반경 +2.75", base: 110, accent: "원" },
-  critical: { title: "치명타", description: "치명타 확률 +5%", base: 170, accent: "치" },
-  combo: { title: "연격 리듬", description: "5번째 클릭 강화", base: 210, accent: "련" },
-  execution: { title: "처형술", description: "빈사 몬스터 즉시 처치", base: 280, accent: "참" },
-  shockwave: { title: "충격파", description: "일정 클릭마다 광역 파동", base: 320, accent: "파" },
+  range: { title: "참격 범위", description: "플레이어 클릭 공격 반경 +2.75", base: 110, accent: "원" },
+  critical: { title: "치명타", description: "플레이어 무기 치명타 +5%", base: 170, accent: "치" },
+  combo: { title: "연격 리듬", description: "5번째 플레이어 클릭 강화", base: 210, accent: "련" },
+  execution: { title: "처형술", description: "클릭 공격으로 빈사 몬스터 즉시 처치", base: 280, accent: "참" },
+  shockwave: { title: "충격파", description: "일정 클릭마다 플레이어 광역 파동", base: 320, accent: "파" },
   momentum: { title: "전투 몰입", description: "빠른 연속 클릭 피해 증가", base: 360, accent: "속" },
   time: { title: "원정 보급", description: "전투 제한 시간 +5초", base: 150, accent: "시" },
   scout: { title: "전장 정찰", description: "잔존 세력 추정 정밀화", base: 135, accent: "눈" },
@@ -273,6 +292,14 @@ function attackFor(member: MemberDefinition, progress: MemberProgress | undefine
   return member.attack + member.growth * (state.level - 1) + state.gear * (4 + RANK_ORDER.indexOf(member.rank) * 5);
 }
 
+function combatStyleCounts(members: MemberDefinition[]) {
+  return members.reduce<Record<CombatStyle, number>>((counts, member) => {
+    const style = combatTraitFor(member).style;
+    counts[style] += 1;
+    return counts;
+  }, { vanguard: 0, marksman: 0, assassin: 0, arcane: 0, support: 0, breaker: 0 });
+}
+
 function randomCandidates(state: SaveState, count = 3) {
   const maxRank = Math.min(6, 1 + state.upgrades.tavern);
   const pool = MEMBERS.filter((member) => !state.owned.includes(member.id) && RANK_ORDER.indexOf(member.rank) <= maxRank);
@@ -281,19 +308,23 @@ function randomCandidates(state: SaveState, count = 3) {
 }
 
 function spawnMonsterPack(stage: ReturnType<typeof getStage>): FieldMonster[] {
-  const count = Math.min(24, 7 + stage.localStage + Math.floor(stage.stage / 20) * 2 + (stage.boss ? 5 : 0));
+  const count = stage.localStage === 1
+    ? Math.min(64, 42 + stage.regionIndex * 2)
+    : stage.localStage === 2
+      ? Math.min(88, 68 + stage.regionIndex * 2)
+      : Math.min(84, 54 + stage.regionIndex * 3);
   const weights = Array.from({ length: count }, (_, index) => stage.boss && index === 0 ? 5 : index % 7 === 0 ? 1.75 : .82 + index % 4 * .16);
   const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-  const totalHp = Math.round(stage.hp * (stage.boss ? 1.75 : 1.5));
+  const totalHp = Math.round(stage.hp * (stage.boss ? 1.7 : 1.42));
 
   return weights.map((weight, index) => {
     const maxHp = Math.max(4, Math.round(totalHp * weight / totalWeight));
     const kind: FieldMonster["kind"] = stage.boss && index === 0 ? "leader" : index % 7 === 0 ? "brute" : index % 5 === 0 ? "mystic" : "swarm";
     return {
       id: `${stage.stage}-monster-${index}`,
-      x: 29 + (index * 37 + stage.stage * 13) % 63,
-      y: 23 + (index * 29 + stage.stage * 7) % 61,
-      scale: kind === "leader" ? 1.28 : kind === "brute" ? 1.05 : .72 + index % 4 * .08,
+      x: 12 + (index * 37 + stage.stage * 13 + Math.floor(index / 9) * 11) % 78,
+      y: 14 + (index * 29 + stage.stage * 7 + Math.floor(index / 7) * 13) % 72,
+      scale: kind === "leader" ? 1.28 : kind === "brute" ? 1.02 : .62 + index % 4 * .07,
       hp: maxHp,
       maxHp,
       hitId: 0,
@@ -374,9 +405,7 @@ export default function Game() {
   const [clicks, setClicks] = useState(0);
   const [momentumStacks, setMomentumStacks] = useState(0);
   const [hitFx, setHitFx] = useState<ClickAttackFx | null>(null);
-  const [memberFx, setMemberFx] = useState<Record<string, number>>({});
-  const [memberSkillFx, setMemberSkillFx] = useState<Record<string, number>>({});
-  const [skillFx, setSkillFx] = useState<string | null>(null);
+  const [memberWeaponFx, setMemberWeaponFx] = useState<MemberWeaponFx[]>([]);
   const [lostMembers, setLostMembers] = useState<string[]>([]);
   const [territoryPulse, setTerritoryPulse] = useState(0);
   const [lootDrops, setLootDrops] = useState<BattleLootDrop[]>([]);
@@ -389,6 +418,7 @@ export default function Game() {
   const lastAttack = useRef<Record<string, number>>({});
   const lastSkill = useRef<Record<string, number>>({});
   const clickFxCounter = useRef(0);
+  const memberWeaponFxCounter = useRef(0);
   const clickCount = useRef(0);
   const momentumState = useRef({ lastAt: 0, stacks: 0 });
   const victoryLock = useRef(false);
@@ -406,6 +436,7 @@ export default function Game() {
   const partyMembers = useMemo(() => developerMode && !save.party.length ? [memberById("roan")] : save.party.map(memberById), [developerMode, save.party]);
   const progressFor = useCallback((member: MemberDefinition) => developerMode ? { level: member.maxLevel, xp: 0, gear: DEV_GEAR_LEVEL } : save.progress[member.id], [developerMode, save.progress]);
   const developerPower = developerMode ? DEV_POWER_MULTIPLIER : 1;
+  const traitCounts = useMemo(() => combatStyleCounts(partyMembers), [partyMembers]);
   const clickVisualLevel = developerMode ? developerClickLevel : save.weaponLevel;
   const activeClickPattern = clickAttackPattern(clickVisualLevel);
   const clickDamage = Math.round(12 * activeClickPattern.damageScale * developerPower);
@@ -417,12 +448,14 @@ export default function Game() {
   const momentumLevel = developerMode ? UPGRADE_CAPS.momentum : save.upgrades.momentum;
   const momentumMaxStacks = momentumLevel ? 3 + momentumLevel * 2 : 0;
   const guildMultiplier = Math.pow(1.15, save.upgrades.guild);
+  const assistMultiplier = 1 + traitCounts.support * .12 + traitCounts.vanguard * .08;
   const goldMultiplier = Math.pow(1.1, save.upgrades.gold);
-  const battleSeconds = developerMode ? DEV_BATTLE_SECONDS : (stage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + save.upgrades.time * 5;
+  const battleSeconds = developerMode ? DEV_BATTLE_SECONDS : (stage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + save.upgrades.time * 5 + traitCounts.support * 3;
   const battleTimeLeft = battleDeadline ? Math.max(0, Math.ceil((battleDeadline - now) / 1000)) : battleSeconds;
   const lootCollecting = lootPhase === "collecting";
   const combatLocked = battleActive || lootCollecting || victory || defeat;
   const aliveMonsters = useMemo(() => fieldMonsters.filter((monster) => monster.hp > 0), [fieldMonsters]);
+  const defeatedMonsters = fieldMonsters.length - aliveMonsters.length;
   const droppedGold = useMemo(() => lootDrops.reduce((sum, drop) => sum + (drop.kind === "gold" ? drop.amount : 0), 0), [lootDrops]);
   const droppedMaterial = useMemo(() => lootDrops.reduce((sum, drop) => sum + (drop.kind === "material" ? drop.amount : 0), 0), [lootDrops]);
   const lootSweepProgress = ((plannedGold ? collectedGold / plannedGold : 1) + (plannedMaterial ? collectedMaterial / plannedMaterial : 1)) / 2 * 100;
@@ -457,8 +490,8 @@ export default function Game() {
   const combatPower = useMemo(() => {
     const partyPower = partyMembers.reduce((sum, member) => sum + attackFor(member, progressFor(member)) * developerPower, 0) * guildMultiplier;
     const playerUtility = 1 + attackRange / 20 + shockwaveLevel * .08 + momentumLevel * .1;
-    return Math.round(clickDamage * playerUtility + partyPower * MEMBER_ASSIST_FACTOR);
-  }, [partyMembers, progressFor, developerPower, clickDamage, guildMultiplier, attackRange, shockwaveLevel, momentumLevel]);
+    return Math.round(clickDamage * playerUtility + partyPower * MEMBER_ASSIST_FACTOR * assistMultiplier);
+  }, [partyMembers, progressFor, developerPower, clickDamage, guildMultiplier, attackRange, shockwaveLevel, momentumLevel, assistMultiplier]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- Saved progress is intentionally restored after the client mounts. */
   useEffect(() => {
@@ -474,7 +507,10 @@ export default function Game() {
         const inferredHallLevel = inferHallLevelFromNodes(migratedNodes);
         const migratedHallLevel = Math.min(GUILD_HALL_STAGES.length, Math.max(inferredHallLevel, loaded.guildHallLevel ?? 1));
         const migratedMaterials = Object.fromEntries(Object.entries(loaded.materials ?? {}).filter(([id, amount]) => stageMaterialById(id) && Number.isFinite(amount) && amount >= 0));
-        setSave({ ...initialState, ...loaded, materials: migratedMaterials, guildHallLevel: migratedHallLevel, weaponLevel: migratedWeaponLevel, nodes: migratedNodes, upgrades: migratedUpgrades, specials: { ...initialState.specials, ...loaded.specials } });
+        const migratedSelectedStage = Math.min(STAGE_COUNT, Math.max(1, loaded.selectedStage ?? 1));
+        const migratedUnlockedStage = Math.min(STAGE_COUNT, Math.max(1, loaded.unlockedStage ?? 1));
+        const migratedCleared = (loaded.cleared ?? []).filter((stageNumber) => stageNumber >= 1 && stageNumber <= STAGE_COUNT);
+        setSave({ ...initialState, ...loaded, selectedStage: migratedSelectedStage, unlockedStage: migratedUnlockedStage, cleared: migratedCleared, materials: migratedMaterials, guildHallLevel: migratedHallLevel, weaponLevel: migratedWeaponLevel, nodes: migratedNodes, upgrades: migratedUpgrades, specials: { ...initialState.specials, ...loaded.specials } });
       }
     } catch {
       setToast("저장 데이터를 불러오지 못해 새 게임으로 시작합니다.");
@@ -535,7 +571,7 @@ export default function Game() {
         materials: { ...current.materials, [stageMaterial.id]: (current.materials[stageMaterial.id] ?? 0) + earnedMaterial },
         bossTokens: current.bossTokens + (stage.boss && firstClear ? 1 : 0),
         cleared: firstClear ? [...current.cleared, stage.stage] : current.cleared,
-        unlockedStage: firstClear ? Math.min(100, Math.max(current.unlockedStage, stage.stage + 1)) : current.unlockedStage,
+        unlockedStage: firstClear ? Math.min(STAGE_COUNT, Math.max(current.unlockedStage, stage.stage + 1)) : current.unlockedStage,
         progress,
       };
     });
@@ -623,18 +659,8 @@ export default function Game() {
     lootPlan.current = [];
     lootDropsRef.current = [];
     revealedLootIds.current.clear();
-    const casualties = [...save.party];
-    setLostMembers(casualties);
-    if (!developerMode) {
-      setSave((current) => {
-        const lost = new Set(current.party);
-        const progress = { ...current.progress };
-        lost.forEach((id) => delete progress[id]);
-        const next = { ...current, owned: current.owned.filter((id) => !lost.has(id)), party: [], progress, candidates: [] };
-        return { ...next, candidates: randomCandidates(next) };
-      });
-    }
-    setToast(developerMode ? "개발자 전투 실패 · 길드원 손실은 저장되지 않습니다." : "원정대가 전멸했습니다. 출전했던 길드원은 길드 명부에서 영구 삭제되었습니다.");
+    setLostMembers([...save.party]);
+    setToast(developerMode ? "개발자 전투 실패 · 진행도는 저장되지 않습니다." : "원정 실패 · 길드원은 부상만 입고 여관으로 복귀했습니다. 조합을 바꿔 즉시 재도전하세요.");
   }, [clearLootTimers, developerMode, save.party]);
 
   useEffect(() => {
@@ -667,29 +693,45 @@ export default function Game() {
     });
   }, [awardVictory, executionThreshold]);
 
+  const emitMemberWeaponFx = useCallback((member: MemberDefinition, point: { x: number; y: number }, skill = false, slot = 0) => {
+    const id = memberWeaponFxCounter.current + 1;
+    memberWeaponFxCounter.current = id;
+    const angle = slot * Math.PI / 2 - Math.PI / 4;
+    const fx: MemberWeaponFx = {
+      id,
+      memberId: member.id,
+      style: combatTraitFor(member).style,
+      glyph: member.glyph,
+      color: member.hue,
+      x: Math.max(5, Math.min(95, point.x + Math.cos(angle) * (skill ? 4 : 2))),
+      y: Math.max(8, Math.min(92, point.y + Math.sin(angle) * (skill ? 4 : 2))),
+      skill,
+    };
+    setMemberWeaponFx((current) => [...current.slice(-18), fx]);
+    window.setTimeout(() => setMemberWeaponFx((current) => current.filter((effect) => effect.id !== id)), skill ? 1050 : 720);
+  }, []);
+
   useEffect(() => {
     if (!battleActive || tab !== "field" || !aliveMonsters.length) return;
     partyMembers.forEach((member, index) => {
-      const attackMs = member.interval * 1000;
-      const skillMs = member.skillCooldown * 1000;
+      const attackMs = member.interval * 1000 / (1 + traitCounts.support * .08);
+      const skillMs = member.skillCooldown * 1000 / (1 + traitCounts.support * .06);
       if (!lastAttack.current[member.id]) lastAttack.current[member.id] = now;
       if (!lastSkill.current[member.id]) lastSkill.current[member.id] = now;
       if (now - lastAttack.current[member.id] >= attackMs) {
         lastAttack.current[member.id] = now;
         const target = aliveMonsters[(index + Math.floor(now / Math.max(1, attackMs))) % aliveMonsters.length];
-        damageMonsters([target.id], attackFor(member, progressFor(member)) * guildMultiplier * developerPower * MEMBER_ASSIST_FACTOR);
-        setMemberFx((current) => ({ ...current, [member.id]: now }));
+        damageMonsters([target.id], attackFor(member, progressFor(member)) * guildMultiplier * developerPower * MEMBER_ASSIST_FACTOR * assistMultiplier);
+        emitMemberWeaponFx(member, target, false, index);
       }
       if (now - lastSkill.current[member.id] >= skillMs) {
         lastSkill.current[member.id] = now;
         const skillTargets = aliveMonsters.slice(index % aliveMonsters.length).concat(aliveMonsters).slice(0, Math.min(aliveMonsters.length, 2 + Math.floor(save.upgrades.guild / 2)));
-        damageMonsters(skillTargets.map((monster) => monster.id), attackFor(member, progressFor(member)) * guildMultiplier * member.skillMultiplier * developerPower * MEMBER_ASSIST_FACTOR);
-        setMemberSkillFx((current) => ({ ...current, [member.id]: now }));
-        setSkillFx(member.id);
-        window.setTimeout(() => setSkillFx((current) => current === member.id ? null : current), 1100);
+        damageMonsters(skillTargets.map((monster) => monster.id), attackFor(member, progressFor(member)) * guildMultiplier * member.skillMultiplier * developerPower * MEMBER_ASSIST_FACTOR * assistMultiplier);
+        emitMemberWeaponFx(member, bestAttackPoint(skillTargets, attackRange), true, index);
       }
     });
-  }, [now, battleActive, tab, aliveMonsters, partyMembers, progressFor, developerPower, guildMultiplier, save.upgrades.guild, damageMonsters]);
+  }, [now, battleActive, tab, aliveMonsters, partyMembers, progressFor, developerPower, guildMultiplier, save.upgrades.guild, damageMonsters, traitCounts.support, assistMultiplier, emitMemberWeaponFx, attackRange]);
 
   const directAttackAt = useCallback((x: number, y: number, automatic = false) => {
     if (!battleActive || !aliveMonsters.length) return;
@@ -780,7 +822,7 @@ export default function Game() {
     }
     const nextStage = getStage(stageNumber);
     const nextMaterial = stageMaterialFor(stageNumber);
-    const durationSeconds = developerMode ? DEV_BATTLE_SECONDS : (nextStage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + save.upgrades.time * 5;
+    const durationSeconds = developerMode ? DEV_BATTLE_SECONDS : (nextStage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + save.upgrades.time * 5 + traitCounts.support * 3;
     const monsters = spawnMonsterPack(nextStage);
     const rewardGold = Math.round(nextStage.gold * goldMultiplier);
     clearLootTimers();
@@ -791,8 +833,7 @@ export default function Game() {
     revealedLootIds.current.clear();
     lastAttack.current = {};
     lastSkill.current = {};
-    setMemberFx({});
-    setMemberSkillFx({});
+    setMemberWeaponFx([]);
     setHitFx(null);
     clickCount.current = 0;
     momentumState.current = { lastAt: 0, stacks: 0 };
@@ -814,7 +855,7 @@ export default function Game() {
     else setSave((current) => ({ ...current, selectedStage: stageNumber }));
     setStagePicker(false);
     setTab("field");
-    setToast(`${nextStage.region.name} ${nextStage.localStage}구역 진입. 필드를 눌러 범위 안의 몬스터 무리를 베어내세요.`);
+    setToast(`${nextStage.region.name} ${nextStage.localStage}웨이브 진입 · 몬스터 ${monsters.length}마리가 몰려옵니다! 길드 조합으로 전장을 쓸어내세요.`);
   }
 
   function returnToGuild(message = "파티를 영지로 복귀시켰습니다.") {
@@ -826,6 +867,8 @@ export default function Game() {
     setVictory(false);
     setDefeat(false);
     setFieldMonsters([]);
+    setMemberWeaponFx([]);
+    setWeaponCursor((cursor) => ({ ...cursor, visible: false }));
     setLootDrops([]);
     setLootPhase("idle");
     setCollectedGold(0);
@@ -851,29 +894,30 @@ export default function Game() {
     setDeveloperMode(next);
     setDeveloperStage(next ? save.selectedStage : null);
     if (next) setDeveloperClickLevel(CLICK_ATTACK_PATTERNS.length - 1);
-    setToast(next ? "개발자 모드 ON · 모든 스테이지와 신화 장비가 임시 해금됩니다. 결과는 저장되지 않습니다." : "개발자 모드 OFF · 원래 저장 진행도로 돌아왔습니다.");
+    setToast(next ? `개발자 모드 ON · 30개 웨이브, 최대 길드 화력, 무기 15종이 임시 해금됩니다. 결과는 저장되지 않습니다.` : "개발자 모드 OFF · 원래 저장 진행도로 돌아왔습니다.");
   }
 
   function previewClickPattern(level: number) {
     const pattern = clickAttackPattern(level);
     setDeveloperClickLevel(level);
     setHitFx(null);
-    setToast(`무기 ${pattern.tier + 1}/15 · ${pattern.weaponName} · ${pattern.title} 미리보기로 변경했습니다. 몬스터를 눌러 연출을 확인하세요.`);
+    setToast(`플레이어 무기 ${pattern.tier + 1}/15 · ${pattern.weaponName} · ${pattern.title} 미리보기입니다.`);
   }
 
   function purchaseWeaponUpgrade() {
     const nextLevel = save.weaponLevel + 1;
-    if (nextLevel > WEAPON_MAX_LEVEL) return setToast("모든 무기를 완성했습니다. 길드마스터 신검이 최종 단계입니다!");
+    if (nextLevel > WEAPON_MAX_LEVEL) return setToast("모든 플레이어 무기를 완성했습니다. 길드마스터 신검이 최종 단계입니다!");
     const nextWeapon = clickAttackPattern(nextLevel);
     const recipe = weaponMaterialRecipe(nextLevel);
     if (save.gold < nextWeapon.cost) return setToast(`${nextWeapon.weaponName}을(를) 제작할 골드가 부족합니다.`);
-    if (!canAffordWeaponRecipe(save.materials, recipe) && recipe) return setToast(`${nextWeapon.weaponName} 제작에는 ${recipe.material.name} ${recipe.amount}개가 필요합니다. ${recipe.material.stage}구역을 반복 토벌하세요.`);
+    if (!canAffordWeaponRecipe(save.materials, recipe) && recipe) return setToast(`${nextWeapon.weaponName} 제작에는 ${recipe.material.name} ${recipe.amount}개가 필요합니다. ${recipe.material.stage}웨이브를 반복 토벌하세요.`);
     setSave((current) => {
       const materials = consumeWeaponRecipe(current.materials, recipe);
       if (!materials || current.gold < nextWeapon.cost) return current;
       return { ...current, gold: current.gold - nextWeapon.cost, materials, weaponLevel: nextLevel };
     });
-    setToast(`${nextWeapon.weaponName} 완성! ${recipe?.material.name ?? "재료"}을(를) 제련해 기본 공격력이 ${Math.round(nextWeapon.damageScale * 100)}%로 상승했습니다.`);
+    setTerritoryPulse((current) => current + 1);
+    setToast(`${nextWeapon.weaponName} 완성! 플레이어 클릭 공격력이 ${Math.round(nextWeapon.damageScale * 100)}%로 상승했습니다.`);
   }
 
   function purchaseGuildHallUpgrade() {
@@ -918,10 +962,11 @@ export default function Game() {
     if (save.gold < member.cost) return setToast("고용 골드가 부족합니다.");
     setSave((current) => {
       const owned = [...current.owned, id];
-      const next = { ...current, gold: current.gold - member.cost, owned, progress: { ...current.progress, [id]: { level: 1, xp: 0, gear: 0 } } };
+      const party = current.party.length < 4 ? [...current.party, id] : current.party;
+      const next = { ...current, gold: current.gold - member.cost, owned, party, progress: { ...current.progress, [id]: { level: 1, xp: 0, gear: 0 } } };
       return { ...next, candidates: randomCandidates(next) };
     });
-    setToast(`${member.name}이(가) 길드에 합류했습니다!`);
+    setToast(`${member.name} 합류 · ${combatTraitFor(member).title} 효과가 전투에 즉시 적용됩니다!`);
   }
 
   function refreshCandidates() {
@@ -942,10 +987,11 @@ export default function Game() {
     const roll = available[Math.floor(Math.random() * available.length)];
     setSave((current) => {
       const owned = [...current.owned, roll.id];
-      const next = { ...current, gold: current.gold - cost, owned, progress: { ...current.progress, [roll.id]: { level: 1, xp: 0, gear: 0 } } };
+      const party = current.party.length < 4 ? [...current.party, roll.id] : current.party;
+      const next = { ...current, gold: current.gold - cost, owned, party, progress: { ...current.progress, [roll.id]: { level: 1, xp: 0, gear: 0 } } };
       return { ...next, candidates: randomCandidates(next) };
     });
-    setToast(`운명의 계약! ${roll.name}을(를) 고용했습니다.`);
+    setToast(`운명의 계약! ${roll.name} 합류 · ${combatTraitFor(roll).title} 효과가 즉시 적용됩니다.`);
   }
 
   function toggleParty(id: string) {
@@ -967,7 +1013,7 @@ export default function Game() {
 
   function unlockSpecial(key: SpecialKey) {
     if (save.specials[key]) return;
-    if (save.bossTokens < 1) return setToast("보스 증표가 필요합니다. 10번째 스테이지 보스를 처치하세요.");
+    if (save.bossTokens < 1) return setToast("보스 증표가 필요합니다. 각 지역의 3번째 군주 웨이브를 처치하세요.");
     setSave((current) => ({ ...current, bossTokens: current.bossTokens - 1, specials: { ...current.specials, [key]: true } }));
     setToast(`${specialInfo[key].title} 특수 전술을 해금했습니다!`);
   }
@@ -985,6 +1031,7 @@ export default function Game() {
     setDefeat(false);
     setDeveloperMode(false);
     setDeveloperStage(null);
+    setDeveloperClickLevel(CLICK_ATTACK_PATTERNS.length - 1);
     setFieldMonsters([]);
     setLootDrops([]);
     setLootPhase("idle");
@@ -1038,12 +1085,12 @@ export default function Game() {
       </header>
 
       <section className="guild-rank-strip" aria-label="길드 성장 현황">
-        <span className="guild-seal">{RANK_ORDER[Math.min(RANK_ORDER.length - 1, Math.floor(save.unlockedStage / 15))]}</span>
+        <span className="guild-seal">{RANK_ORDER[Math.min(RANK_ORDER.length - 1, Math.floor((save.unlockedStage - 1) / 5))]}</span>
         <div className="guild-rank-copy">
-          <span><b>길드 명성</b><em>{save.unlockedStage * 17 + save.nodes.length * 28} / {(Math.floor(save.unlockedStage / 10) + 1) * 400}</em></span>
-          <i><b style={{ width: `${Math.min(100, (save.unlockedStage % 10 || 10) * 10)}%` }} /></i>
+          <span><b>15분 원정 진척</b><em>{save.unlockedStage}/{STAGE_COUNT} 웨이브</em></span>
+          <i><b style={{ width: `${save.unlockedStage / STAGE_COUNT * 100}%` }} /></i>
         </div>
-        <div className="current-objective"><small>현재 목표</small><strong>{stage.boss ? `${stage.name} 처치` : `${stage.region.name} ${stage.localStage}구역 돌파`}</strong></div>
+        <div className="current-objective"><small>현재 목표</small><strong>{stage.boss ? `${stage.name} 군주전` : `${stage.region.name} ${stage.localStage}웨이브 돌파`}</strong></div>
       </section>
 
       <nav className="main-tabs" aria-label="주요 화면">
@@ -1052,13 +1099,13 @@ export default function Game() {
       </nav>
 
       <div className="toast" role="status"><span aria-hidden="true">✦</span>{toast}</div>
-      {developerMode && <div className="developer-banner" role="status"><strong>개발자 모드</strong><span>스테이지 1–100 임시 해금 · 파티 최대 레벨 · 신화 장비 +{DEV_GEAR_LEVEL} · 무기 15종 비교 · 전투 결과 저장 안 됨</span></div>}
+      {developerMode && <div className="developer-banner" role="status"><strong>개발자 모드</strong><span>30개 웨이브 임시 해금 · 길드원 패시브 최대 화력 · 플레이어 무기 15종 비교 · 전투 결과 저장 안 됨</span></div>}
 
       {tab === "guild" && (
         <section className="screen guild-screen" aria-label="길드 관리">
           <div className="section-heading">
             <div><span className="eyebrow">GUILD TERRITORY</span><h2>길드 관리</h2><p>파티를 편성하고 목표를 지정한 뒤 토벌대를 출정시키세요. 전투가 끝날 때까지 영지로 돌아올 수 없습니다.</p></div>
-            <div className="heading-actions expedition-actions"><button className="secondary-button" onClick={() => setStagePicker(true)}>목표 · {stage.region.name} {stage.localStage}구역</button><button className="primary-button" onClick={() => startStage()}>토벌 출정 ⚔</button></div>
+            <div className="heading-actions expedition-actions"><button className="secondary-button" onClick={() => setStagePicker(true)}>목표 · {stage.region.name} {stage.localStage}웨이브</button><button className="primary-button" onClick={() => startStage()}>군세 토벌 출정 ⚔</button></div>
           </div>
 
           <GuildBuildingHub
@@ -1111,7 +1158,7 @@ export default function Game() {
               </div>
             </div>
             <div className="upgrade-tree-panel panel">
-              <div className="panel-title"><div><span className="eyebrow">GUILD DEVELOPMENT MAP</span><h3>중앙 4방향 발전 노드</h3><p className="panel-description">중앙의 길드 기반에서 직접 공격·전투 리듬·원정 지원·길드 경영 네 방향으로 확장됩니다. 무기 공격력과 연출은 대장간에서만 강화됩니다.</p></div><span className="level-chip">보유 골드 {compactNumber(save.gold)}</span></div>
+              <div className="panel-title"><div><span className="eyebrow">GUILD DEVELOPMENT MAP</span><h3>플레이어·길드 발전 노드</h3><p className="panel-description">플레이어의 클릭 전투와 길드원 패시브 화력을 각각 성장시킵니다. 무기 공격력과 외형은 불꽃 대장간에서 강화됩니다.</p></div><span className="level-chip">보유 골드 {compactNumber(save.gold)}</span></div>
               <ResearchMap nodes={UPGRADE_NODES} purchasedIds={save.nodes} hallLevel={save.guildHallLevel} formatCost={compactNumber} onPurchase={(node: ResearchNodeView) => { const fullNode = UPGRADE_NODES.find((item) => item.id === node.id); if (fullNode) purchaseNode(fullNode); }} />
             </div>
           </>}
@@ -1147,7 +1194,7 @@ export default function Game() {
       {tab === "field" && (
         <section className={`screen field-screen biome-${stage.region.hue}`} aria-label="필드 전투">
           <div className="field-toolbar">
-            <div><span className="eyebrow">CURRENT EXPEDITION · SWARM HUNT</span><h2>{stage.region.name} <b>{stage.localStage}/10</b></h2><small className="permadeath-warning">⚠ 제한 시간 종료 시 출전 길드원 영구 소실</small></div>
+            <div><span className="eyebrow">CURRENT EXPEDITION · GUILD SURVIVOR</span><h2>{stage.region.name} <b>{stage.localStage}/{STAGES_PER_REGION}</b></h2><small className="permadeath-warning">시간 내에 군세를 쓸어내세요 · 실패해도 길드원은 보존됩니다</small></div>
             <div className="field-actions battle-controls">
               {lootCollecting
                 ? <div className="battle-timer loot-sweep-timer"><span>전리품 회수</span><strong>{compactNumber(collectedGold)} G · {collectedMaterial}/{plannedMaterial} 재료</strong><i><b style={{ width: `${lootSweepProgress}%` }} /></i></div>
@@ -1157,55 +1204,20 @@ export default function Game() {
           </div>
 
           <div className="battle-layout">
-            <div className={`arena hack-arena has-forge-cursor panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier} loot-phase-${lootPhase}`} style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties} onPointerDown={attackField} onPointerMove={trackWeaponCursor} onPointerLeave={() => setWeaponCursor((cursor) => ({ ...cursor, visible: false }))} role="application" aria-label="강화 무기 커서로 클릭한 위치를 중심으로 범위 공격하는 몬스터 전장">
+            <div className={`arena hack-arena mass-swarm has-forge-cursor panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier} loot-phase-${lootPhase}`} style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties} onPointerDown={attackField} onPointerMove={trackWeaponCursor} onPointerLeave={() => setWeaponCursor((cursor) => ({ ...cursor, visible: false }))} role="application" aria-label="플레이어의 강화 무기로 클릭한 위치를 공격하고 길드원은 자동 공격하는 몬스터 전장">
               <Image className="field-background-art" src={fieldAsset.source} alt="" fill sizes="(max-width: 1180px) 100vw, 900px" priority={stage.stage <= 10} unoptimized draggable={false} />
               <div className="environment-tag"><span>{BIOME_DETAILS[stage.region.hue].label}</span><small>{BIOME_DETAILS[stage.region.hue].description}</small></div>
               <div className="battle-banner"><span>{stage.boss ? "BOSS SWARM" : `STAGE ${stage.stage}`}</span><strong>{stage.name} 무리</strong></div>
+              <div className="swarm-hud" aria-label={`몬스터 ${defeatedMonsters}체 처치, ${aliveMonsters.length}체 생존`}>
+                <span><small>KILL RUSH</small><strong>{defeatedMonsters}<em> / {fieldMonsters.length}</em></strong></span>
+                <i><b style={{ width: `${fieldMonsters.length ? defeatedMonsters / fieldMonsters.length * 100 : 0}%` }} /></i>
+              </div>
               <div className={`loot-tally ${lootCollecting ? "is-collecting" : ""}`}>
                 <div className="loot-tally-icons"><i className="loot-tally-coin">G</i><i className="stage-material-icon loot-tally-material" style={materialIconVars(stageMaterial) as React.CSSProperties} /></div>
                 <span><small>{lootCollecting ? "촤라락 회수 중" : stageMaterial.name}</small><strong>+{compactNumber(lootCollecting ? collectedGold : droppedGold)} G</strong><em>+{lootCollecting ? collectedMaterial : droppedMaterial} 재료</em></span>
               </div>
-              <div className="field-click-guide"><b>필드를 직접 누르세요</b><span>원 안의 모든 몬스터가 함께 베입니다</span></div>
+              <div className="field-click-guide"><b>필드를 직접 눌러 플레이어 무기로 베세요</b><span>길드원 무기는 각자의 주기에 따라 자동으로 적을 공격합니다</span></div>
               <WeaponCursor weapon={activeClickPattern} point={weaponCursor} />
-
-              <div className="fighters" aria-label="출전 길드원">
-                {partyMembers.map((member, index) => {
-                  const progress = progressFor(member) ?? { level: 1, xp: 0, gear: 0 };
-                  const battleStartedAt = battleDeadline ? battleDeadline - battleSeconds * 1000 : now;
-                  const attackElapsed = now - (memberFx[member.id] || now);
-                  const skillElapsed = now - (memberSkillFx[member.id] || battleStartedAt);
-                  const skillReady = Math.min(1, skillElapsed / (member.skillCooldown * 1000));
-                  const motion: MemberMotion = skillFx === member.id
-                    ? "skill"
-                    : memberFx[member.id] && attackElapsed < 850
-                      ? "attack"
-                      : "idle";
-                  const motionEvent = motion === "skill"
-                    ? memberSkillFx[member.id]
-                    : motion === "attack"
-                      ? memberFx[member.id]
-                      : "idle";
-                  return <div className={`fighter fighter-${index + 1} ${skillFx === member.id ? "casting" : ""}`} key={member.id} style={{ "--member-hue": member.hue } as React.CSSProperties}>
-                    <div className="fighter-name"><strong>{member.name.split(" ").at(-1)}</strong><span>Lv.{progress.level}</span></div>
-                    <div className="sprite">
-                      <Image
-                        key={`${member.id}-${motion}-${motionEvent}`}
-                        className="fighter-animation"
-                        src={memberAnimationSource(member.id, motion)}
-                        alt=""
-                        fill
-                        sizes="152px"
-                        unoptimized
-                        draggable={false}
-                      />
-                    </div>
-                    <div className="fighter-shadow" />
-                    <div className="skill-meter" title={`${member.skill} 쿨타임`}><i style={{ width: `${skillReady * 100}%` }} /><span>{skillReady >= 1 ? member.skill : `${Math.max(0, member.skillCooldown - skillElapsed / 1000).toFixed(1)}초`}</span></div>
-                    {memberFx[member.id] ? <i key={memberFx[member.id]} className="attack-trail" /> : null}
-                    {attackElapsed < 260 ? <span className="fighter-burst">✦</span> : null}
-                  </div>;
-                })}
-              </div>
 
               <div className="monster-pack" aria-hidden="true">
                 {fieldMonsters.map((monster, index) => {
@@ -1227,6 +1239,20 @@ export default function Game() {
                     {monster.kind === "leader" && <b className="leader-mark">♛</b>}
                   </span>;
                 })}
+              </div>
+
+              <div className="member-weapon-layer" aria-hidden="true">
+                {memberWeaponFx.map((effect) => <span
+                  className={`member-weapon-fx weapon-style-${effect.style} ${effect.skill ? "is-skill" : ""}`}
+                  key={effect.id}
+                  style={{ left: `${effect.x}%`, top: `${effect.y}%`, "--weapon-color": effect.color } as React.CSSProperties}
+                >
+                  <i className="member-projectile primary" />
+                  <i className="member-projectile secondary" />
+                  <i className="member-weapon-impact" />
+                  <b>{effect.glyph}</b>
+                  <small>{memberById(effect.memberId).name.split(" ").at(-1)} · {effect.skill ? memberById(effect.memberId).skill : COMBAT_STYLE_LABELS[effect.style].name}</small>
+                </span>)}
               </div>
 
               <div className="gold-loot-layer" aria-hidden="true">
@@ -1291,9 +1317,7 @@ export default function Game() {
                 </span>
               </>}
 
-              {hitFx && !hitFx.automatic && <span className="sr-only" role="status">{activeCombatProcs.length ? `${activeCombatProcs.map((proc) => `${proc.title} 레벨 ${proc.level}`).join(", ")} 발동. ` : "일반 직접 공격. "}{clickAttackPattern(hitFx.tier).title}, 범위 안의 몬스터 {hitFx.hitCount}체 타격</span>}
-
-              {skillFx && <div className="skill-flash" key={`${skillFx}-${now}`}><span>{memberById(skillFx).skill}!</span></div>}
+              {hitFx && !hitFx.automatic && <span className="sr-only" role="status">{activeCombatProcs.length ? `${activeCombatProcs.map((proc) => `${proc.title} 레벨 ${proc.level}`).join(", ")} 발동. ` : "일반 직접 공격. "}플레이어의 {clickAttackPattern(hitFx.tier).title}, 범위 안의 몬스터 {hitFx.hitCount}체 타격</span>}
             </div>
 
             <aside className="battle-sidebar">
@@ -1302,18 +1326,26 @@ export default function Game() {
                 <div className="intel-report"><span>정찰 보고</span><strong>{intelReport}</strong><small>적의 체력과 정확한 잔여 수는 알 수 없습니다. 화면의 움직임을 보고 후퇴를 결정하세요.</small></div>
                 <div className="reward-preview"><span>예상 보상</span><strong>골드 {compactNumber(stage.gold * goldMultiplier)}</strong><strong className="material-reward-preview"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} />{stageMaterial.name} {stageMaterial.rewardAmount}</strong><strong>경험치 {compactNumber(stage.xp)}</strong>{stage.boss && <strong>증표 1</strong>}</div>
               </div>
-              <div className="party-status panel"><div className="panel-title"><h3>보조 전투원</h3><span className="level-chip">{partyMembers.length}/4</span></div>{partyMembers.map((member) => <div className="party-row" key={member.id}><span className="mini-portrait" style={{ "--member-hue": member.hue } as React.CSSProperties}>{member.glyph}</span><span><strong>{member.name}</strong><small>{member.job} · 보조 타격 {compactNumber(attackFor(member, progressFor(member)) * guildMultiplier * developerPower * MEMBER_ASSIST_FACTOR)}</small></span><b>{developerMode ? `신화 +${DEV_GEAR_LEVEL}` : member.skill}</b></div>)}</div>
+              <div className="party-status panel guild-arsenal-panel">
+                <div className="panel-title"><h3>길드원 패시브 무기</h3><span className="level-chip">{partyMembers.length}/4</span></div>
+                <div className="equipped-member-weapons" aria-label="자동 공격하는 길드원 패시브 무기">
+                  {partyMembers.map((member) => { const trait = combatTraitFor(member); return <span className={`equipped-member-weapon weapon-slot-${trait.style}`} key={member.id} style={{ "--weapon-color": member.hue } as React.CSSProperties}><b>{member.glyph}</b><small>{member.interval}초</small><strong>{member.skill}</strong></span>; })}
+                </div>
+                {partyMembers.map((member) => { const trait = combatTraitFor(member); return <div className="party-row" key={member.id}><span className="mini-portrait" style={{ "--member-hue": member.hue } as React.CSSProperties}>{member.glyph}</span><span><strong>{member.name}</strong><small>{member.job} · {member.interval}초마다 독립 자동 공격</small></span><b>{trait.title}</b></div>; })}
+                <small>플레이어가 클릭하지 않아도 각 길드원이 자신의 무기와 스킬을 자동 발동합니다.</small>
+              </div>
               <div className={`click-power panel click-power-tier-${activeClickPattern.tier}`}>
-                <span>길드마스터 직접 공격</span>
+                <span>길드마스터 직접 공격 · 대장간 무기</span>
                 {developerMode && <div className="developer-pattern-picker">
-                  <strong>무기 업그레이드 비교</strong>
-                  <div role="group" aria-label="무기 업그레이드 공격 미리보기">
+                  <strong>플레이어 무기 15종 비교</strong>
+                  <div role="group" aria-label="플레이어 무기 업그레이드 공격 미리보기">
                     {CLICK_ATTACK_PATTERNS.map((pattern) => <button key={pattern.key} className={pattern.tier === activeClickPattern.tier ? "active" : ""} onClick={() => previewClickPattern(pattern.tier)} aria-pressed={pattern.tier === activeClickPattern.tier} aria-label={`무기 ${pattern.tier + 1}단계 ${pattern.weaponName} ${pattern.title}`} title={`${pattern.weaponName} · ${pattern.title} · ${pattern.subtitle}`}><b>{pattern.glyph}</b><small>{pattern.tier + 1} · {pattern.weaponName}</small></button>)}
                   </div>
-                  <small>단계를 고른 뒤 몬스터를 눌러 비교하세요.</small>
+                  <small>단계를 고른 뒤 필드를 눌러 연출을 비교하세요.</small>
                 </div>}
                 <div className="click-pattern-card"><b>{activeClickPattern.glyph}</b><span><strong>{activeClickPattern.weaponName} · {activeClickPattern.title}</strong><small>무기 {activeClickPattern.tier + 1}/15 · {activeClickPattern.subtitle}</small></span><em>{activeClickPattern.visualHits} HIT</em></div>
-                <strong>{compactNumber(clickDamage)} 피해</strong>
+                <strong>{compactNumber(clickDamage)} 플레이어 피해</strong>
+                <div className="click-combat-stats"><span><b>공격 반경</b><em>{attackRange.toFixed(1)}</em></span><span><b>치명타</b><em>{Math.round(criticalChance * 100)}%</em></span><span><b>처형선</b><em>{executionThreshold ? `${Math.round(executionThreshold * 100)}%` : "없음"}</em></span></div>
                 <div className="attack-upgrade-monitor" aria-label="직접 공격 강화 현황">
                   {attackUpgradeStatuses.map((upgrade) => <span key={upgrade.key} className={`${upgrade.level ? "unlocked" : "locked"} ${upgrade.ready ? "ready" : ""} ${upgrade.active ? "triggered" : ""}`}>
                     <Image src={UPGRADE_ICON_BY_KEY[upgrade.key]} alt="" width={30} height={30} aria-hidden="true" />
@@ -1323,14 +1355,14 @@ export default function Game() {
                   </span>)}
                 </div>
                 <small className="battle-click-count">직접 공격 {clicks}회 · 아이콘이 빛나면 해당 길드 강화가 발동한 공격입니다.</small>
-                <small>{save.specials.double ? "쌍격 적용 · 범위 내 모든 적에게 2배" : "클릭 위치와 공격 반경이 손맛을 결정합니다"}</small>
+                <small>{save.specials.double ? "쌍격 적용 · 플레이어 공격이 항상 두 번 적중" : "클릭 위치와 공격 반경은 플레이어 무기에만 적용됩니다"}</small>
                 <button className="attack-button" onClick={() => directAttackAt(autoAttackPoint.x, autoAttackPoint.y, false)} disabled={!battleActive}>{activeClickPattern.glyph} 가장 밀집한 곳 베기</button>
               </div>
             </aside>
           </div>
 
-          {victory && <div className="victory-overlay"><div className="victory-card"><span className="victory-star">★</span><p>STAGE CLEAR</p><h2>토벌 성공!</h2><div className="outcome-rewards"><span>{developerMode ? "개발자 결과 · 저장 안 됨" : <>골드 <b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span className="material-victory-reward"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} />{stageMaterial.name} <b>+{stageMaterial.rewardAmount}</b></span>}{!developerMode && <span>경험치 <b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span>보스 토벌 완료</span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? 100 : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(100, stage.stage + 1))}>다음 구역 출정</button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}>반복 토벌</button><button className="text-button" onClick={() => returnToGuild("토벌을 마치고 영지로 복귀했습니다.")}>영지로 복귀</button></div></div></div>}
-          {defeat && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">☠</span><p>EXPEDITION FAILED</p><h2>원정대 전멸</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드에서는 손실이 저장되지 않습니다." : "출전 길드원이 명부에서 영구 삭제되었습니다."}</strong>{lostMembers.map((id) => <span key={id}>† {memberById(id).name}</span>)}<span>시간이 부족하다고 판단되면 전멸 전에 안전 후퇴해야 합니다.</span></div><button className="primary-button" onClick={() => returnToGuild(developerMode ? "개발자 전투에서 복귀했습니다." : "전사자 기록을 남기고 영지로 복귀했습니다. 여관에서 새 원정대를 모집하세요.")}>영지로 귀환</button></div></div>}
+          {victory && <div className="victory-overlay"><div className="victory-card"><span className="victory-star">★</span><p>WAVE ANNIHILATED</p><h2>{fieldMonsters.length}체 도륙 완료!</h2><div className="outcome-rewards"><span>{developerMode ? "개발자 결과 · 저장 안 됨" : <>골드 <b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span className="material-victory-reward"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} />{stageMaterial.name} <b>+{stageMaterial.rewardAmount}</b></span>}{!developerMode && <span>경험치 <b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span>군주 웨이브 토벌 완료</span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? STAGE_COUNT : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(STAGE_COUNT, stage.stage + 1))}>다음 웨이브 즉시 진입</button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}>반복 도륙</button><button className="text-button" onClick={() => returnToGuild("토벌을 마치고 영지로 복귀했습니다.")}>영지로 복귀</button></div></div></div>}
+          {defeat && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">⚑</span><p>EXPEDITION FAILED</p><h2>공세 실패</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드 전투가 종료되었습니다." : "길드원은 모두 부상만 입고 여관으로 복귀합니다."}</strong>{lostMembers.map((id) => <span key={id}>＋ {memberById(id).name} · 회복 완료</span>)}<span>파티의 전투 개입 조합을 바꾸거나 같은 웨이브를 바로 재도전하세요.</span></div><button className="primary-button" onClick={() => returnToGuild(developerMode ? "개발자 전투에서 복귀했습니다." : "길드원과 함께 영지로 복귀했습니다. 조합을 정비해 다시 출정하세요.")}>길드원과 귀환</button></div></div>}
         </section>
       )}
 
