@@ -81,3 +81,24 @@ test("routes guild management through buildings and gates four-way research", as
   assert.match(researchMap, /길드 경영/);
   assert.match(researchMap, /본관 Lv\.\$\{requiredHallLevel\} 필요/);
 });
+
+test("upgrades the flame forge and carries the equipped weapon into the combat cursor", async () => {
+  const [guildAssets, game, hub, forge, weaponArt] = await Promise.all([
+    readdir(new URL("../public/assets/guild/forge/", import.meta.url)),
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/GuildBuildingHub.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/ForgeWorkshop.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/WeaponArt.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.ok(guildAssets.includes("flame-forge-v1.png"));
+  assert.match(hub, /forgeBuildingArt/);
+  assert.match(forge, /FLAME FORGE · MASTERWORK ARSENAL/);
+  assert.match(forge, /공격력만 상승/);
+  assert.match(forge, /무기 진열대/);
+  assert.match(game, /<ForgeWorkshop/);
+  assert.match(game, /<WeaponCursor weapon=\{activeClickPattern\}/);
+  assert.match(game, /onPointerMove=\{trackWeaponCursor\}/);
+  assert.match(weaponArt, /WEAPON_PALETTES/);
+  assert.match(weaponArt, /cursorVisible/);
+});

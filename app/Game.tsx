@@ -13,9 +13,11 @@ import {
 } from "./battle-loot";
 import { fieldAssetForRegion } from "./field-assets";
 import { compactNumber, getStage, MEMBERS, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "./game-data";
+import { ForgeWorkshop } from "./guild-hub/ForgeWorkshop";
 import { GuildBuildingHub } from "./guild-hub/GuildBuildingHub";
 import { ResearchMap, type ResearchNodeView } from "./guild-hub/ResearchMap";
 import { GUILD_HALL_STAGES, guildHallStage, inferHallLevelFromNodes, requiredHallLevelForNode, type GuildFacility } from "./guild-hub/guild-progression";
+import { WeaponCursor } from "./guild-hub/WeaponArt";
 import { memberAnimationSource, type MemberMotion } from "./member-animations";
 import { monsterAssetForStage } from "./monster-assets";
 import { StageMap } from "./stage-map";
@@ -373,6 +375,7 @@ export default function Game() {
   const [lootPhase, setLootPhase] = useState<LootPhase>("idle");
   const [collectedLoot, setCollectedLoot] = useState(0);
   const [plannedGold, setPlannedGold] = useState(0);
+  const [weaponCursor, setWeaponCursor] = useState({ x: 50, y: 50, visible: false });
   const lastAttack = useRef<Record<string, number>>({});
   const lastSkill = useRef<Record<string, number>>({});
   const clickFxCounter = useRef(0);
@@ -401,7 +404,6 @@ export default function Game() {
   const shockwaveLevel = developerMode ? UPGRADE_CAPS.shockwave : save.upgrades.shockwave;
   const momentumLevel = developerMode ? UPGRADE_CAPS.momentum : save.upgrades.momentum;
   const momentumMaxStacks = momentumLevel ? 3 + momentumLevel * 2 : 0;
-  const nextWeapon = save.weaponLevel < WEAPON_MAX_LEVEL ? clickAttackPattern(save.weaponLevel + 1) : null;
   const guildMultiplier = Math.pow(1.15, save.upgrades.guild);
   const goldMultiplier = Math.pow(1.1, save.upgrades.gold);
   const battleSeconds = developerMode ? DEV_BATTLE_SECONDS : (stage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + save.upgrades.time * 5;
@@ -934,7 +936,18 @@ export default function Game() {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = Math.max(0, Math.min(100, (event.clientX - rect.left) / rect.width * 100));
     const y = Math.max(0, Math.min(100, (event.clientY - rect.top) / rect.height * 100));
+    if (event.pointerType === "mouse") setWeaponCursor({ x, y, visible: true });
     directAttackAt(x, y, false);
+  }
+
+  function trackWeaponCursor(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== "mouse") return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setWeaponCursor({
+      x: Math.max(0, Math.min(100, (event.clientX - rect.left) / rect.width * 100)),
+      y: Math.max(0, Math.min(100, (event.clientY - rect.top) / rect.height * 100)),
+      visible: true,
+    });
   }
 
   return (
@@ -1008,21 +1021,14 @@ export default function Game() {
             </div>
           </div>}
 
-          {activeFacility === "forge" && <div className="weapon-forge-panel panel facility-first-panel">
-            <div className="panel-title"><div><span className="eyebrow">WEAPON FORGE · 15 ARSENAL</span><h3>길드마스터 무기 공방</h3><p className="panel-description">발전 노드와 별개인 전용 강화입니다. 새 무기를 완성할 때마다 기본 공격력과 직접 공격 연출이 함께 진화합니다.</p></div><span className="level-chip">보유 {save.weaponLevel + 1}/15</span></div>
-            <div className="weapon-forge-current">
-              <span className={`weapon-forge-emblem weapon-tier-${save.weaponLevel}`}>{clickAttackPattern(save.weaponLevel).glyph}</span>
-              <span><small>현재 장착</small><strong>{clickAttackPattern(save.weaponLevel).weaponName}</strong><em>{clickAttackPattern(save.weaponLevel).title} · 기본 공격력 {Math.round(12 * clickAttackPattern(save.weaponLevel).damageScale)}</em></span>
-              {nextWeapon ? <button className="forge-upgrade-button" onClick={purchaseWeaponUpgrade} disabled={save.gold < nextWeapon.cost}><small>NEXT · {nextWeapon.weaponName}</small><strong>{compactNumber(nextWeapon.cost)} G로 제작</strong><em>공격력 {Math.round(12 * nextWeapon.damageScale)} · {nextWeapon.visualHits} HIT</em></button> : <div className="forge-complete"><small>MASTERWORK</small><strong>최종 무기 완성</strong><em>모든 공격 연출 해금</em></div>}
-            </div>
-            <div className="weapon-arsenal" aria-label="15종 무기 강화 단계">
-              {CLICK_ATTACK_PATTERNS.map((pattern) => {
-                const unlocked = pattern.tier <= save.weaponLevel;
-                const current = pattern.tier === save.weaponLevel;
-                return <article key={pattern.key} className={`${unlocked ? "unlocked" : "locked"} ${current ? "current" : ""}`} title={`${pattern.weaponName} · ${pattern.title} · 기본 공격력 ${Math.round(12 * pattern.damageScale)}`}><span>{unlocked ? pattern.glyph : "?"}</span><small>{String(pattern.tier + 1).padStart(2, "0")}</small><strong>{pattern.weaponName}</strong><em>{unlocked ? `${pattern.title} · 공격 ${Math.round(12 * pattern.damageScale)}` : `${compactNumber(pattern.cost)} G`}</em></article>;
-              })}
-            </div>
-          </div>}
+          {activeFacility === "forge" && <ForgeWorkshop
+            weapons={CLICK_ATTACK_PATTERNS}
+            currentLevel={save.weaponLevel}
+            gold={save.gold}
+            bossTokens={save.bossTokens}
+            formatNumber={compactNumber}
+            onUpgrade={purchaseWeaponUpgrade}
+          />}
 
           {activeFacility === "research" && <>
             <div className="upgrade-panel research-overview panel facility-first-panel">
@@ -1092,7 +1098,7 @@ export default function Game() {
           </div>
 
           <div className="battle-layout">
-            <div className={`arena hack-arena panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier} loot-phase-${lootPhase}`} style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties} onPointerDown={attackField} role="application" aria-label="클릭한 위치를 중심으로 범위 공격하는 몬스터 전장">
+            <div className={`arena hack-arena has-forge-cursor panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier} loot-phase-${lootPhase}`} style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties} onPointerDown={attackField} onPointerMove={trackWeaponCursor} onPointerLeave={() => setWeaponCursor((cursor) => ({ ...cursor, visible: false }))} role="application" aria-label="강화 무기 커서로 클릭한 위치를 중심으로 범위 공격하는 몬스터 전장">
               <Image className="field-background-art" src={fieldAsset.source} alt="" fill sizes="(max-width: 1180px) 100vw, 900px" priority={stage.stage <= 10} unoptimized draggable={false} />
               <div className="environment-tag"><span>{BIOME_DETAILS[stage.region.hue].label}</span><small>{BIOME_DETAILS[stage.region.hue].description}</small></div>
               <div className="battle-banner"><span>{stage.boss ? "BOSS SWARM" : `STAGE ${stage.stage}`}</span><strong>{stage.name} 무리</strong></div>
@@ -1101,6 +1107,7 @@ export default function Game() {
                 <span><small>{lootCollecting ? "회수 중" : "전장 전리품"}</small><strong>+{compactNumber(lootCollecting ? collectedLoot : droppedGold)} G</strong></span>
               </div>
               <div className="field-click-guide"><b>필드를 직접 누르세요</b><span>원 안의 모든 몬스터가 함께 베입니다</span></div>
+              <WeaponCursor weapon={activeClickPattern} point={weaponCursor} />
 
               <div className="fighters" aria-label="출전 길드원">
                 {partyMembers.map((member, index) => {

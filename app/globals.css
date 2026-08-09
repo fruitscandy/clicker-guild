@@ -759,6 +759,7 @@ body {
 
 .permadeath-warning { display: block; margin-top: 5px; color: #a93227; font-size: 9px; font-weight: 1000; letter-spacing: .03em; }
 .hack-arena { --click-primary: #d46a48; --click-secondary: #ffe0a0; --click-glow: rgba(255,190,103,.55); position: relative; cursor: crosshair; touch-action: manipulation; user-select: none; }
+@media (pointer: fine) { .hack-arena.has-forge-cursor { cursor: none; } }
 .field-background-art { z-index: 0; object-fit: cover; object-position: var(--field-art-position, 50% 50%); filter: saturate(.92) contrast(1.035) brightness(.94); pointer-events: none; user-select: none; }
 .hack-arena::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at 53% 49%, transparent 34%, rgba(12,18,17,.08) 70%, rgba(8,13,13,.24) 100%), linear-gradient(90deg, rgba(13,20,18,.08), transparent 31%, transparent 72%, rgba(13,17,18,.08)); box-shadow: inset 0 0 72px rgba(10,16,15,.2); pointer-events: none; }
 .field-tone-bright .field-background-art { filter: saturate(.88) contrast(1.04) brightness(.91); }
@@ -865,20 +866,6 @@ body {
 .combat-proc-strip span.active { color: #fff1a6; border-color: #d19a3c; box-shadow: inset 0 0 12px rgba(255,194,70,.14); }
 .combat-proc-strip b { font-size: 7px; }.combat-proc-strip em { font-size: 8px; font-style: normal; font-weight: 1000; }
 .defeat-copy span { display: block; width: 100%; }.defeat-copy span:not(:last-child) { color: #7f2924; font-weight: 900; }
-
-/* Weapon forge */
-.weapon-forge-panel { margin-top: 18px; padding: 20px; overflow: hidden; border-top: 6px solid #b67634; background: linear-gradient(145deg,#f7edd6,#e8d2aa); }
-.weapon-forge-current { display: grid; grid-template-columns: 76px 1fr auto; align-items: center; gap: 14px; margin: 15px 0 13px; padding: 14px; color: #f7ead2; background: radial-gradient(circle at 12% 50%,#5d4937,#29231f 62%); border: 2px solid #8c6841; border-radius: 10px; box-shadow: inset 0 0 24px rgba(0,0,0,.28); }
-.weapon-forge-emblem { display: grid; place-items: center; width: 66px; height: 66px; color: #3a281c; background: linear-gradient(145deg,#ffec9b,#c98d36); border: 2px solid #fff0ae; border-radius: 50%; box-shadow: 0 0 0 4px #473426,0 0 22px rgba(255,195,70,.3); font-family: Georgia,"Noto Serif KR",serif; font-size: 25px; font-weight: 1000; }
-.weapon-forge-current > span:nth-child(2) { display: grid; gap: 3px; }.weapon-forge-current > span:nth-child(2) small { color: #d5b975; font-size: 8px; font-weight: 1000; letter-spacing: .11em; }.weapon-forge-current > span:nth-child(2) strong { font-size: 19px; }.weapon-forge-current > span:nth-child(2) em { color: #c9bcaa; font-size: 9px; font-style: normal; }
-.forge-upgrade-button, .forge-complete { display: grid; gap: 3px; min-width: 205px; padding: 11px 14px; color: #2e2319; background: linear-gradient(135deg,#ffe58b,#d99a3b); border: 2px solid #3e2b1f; border-radius: 7px; box-shadow: 0 4px 0 #3e2b1f; text-align: left; }
-.forge-upgrade-button { cursor: pointer; }.forge-upgrade-button:not(:disabled):hover { filter: brightness(1.08); transform: translateY(-1px); }.forge-upgrade-button:disabled { filter: grayscale(.65); opacity: .55; cursor: not-allowed; }
-.forge-upgrade-button small, .forge-complete small { font-size: 7px; font-weight: 1000; letter-spacing: .08em; }.forge-upgrade-button strong, .forge-complete strong { font-size: 12px; }.forge-upgrade-button em, .forge-complete em { font-size: 8px; font-style: normal; }
-.forge-complete { color: #fff0ad; background: linear-gradient(135deg,#4d3867,#2d294f); border-color: #caa95a; box-shadow: 0 0 18px rgba(217,180,80,.24); }
-.weapon-arsenal { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 7px; }
-.weapon-arsenal article { position: relative; display: grid; grid-template-columns: 31px 1fr; grid-template-rows: auto auto; align-items: center; gap: 2px 7px; min-width: 0; padding: 8px; color: #9f9587; background: rgba(66,54,43,.13); border: 1px solid #b8a180; border-radius: 6px; }
-.weapon-arsenal article > span { grid-row: 1 / 3; display: grid; place-items: center; width: 31px; height: 31px; color: #716352; background: #d7c9b2; border: 1px solid #9e886a; border-radius: 50%; font-weight: 1000; }.weapon-arsenal article > small { position: absolute; right: 5px; top: 4px; color: #897a67; font-size: 7px; font-weight: 1000; }.weapon-arsenal article > strong { padding-right: 17px; overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }.weapon-arsenal article > em { overflow: hidden; font-size: 7px; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
-.weapon-arsenal article.unlocked { color: #4a3423; background: #f7e5be; border-color: #b77730; }.weapon-arsenal article.unlocked > span { color: #fff3bb; background: #76502d; border-color: #e0ae54; }.weapon-arsenal article.current { color: #fff5c9; background: linear-gradient(135deg,#73502b,#433329); border-color: #f2c86b; box-shadow: 0 0 0 2px rgba(236,188,82,.15),0 0 14px rgba(210,150,52,.25); }.weapon-arsenal article.current > span { color: #37251d; background: #f4cd6b; box-shadow: 0 0 12px rgba(255,211,103,.48); }
 
 /* Weapon tiers 6–15: layered CC0 particles and increasingly dense finishers */
 .hack-arena.click-style-5 { --click-primary:#d590ff; --click-secondary:#7ff6ff; --click-glow:rgba(180,92,255,.95); }
@@ -1019,7 +1006,6 @@ body {
   .field-click-guide { top: 10%; }
   .pack-monster { width: 72px; height: 100px; }
   .tech-tree-scroll { max-height: 620px; }
-  .weapon-forge-current { grid-template-columns:66px 1fr; }.forge-upgrade-button,.forge-complete { grid-column:1 / -1; width:100%; }.weapon-arsenal { grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
 
 @media (max-width: 560px) {
@@ -1030,7 +1016,6 @@ body {
   .pack-monster .monster-sprite { bottom: -2px; transform: translateX(-50%) scale(.22); }
   @keyframes packMonsterIdle { 50% { transform: translateX(-50%) translateY(-7px) scale(.22) rotate(-2deg); } }
   .field-click-fx .fx-pattern-label { top: -92px; }.field-click-fx .fx-damage { top: -50px; }
-  .weapon-arsenal { grid-template-columns:repeat(2,minmax(0,1fr)); }.weapon-forge-current { grid-template-columns:55px 1fr; padding:10px; }.weapon-forge-emblem { width:50px; height:50px; font-size:20px; }
 }
 
 /* Growing guild territory */

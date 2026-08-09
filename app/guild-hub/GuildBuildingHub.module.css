@@ -178,6 +178,23 @@
   box-shadow: 0 0 11px color-mix(in srgb, var(--glow), transparent 35%);
 }
 
+.forgeBuildingArt {
+  bottom: 4px;
+  width: 176px;
+  height: 124px;
+  background: url("/assets/guild/forge/flame-forge-v1.png") center bottom / contain no-repeat;
+  border: 0;
+  box-shadow: none;
+  filter: drop-shadow(7px 9px 5px rgba(20, 13, 10, .34));
+}
+
+.forgeBuildingArt::before { display: none; }
+.forge:hover .forgeBuildingArt,
+.forge:focus-visible .forgeBuildingArt,
+.forge.active .forgeBuildingArt {
+  filter: brightness(1.08) drop-shadow(7px 9px 5px rgba(20, 13, 10, .34)) drop-shadow(0 0 16px rgba(255, 112, 56, .4));
+}
+
 .buildingLabel {
   position: absolute;
   left: 50%;
@@ -258,4 +275,3 @@
   .sky i,
   .hallSprite.upgrading { animation: none; }
 }
-

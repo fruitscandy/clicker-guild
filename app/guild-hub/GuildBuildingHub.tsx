@@ -56,7 +56,9 @@ export function GuildBuildingHub(props: GuildBuildingHubProps) {
             onClick={() => props.onSelect(facility.id)}
             aria-pressed={props.activeFacility === facility.id}
           >
-            <span className={styles.facilityBuilding} aria-hidden="true"><i>{facility.glyph}</i><b /></span>
+            {facility.id === "forge"
+              ? <span className={`${styles.facilityBuilding} ${styles.forgeBuildingArt}`} aria-hidden="true" />
+              : <span className={styles.facilityBuilding} aria-hidden="true"><i>{facility.glyph}</i><b /></span>}
             <span className={styles.buildingLabel}><strong>{facility.title}</strong><small>{facilityStatus[facility.id](props)}</small></span>
           </button>
         ))}
@@ -66,4 +68,3 @@ export function GuildBuildingHub(props: GuildBuildingHubProps) {
     </section>
   );
 }
-
