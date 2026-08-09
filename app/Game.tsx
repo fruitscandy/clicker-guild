@@ -27,6 +27,7 @@ import {
 } from "./battle-loot";
 import { fieldAssetForRegion } from "./field-assets";
 import { BOSS_BATTLE_SECONDS, NORMAL_BATTLE_SECONDS } from "./economy-balance";
+import { AUTO_ATTACK_FACTOR, BASE_ATTACK_RANGE, BASE_CLICK_DAMAGE, failureSalvageFor, MEMBER_ASSIST_FACTOR, PLAYER_WEAPON_BALANCE } from "./game-balance";
 import { combatTraitFor, compactNumber, getStage, MEMBERS, RANK_ORDER, STAGE_COUNT, STAGES_PER_REGION, type CombatStyle, type MemberDefinition } from "./game-data";
 import { maximumUpgradeLevels, UPGRADE_CAPS, UPGRADE_KEYS, type UpgradeKey, type UpgradeLevels } from "./developer-upgrades";
 import { DeveloperResourcePanel } from "./guild-hub/DeveloperResourcePanel";
@@ -133,25 +134,23 @@ const SAVE_KEY = "guildmaster-clicker-save-v1";
 const DEV_BATTLE_SECONDS = 300;
 const DEV_GEAR_LEVEL = 99;
 const DEV_POWER_MULTIPLIER = 500;
-const MEMBER_ASSIST_FACTOR = .32;
-const AUTO_ATTACK_FACTOR = .35;
 
 const CLICK_ATTACK_PATTERNS: ClickAttackPattern[] = [
-  { key: "training-strike", weaponName: "훈련용 장검", title: "견습 타격", subtitle: "묵직한 기본 일격", glyph: "검", tier: 0, visualHits: 1, variants: 1, duration: 620, cost: 0, damageScale: 1 },
-  { key: "crescent-slash", weaponName: "초승달 도", title: "반월참", subtitle: "검기를 실은 넓은 베기", glyph: "◒", tier: 1, visualHits: 1, variants: 2, duration: 720, cost: 90, damageScale: 1.28 },
-  { key: "cross-cut", weaponName: "쌍날검", title: "교차참", subtitle: "엇갈리는 2연속 참격", glyph: "×", tier: 2, visualHits: 2, variants: 2, duration: 820, cost: 180, damageScale: 1.68 },
-  { key: "weakpoint-break", weaponName: "룬 파쇄검", title: "약점 파쇄", subtitle: "표식을 꿰뚫는 3단 베기", glyph: "◎", tier: 3, visualHits: 3, variants: 3, duration: 980, cost: 360, damageScale: 2.18 },
-  { key: "sky-sword-array", weaponName: "천공검", title: "천공검진", subtitle: "길드마스터의 5연속 오의", glyph: "劍", tier: 4, visualHits: 5, variants: 4, duration: 1180, cost: 650, damageScale: 2.85 },
-  { key: "nebula-dance", weaponName: "성운도", title: "성운 난무", subtitle: "별빛 잔상을 남기는 7연참", glyph: "星", tier: 5, visualHits: 7, variants: 4, duration: 1320, cost: 1100, damageScale: 3.72 },
-  { key: "dragon-vein-break", weaponName: "용맥검", title: "용맥 붕괴", subtitle: "번개와 검풍으로 전장을 가르는 9연격", glyph: "龍", tier: 6, visualHits: 9, variants: 4, duration: 1480, cost: 1800, damageScale: 4.88 },
-  { key: "celestial-ruin", weaponName: "천상검", title: "천상 종언", subtitle: "천공의 룬과 낙검이 겹치는 12연 오의", glyph: "天", tier: 7, visualHits: 12, variants: 4, duration: 1680, cost: 2900, damageScale: 6.5 },
-  { key: "blood-moon-eclipse", weaponName: "혈월도", title: "붉은 월식", subtitle: "핏빛 초승달이 겹쳐지는 13연참", glyph: "月", tier: 8, visualHits: 13, variants: 4, duration: 1740, cost: 4500, damageScale: 8.6 },
-  { key: "storm-twin-dance", weaponName: "폭풍쌍검", title: "뇌광 연무", subtitle: "번개 궤적을 남기는 쌍검 난무", glyph: "雷", tier: 9, visualHits: 15, variants: 4, duration: 1800, cost: 6800, damageScale: 11.4 },
-  { key: "radiant-judgment", weaponName: "성휘 대검", title: "성광 심판", subtitle: "빛의 기둥과 대검이 함께 낙하", glyph: "光", tier: 10, visualHits: 16, variants: 4, duration: 1880, cost: 10000, damageScale: 15.1 },
-  { key: "abyss-sever", weaponName: "심연검", title: "공허 절단", subtitle: "전장을 가르는 검은 균열의 일격", glyph: "闇", tier: 11, visualHits: 18, variants: 4, duration: 1940, cost: 15000, damageScale: 20 },
-  { key: "time-collapse", weaponName: "시간절단검", title: "찰나 붕괴", subtitle: "멈춘 시간 위로 모든 참격이 겹침", glyph: "時", tier: 12, visualHits: 20, variants: 4, duration: 2020, cost: 22000, damageScale: 26.5 },
-  { key: "world-tree-wave", weaponName: "세계수 성검", title: "생명의 파동", subtitle: "거대한 생명 룬이 전장을 휩씀", glyph: "樹", tier: 13, visualHits: 22, variants: 4, duration: 2100, cost: 32000, damageScale: 35 },
-  { key: "myriad-blades-one", weaponName: "길드마스터 신검", title: "만검귀일", subtitle: "수천 검광이 하나의 종언으로 수렴", glyph: "神", tier: 14, visualHits: 25, variants: 4, duration: 2200, cost: 46000, damageScale: 46.5 },
+  { key: "training-strike", weaponName: "훈련용 장검", title: "견습 타격", subtitle: "묵직한 기본 일격", glyph: "검", tier: 0, visualHits: 1, variants: 1, duration: 620, ...PLAYER_WEAPON_BALANCE[0] },
+  { key: "crescent-slash", weaponName: "초승달 도", title: "반월참", subtitle: "검기를 실은 넓은 베기", glyph: "◒", tier: 1, visualHits: 1, variants: 2, duration: 720, ...PLAYER_WEAPON_BALANCE[1] },
+  { key: "cross-cut", weaponName: "쌍날검", title: "교차참", subtitle: "엇갈리는 2연속 참격", glyph: "×", tier: 2, visualHits: 2, variants: 2, duration: 820, ...PLAYER_WEAPON_BALANCE[2] },
+  { key: "weakpoint-break", weaponName: "룬 파쇄검", title: "약점 파쇄", subtitle: "표식을 꿰뚫는 3단 베기", glyph: "◎", tier: 3, visualHits: 3, variants: 3, duration: 980, ...PLAYER_WEAPON_BALANCE[3] },
+  { key: "sky-sword-array", weaponName: "천공검", title: "천공검진", subtitle: "길드마스터의 5연속 오의", glyph: "劍", tier: 4, visualHits: 5, variants: 4, duration: 1180, ...PLAYER_WEAPON_BALANCE[4] },
+  { key: "nebula-dance", weaponName: "성운도", title: "성운 난무", subtitle: "별빛 잔상을 남기는 7연참", glyph: "星", tier: 5, visualHits: 7, variants: 4, duration: 1320, ...PLAYER_WEAPON_BALANCE[5] },
+  { key: "dragon-vein-break", weaponName: "용맥검", title: "용맥 붕괴", subtitle: "번개와 검풍으로 전장을 가르는 9연격", glyph: "龍", tier: 6, visualHits: 9, variants: 4, duration: 1480, ...PLAYER_WEAPON_BALANCE[6] },
+  { key: "celestial-ruin", weaponName: "천상검", title: "천상 종언", subtitle: "천공의 룬과 낙검이 겹치는 12연 오의", glyph: "天", tier: 7, visualHits: 12, variants: 4, duration: 1680, ...PLAYER_WEAPON_BALANCE[7] },
+  { key: "blood-moon-eclipse", weaponName: "혈월도", title: "붉은 월식", subtitle: "핏빛 초승달이 겹쳐지는 13연참", glyph: "月", tier: 8, visualHits: 13, variants: 4, duration: 1740, ...PLAYER_WEAPON_BALANCE[8] },
+  { key: "storm-twin-dance", weaponName: "폭풍쌍검", title: "뇌광 연무", subtitle: "번개 궤적을 남기는 쌍검 난무", glyph: "雷", tier: 9, visualHits: 15, variants: 4, duration: 1800, ...PLAYER_WEAPON_BALANCE[9] },
+  { key: "radiant-judgment", weaponName: "성휘 대검", title: "성광 심판", subtitle: "빛의 기둥과 대검이 함께 낙하", glyph: "光", tier: 10, visualHits: 16, variants: 4, duration: 1880, ...PLAYER_WEAPON_BALANCE[10] },
+  { key: "abyss-sever", weaponName: "심연검", title: "공허 절단", subtitle: "전장을 가르는 검은 균열의 일격", glyph: "闇", tier: 11, visualHits: 18, variants: 4, duration: 1940, ...PLAYER_WEAPON_BALANCE[11] },
+  { key: "time-collapse", weaponName: "시간절단검", title: "찰나 붕괴", subtitle: "멈춘 시간 위로 모든 참격이 겹침", glyph: "時", tier: 12, visualHits: 20, variants: 4, duration: 2020, ...PLAYER_WEAPON_BALANCE[12] },
+  { key: "world-tree-wave", weaponName: "세계수 성검", title: "생명의 파동", subtitle: "거대한 생명 룬이 전장을 휩씀", glyph: "樹", tier: 13, visualHits: 22, variants: 4, duration: 2100, ...PLAYER_WEAPON_BALANCE[13] },
+  { key: "myriad-blades-one", weaponName: "길드마스터 신검", title: "만검귀일", subtitle: "수천 검광이 하나의 종언으로 수렴", glyph: "神", tier: 14, visualHits: 25, variants: 4, duration: 2200, ...PLAYER_WEAPON_BALANCE[14] },
 ];
 
 const CLICK_EFFECT_SPARKS = Array.from({ length: 12 }, (_, index) => index);
@@ -482,8 +481,8 @@ export default function Game() {
   const traitCounts = useMemo(() => combatStyleCounts(partyMembers), [partyMembers]);
   const clickVisualLevel = developerMode ? developerClickLevel : save.weaponLevel;
   const activeClickPattern = clickAttackPattern(clickVisualLevel);
-  const clickDamage = Math.round(12 * activeClickPattern.damageScale * developerPower);
-  const attackRange = 10 + effectiveUpgrades.range * 2.75;
+  const clickDamage = Math.round(BASE_CLICK_DAMAGE * activeClickPattern.damageScale * developerPower);
+  const attackRange = BASE_ATTACK_RANGE + effectiveUpgrades.range * 2.75;
   const criticalChance = Math.min(.45, effectiveUpgrades.critical * .05);
   const executionThreshold = effectiveUpgrades.execution ? .05 + effectiveUpgrades.execution * .02 : 0;
   const comboLevel = effectiveUpgrades.combo;
@@ -499,6 +498,7 @@ export default function Game() {
   const combatLocked = battleActive || lootCollecting || victory || defeat;
   const aliveMonsters = useMemo(() => fieldMonsters.filter((monster) => monster.hp > 0), [fieldMonsters]);
   const defeatedMonsters = fieldMonsters.length - aliveMonsters.length;
+  const defeatSalvage = useMemo(() => developerMode ? { gold: 0, material: 0 } : failureSalvageFor(stage.stage, Math.round(stage.gold * goldMultiplier), stageMaterial.rewardAmount, defeatedMonsters, fieldMonsters.length), [developerMode, stage.stage, stage.gold, goldMultiplier, stageMaterial.rewardAmount, defeatedMonsters, fieldMonsters.length]);
   const droppedGold = useMemo(() => lootDrops.reduce((sum, drop) => sum + (drop.kind === "gold" ? drop.amount : 0), 0), [lootDrops]);
   const droppedMaterial = useMemo(() => lootDrops.reduce((sum, drop) => sum + (drop.kind === "material" ? drop.amount : 0), 0), [lootDrops]);
   const lootSweepProgress = ((plannedGold ? collectedGold / plannedGold : 1) + (plannedMaterial ? collectedMaterial / plannedMaterial : 1)) / 2 * 100;
@@ -703,12 +703,19 @@ export default function Game() {
     setCollectedMaterial(0);
     setPlannedGold(0);
     setPlannedMaterial(0);
+    if (!developerMode && (defeatSalvage.gold || defeatSalvage.material)) {
+      setSave((current) => ({
+        ...current,
+        gold: current.gold + defeatSalvage.gold,
+        materials: { ...current.materials, [stageMaterial.id]: (current.materials[stageMaterial.id] ?? 0) + defeatSalvage.material },
+      }));
+    }
     lootPlan.current = [];
     lootDropsRef.current = [];
     revealedLootIds.current.clear();
     setLostMembers([...save.party]);
-    setToast(developerMode ? "개발자 전투 실패 · 진행도는 저장되지 않습니다." : "원정 실패 · 길드원은 부상만 입고 여관으로 복귀했습니다. 조합을 바꿔 즉시 재도전하세요.");
-  }, [clearLootTimers, developerMode, save.party]);
+    setToast(developerMode ? "개발자 전투 실패 · 진행도는 저장되지 않습니다." : `원정 실패 · 쓰러뜨린 적의 전리품에서 골드 ${compactNumber(defeatSalvage.gold)} · ${stageMaterial.name} ${defeatSalvage.material}개를 회수했습니다.`);
+  }, [clearLootTimers, developerMode, save.party, defeatSalvage, stageMaterial.id, stageMaterial.name]);
 
   useEffect(() => {
     if (!battleActive || !battleDeadline || !aliveMonsters.length) return;
@@ -1497,7 +1504,7 @@ export default function Game() {
           </div>
 
           {victory && <div className="victory-overlay"><div className="victory-card"><span className="victory-star">★</span><p>WAVE ANNIHILATED</p><h2>{fieldMonsters.length}체 도륙 완료!</h2><div className="outcome-rewards"><span>{developerMode ? "개발자 결과 · 저장 안 됨" : <>골드 <b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span className="material-victory-reward"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} />{stageMaterial.name} <b>+{stageMaterial.rewardAmount}</b></span>}{!developerMode && <span>경험치 <b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span>군주 웨이브 토벌 완료</span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? STAGE_COUNT : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(STAGE_COUNT, stage.stage + 1))}>다음 웨이브 즉시 진입</button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}>반복 도륙</button><button className="text-button" onClick={() => returnToGuild("토벌을 마치고 영지로 복귀했습니다.")}>영지로 복귀</button></div></div></div>}
-          {defeat && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">⚑</span><p>EXPEDITION FAILED</p><h2>공세 실패</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드 전투가 종료되었습니다." : "길드원은 모두 부상만 입고 여관으로 복귀합니다."}</strong>{lostMembers.map((id) => <span key={id}>＋ {memberById(id).name} · 회복 완료</span>)}<span>파티의 전투 개입 조합을 바꾸거나 같은 웨이브를 바로 재도전하세요.</span></div><button className="primary-button" onClick={() => returnToGuild(developerMode ? "개발자 전투에서 복귀했습니다." : "길드원과 함께 영지로 복귀했습니다. 조합을 정비해 다시 출정하세요.")}>길드원과 귀환</button></div></div>}
+          {defeat && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">⚑</span><p>EXPEDITION FAILED</p><h2>공세 실패</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드 전투가 종료되었습니다." : "길드원은 모두 부상만 입고 여관으로 복귀합니다."}</strong>{lostMembers.map((id) => <span key={id}>＋ {memberById(id).name} · 회복 완료</span>)}{!developerMode && <span>회수 전리품 · 골드 +{compactNumber(defeatSalvage.gold)} · {stageMaterial.name} +{defeatSalvage.material}</span>}<span>이번 전리품으로 바로 강화하거나 같은 웨이브를 재도전하세요.</span></div><button className="primary-button" onClick={() => returnToGuild(developerMode ? "개발자 전투에서 복귀했습니다." : "길드원과 함께 영지로 복귀했습니다. 회수한 전리품으로 강화한 뒤 다시 출정하세요.")}>길드원과 귀환</button></div></div>}
         </section>
       )}
 
