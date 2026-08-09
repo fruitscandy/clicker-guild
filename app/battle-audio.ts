@@ -1,4 +1,5 @@
 import type { LootSoundProfile } from "./stage-materials";
+import type { Rank } from "./game-data";
 import {
   effectiveSfxVolume,
   readAudioSettings,
@@ -32,6 +33,7 @@ const GOLD_COIN_SAMPLE_URLS = [
 // stay comfortable for weapon hits.
 const REWARD_MIX_GAIN = 1.6;
 const VICTORY_MIX_GAIN = 1.5;
+const RECRUIT_REVEAL_MIX_GAIN = 1.12;
 
 let goldCoinSampleBuffers: AudioBuffer[] = [];
 let goldCoinSamplePromise: Promise<void> | null = null;
@@ -228,14 +230,40 @@ export function playExpeditionStartSound(boss = false) {
   });
 }
 
-export function playGuildMemberHireSound() {
+export function playGuildMemberHireSound(count: 1 | 10 = 1) {
   playWhenAudioIsReady((context) => {
     const start = context.currentTime;
-    tone(context, 145, start, 0.13, 0.027, "triangle", 92, 0.003);
-    noiseBurst(context, start, 0.055, 0.012, 1200, 620);
-    [523, 659, 784].forEach((frequency, index) => {
-      tone(context, frequency, start + 0.055 + index * 0.065, 0.25, 0.021, "sine", frequency * 1.025, 0.008);
-      tone(context, frequency * 2, start + 0.065 + index * 0.065, 0.14, 0.006, "triangle", frequency * 2.08, 0.004);
+    markEventSound(`guild-recruit-open:${count}`);
+    tone(context, count === 10 ? 92 : 116, start, 0.18, 0.03, "triangle", 73, 0.003);
+    noiseBurst(context, start + 0.015, 0.12, 0.018, 420, 2800);
+    tone(context, 392, start + 0.075, 0.14, 0.018, "triangle", count === 10 ? 659 : 523, 0.004);
+  });
+}
+
+export function playGuildRecruitRevealSound(rank: Rank, revealIndex = 0) {
+  playWhenAudioIsReady((context) => {
+    const tier = ["F", "E", "D", "C", "B", "A", "S"].indexOf(rank);
+    const rare = tier >= 4;
+    const start = context.currentTime + 0.004;
+    const revealMix = createSfxMixBus(context, RECRUIT_REVEAL_MIX_GAIN + Math.max(0, tier - 3) * 0.1);
+    const variation = (revealIndex % 4) * 45;
+    window.setTimeout(() => revealMix.disconnect(), rank === "S" ? 1600 : 900);
+    markEventSound(`guild-recruit-reveal:${rank}`);
+
+    // Every portrait enters with a short left-to-right cloth/card whoosh.
+    noiseBurst(context, start, rare ? 0.15 : 0.095, rare ? 0.025 : 0.016, 2450 + variation, 480, revealMix);
+    tone(context, 210 + tier * 22, start, rare ? 0.18 : 0.11, rare ? 0.021 : 0.013, "triangle", 420 + tier * 48, 0.002, revealMix);
+    tone(context, 760 + variation, start + 0.025, 0.08, 0.008, "sine", 1120 + tier * 70, 0.002, revealMix);
+
+    if (!rare) return;
+
+    // B, A and S gain progressively heavier impact and a longer rising fanfare.
+    tone(context, rank === "S" ? 55 : rank === "A" ? 73 : 92, start, 0.34, 0.045, "sine", 49, 0.003, revealMix);
+    noiseBurst(context, start + 0.055, 0.22, 0.022, 720, 3800, revealMix);
+    const fanfare = rank === "S" ? [392, 523, 659, 988] : rank === "A" ? [349, 440, 659] : [330, 415, 523];
+    fanfare.forEach((frequency, index) => {
+      tone(context, frequency, start + 0.07 + index * 0.07, 0.32, 0.022 + tier * 0.002, index === fanfare.length - 1 ? "sine" : "triangle", frequency * 1.02, 0.006, revealMix);
+      if (rank === "S") tone(context, frequency * 2, start + 0.08 + index * 0.07, 0.22, 0.008, "sine", frequency * 2.04, 0.004, revealMix);
     });
   });
 }

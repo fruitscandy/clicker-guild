@@ -43,10 +43,12 @@ import { WeaponCursor } from "./guild-hub/WeaponArt";
 import { monsterAssetForStage } from "./monster-assets";
 import { MaterialInventory } from "./MaterialInventory";
 import { SpecialAttackLayer, specialMonsterClassName } from "./SpecialAttackLayer";
+import { WeaponAttackEffect } from "./WeaponAttackEffect";
 import { useSpecialAttackController } from "./special-attack-controller";
 import { SPECIAL_RESEARCH_NODES } from "./special-attacks";
 import { StageMap } from "./stage-map";
 import { canAffordWeaponRecipe, consumeWeaponRecipe, materialIconVars, migrateMaterialInventory, stageMaterialById, stageMaterialFor, weaponMaterialRecipe } from "./stage-materials";
+import { formatRecruitRate, highRankRecruitChance, MEMBER_SALE_PRICES, RECRUIT_COSTS, rollRecruitMembers, settleRecruitment, type RecruitResult } from "./tavern-gacha";
 import { UPGRADE_ICON_BY_KEY } from "./upgrade-icons";
 
 type LootPhase = "idle" | "fighting" | "collecting" | "complete";
@@ -82,6 +84,8 @@ type ClickAttackFx = {
   y: number;
   radius: number;
 };
+
+const MAX_SIMULTANEOUS_CLICK_FX = 48;
 
 type MemberWeaponFx = {
   id: number;
@@ -121,7 +125,6 @@ type SaveState = {
   weaponLevel: number;
   upgrades: Record<UpgradeKey, number>;
   nodes: string[];
-  candidates: string[];
   autoAdvance: boolean;
 };
 
@@ -148,9 +151,6 @@ const CLICK_ATTACK_PATTERNS: ClickAttackPattern[] = [
   { key: "myriad-blades-one", weaponName: "길드마스터 신검", title: "만검귀일", subtitle: "수천 검광이 하나의 종언으로 수렴", glyph: "神", tier: 14, visualHits: 25, variants: 4, duration: 2200, ...PLAYER_WEAPON_BALANCE[14] },
 ];
 
-const CLICK_EFFECT_SPARKS = Array.from({ length: 12 }, (_, index) => index);
-const CLICK_EFFECT_PARTICLES = Array.from({ length: 10 }, (_, index) => index);
-const CLICK_EFFECT_BLADES = Array.from({ length: 9 }, (_, index) => index);
 const WEAPON_MAX_LEVEL = CLICK_ATTACK_PATTERNS.length - 1;
 
 function clickAttackPattern(level: number) {
@@ -179,7 +179,6 @@ const initialState: SaveState = {
   weaponLevel: 0,
   upgrades: { range: 0, critical: 0, combo: 0, execution: 0, shockwave: 0, momentum: 0, time: 0, scout: 0, guild: 0, gold: 0, tavern: 0, loot: 0 },
   nodes: ["foundation"],
-  candidates: ["mia", "finn", "lulu"],
   autoAdvance: true,
 };
 
@@ -193,7 +192,6 @@ function cloneSaveState(state: SaveState): SaveState {
     progress: Object.fromEntries(Object.entries(state.progress).map(([id, progress]) => [id, { ...progress }])),
     upgrades: { ...state.upgrades },
     nodes: [...state.nodes],
-    candidates: [...state.candidates],
   };
 }
 
@@ -208,7 +206,7 @@ const upgradeInfo: Record<UpgradeKey, { title: string; description: string; base
   scout: { title: "전장 정찰", description: "잔존 세력 추정 정밀화", base: 135, accent: "눈" },
   guild: { title: "길드 전술", description: "길드원 공격력 +15%", base: 140, accent: "기" },
   gold: { title: "행운의 금고", description: "토벌 골드 +10%", base: 180, accent: "금" },
-  tavern: { title: "여관 증축", description: "상위 등급 후보 해금", base: 300, accent: "관" },
+  tavern: { title: "여관 증축", description: "상위 등급 영입 확률 증가", base: 300, accent: "관" },
   loot: { title: "전리품 감정", description: "장비 획득 확률 +3%", base: 260, accent: "보" },
 };
 
@@ -282,9 +280,9 @@ const UPGRADE_NODES: UpgradeNode[] = [
   { id: "loot-2", title: "전리품 감정 II", description: "장비 획득 확률 +3%", glyph: "♣", target: "loot", cost: 680, prerequisites: ["loot-1"], x: 59, y: 1240 },
   { id: "loot-3", title: "보물 사냥단", description: "장비 획득 확률 +3%", glyph: "寶", target: "loot", cost: 1520, prerequisites: ["loot-2"], x: 83, y: 1240 },
 
-  { id: "tavern-1", title: "여관 증축 I", description: "고용 가능 등급 상승", glyph: "관", target: "tavern", cost: 300, prerequisites: ["foundation"], x: 35, y: 1370 },
-  { id: "tavern-2", title: "여관 증축 II", description: "고용 가능 등급 상승", glyph: "잔", target: "tavern", cost: 820, prerequisites: ["tavern-1"], x: 59, y: 1370 },
-  { id: "tavern-3", title: "영웅의 주점", description: "고용 가능 등급 상승", glyph: "杯", target: "tavern", cost: 1800, prerequisites: ["tavern-2"], x: 83, y: 1370 },
+  { id: "tavern-1", title: "여관 증축 I", description: "상위 등급 영입 확률 증가", glyph: "관", target: "tavern", cost: 300, prerequisites: ["foundation"], x: 35, y: 1370 },
+  { id: "tavern-2", title: "여관 증축 II", description: "상위 등급 영입 확률 증가", glyph: "잔", target: "tavern", cost: 820, prerequisites: ["tavern-1"], x: 59, y: 1370 },
+  { id: "tavern-3", title: "영웅의 주점", description: "최상급 계약 확률 증가", glyph: "杯", target: "tavern", cost: 1800, prerequisites: ["tavern-2"], x: 83, y: 1370 },
 
   { id: "momentum-1", title: "전투 호흡", description: "빠른 연속 클릭으로 최대 13% 피해 증가", glyph: "속", target: "momentum", cost: 360, prerequisites: ["foundation"], x: 35, y: 1500 },
   { id: "momentum-2", title: "무아지경", description: "몰입 중 최대 35% 피해 증가", glyph: "無", target: "momentum", cost: 940, prerequisites: ["momentum-1"], x: 59, y: 1500 },
@@ -323,13 +321,6 @@ function combatStyleCounts(members: MemberDefinition[]) {
     counts[style] += 1;
     return counts;
   }, { vanguard: 0, marksman: 0, assassin: 0, arcane: 0, support: 0, breaker: 0 });
-}
-
-function randomCandidates(state: SaveState, count = 3) {
-  const maxRank = Math.min(6, 1 + state.upgrades.tavern);
-  const pool = MEMBERS.filter((member) => !state.owned.includes(member.id) && RANK_ORDER.indexOf(member.rank) <= maxRank);
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(count, shuffled.length)).map((member) => member.id);
 }
 
 function spawnMonsterPack(stage: ReturnType<typeof getStage>): FieldMonster[] {
@@ -405,7 +396,7 @@ function upgradeEffectText(key: UpgradeKey, level: number) {
     case "scout": return `잔존 세력 추정 정밀도 ${level}/3`;
     case "guild": return `길드원 공격력 +${Math.round((Math.pow(1.15, level) - 1) * 100)}%`;
     case "gold": return `토벌 골드 +${Math.round((Math.pow(1.1, level) - 1) * 100)}%`;
-    case "tavern": return `고용 후보 최대 ${RANK_ORDER[Math.min(RANK_ORDER.length - 1, 1 + level)]}등급`;
+    case "tavern": return `B 이상 영입 확률 ${formatRecruitRate(highRankRecruitChance(level))}`;
     case "loot": return `장비 획득 확률 +${level * 3}%`;
   }
 }
@@ -419,6 +410,9 @@ export default function Game() {
   const [now, setNow] = useState(0);
   const [stagePicker, setStagePicker] = useState(false);
   const [toast, setToast] = useState("");
+  const [recruitResults, setRecruitResults] = useState<RecruitResult[]>([]);
+  const [recruitSequence, setRecruitSequence] = useState(0);
+  const [pendingSaleId, setPendingSaleId] = useState<string | null>(null);
   const [victory, setVictory] = useState(false);
   const [defeat, setDefeat] = useState(false);
   const [battleDeadline, setBattleDeadline] = useState<number | null>(null);
@@ -430,6 +424,7 @@ export default function Game() {
   const [clicks, setClicks] = useState(0);
   const [momentumStacks, setMomentumStacks] = useState(0);
   const [hitFx, setHitFx] = useState<ClickAttackFx | null>(null);
+  const [activeHitFxs, setActiveHitFxs] = useState<ClickAttackFx[]>([]);
   const [memberWeaponFx, setMemberWeaponFx] = useState<MemberWeaponFx[]>([]);
   const [lostMembers, setLostMembers] = useState<string[]>([]);
   const [territoryPulse, setTerritoryPulse] = useState(0);
@@ -821,7 +816,7 @@ export default function Game() {
     const executionCount = executionTargets.length;
     const effectId = clickFxCounter.current + 1;
     clickFxCounter.current = effectId;
-    setHitFx({
+    const nextHitFx: ClickAttackFx = {
       id: effectId,
       tier: activeClickPattern.tier,
       variant: effectId % activeClickPattern.variants,
@@ -837,9 +832,14 @@ export default function Game() {
       x,
       y,
       radius: effectiveRange,
-    });
+    };
+    setHitFx(nextHitFx);
+    setActiveHitFxs((current) => [...current.slice(-(MAX_SIMULTANEOUS_CLICK_FX - 1)), nextHitFx]);
     const feedbackDuration = shockwave ? 1750 : executionCount || critical || combo || nextMomentum ? 1250 : activeClickPattern.duration;
-    window.setTimeout(() => setHitFx((current) => current?.id === effectId ? null : current), Math.max(activeClickPattern.duration, feedbackDuration));
+    window.setTimeout(() => {
+      setHitFx((current) => current?.id === effectId ? null : current);
+      setActiveHitFxs((current) => current.filter((effect) => effect.id !== effectId));
+    }, Math.max(activeClickPattern.duration, feedbackDuration));
     if (targets.length) playCombatProcSound({ critical, combo, shockwave, execution: executionCount > 0, momentumMaxed });
     damageMonsters(targets.map((monster) => monster.id), damage, true, activeClickPattern.tier);
     clickCount.current = nextClicks;
@@ -868,6 +868,7 @@ export default function Game() {
     lastSkill.current = {};
     setMemberWeaponFx([]);
     setHitFx(null);
+    setActiveHitFxs([]);
     clickCount.current = 0;
     momentumState.current = { lastAt: 0, stacks: 0 };
     setClicks(0);
@@ -901,6 +902,7 @@ export default function Game() {
     setDefeat(false);
     setFieldMonsters([]);
     setMemberWeaponFx([]);
+    setActiveHitFxs([]);
     setWeaponCursor((cursor) => ({ ...cursor, visible: false }));
     setLootDrops([]);
     setLootPhase("idle");
@@ -939,6 +941,7 @@ export default function Game() {
     const pattern = clickAttackPattern(level);
     setDeveloperClickLevel(level);
     setHitFx(null);
+    setActiveHitFxs([]);
     setToast(`플레이어 무기 ${pattern.tier + 1}/15 · ${pattern.weaponName} · ${pattern.title} 미리보기입니다.`);
   }
 
@@ -1004,46 +1007,66 @@ export default function Game() {
     setToast(`${node.title} 노드를 해금했습니다. 새로운 성장 경로가 발견됩니다!`);
   }
 
-  function hire(id: string) {
+  function recruitGuildMembers(count: 1 | 10) {
+    const cost = count === 1 ? RECRUIT_COSTS.single : RECRUIT_COSTS.ten;
+    if (save.gold < cost) return setToast(`${count}명 영입에 필요한 골드가 부족합니다.`);
+
+    const rolls = rollRecruitMembers(MEMBERS, count, effectiveUpgrades.tavern);
+    const settlement = settleRecruitment(save.owned, rolls);
+    setRecruitResults(settlement.results);
+    setRecruitSequence((current) => current + 1);
+    setSave((current) => {
+      const progress = { ...current.progress };
+      settlement.newMemberIds.forEach((id) => {
+        progress[id] = { level: 1, xp: 0, gear: 0 };
+      });
+      return {
+        ...current,
+        gold: current.gold - cost + settlement.refund,
+        owned: [...current.owned, ...settlement.newMemberIds],
+        progress,
+      };
+    });
+    playGuildMemberHireSound(count);
+
+    const bestRoll = rolls.reduce((best, member) => RANK_ORDER.indexOf(member.rank) > RANK_ORDER.indexOf(best.rank) ? member : best);
+    const rareCallout = RANK_ORDER.indexOf(bestRoll.rank) >= RANK_ORDER.indexOf("B") ? `${bestRoll.rank}등급 ${bestRoll.name}! ` : "";
+    const refundCallout = settlement.refund > 0 ? ` · 중복 정산 +${compactNumber(settlement.refund)} G` : "";
+    setToast(`${rareCallout}${count}명 영입 완료 · 신규 ${settlement.newMemberIds.length}명${refundCallout}`);
+  }
+
+  function requestMemberSale(id: string) {
     const member = memberById(id);
-    if (save.gold < member.cost) return setToast("고용 골드가 부족합니다.");
-    setSave((current) => {
-      const owned = [...current.owned, id];
-      const party = current.party.length < 4 ? [...current.party, id] : current.party;
-      const next = { ...current, gold: current.gold - member.cost, owned, party, progress: { ...current.progress, [id]: { level: 1, xp: 0, gear: 0 } } };
-      return { ...next, candidates: randomCandidates(next) };
-    });
-    playGuildMemberHireSound();
-    setToast(`${member.name} 합류 · ${combatTraitFor(member).title} 효과가 전투에 즉시 적용됩니다!`);
+    if (save.party.includes(id)) return setToast("편성 중인 길드원은 파티에서 해제한 뒤 판매할 수 있습니다.");
+    if (save.owned.length <= 1) return setToast("길드를 지킬 마지막 길드원은 판매할 수 없습니다.");
+    setPendingSaleId(member.id);
   }
 
-  function refreshCandidates() {
-    const cost = Math.max(20, 60 - effectiveUpgrades.tavern * 5);
-    if (save.gold < cost) return setToast("여관 후보를 갱신할 골드가 부족합니다.");
-    setSave((current) => {
-      const next = { ...current, gold: current.gold - cost };
-      return { ...next, candidates: randomCandidates(next) };
-    });
-    setToast("새로운 모험가들이 여관에 도착했습니다.");
-  }
+  function confirmMemberSale() {
+    if (!pendingSaleId) return;
+    const member = memberById(pendingSaleId);
+    if (save.party.includes(member.id) || save.owned.length <= 1 || !save.owned.includes(member.id)) {
+      setPendingSaleId(null);
+      return setToast("현재 상태에서는 이 길드원을 판매할 수 없습니다.");
+    }
+    const salePrice = MEMBER_SALE_PRICES[member.rank];
 
-  function randomHire() {
-    const cost = 260;
-    if (save.gold < cost) return setToast("랜덤 고용에 필요한 골드가 부족합니다.");
-    const available = MEMBERS.filter((member) => !save.owned.includes(member.id) && RANK_ORDER.indexOf(member.rank) <= Math.min(6, 1 + effectiveUpgrades.tavern));
-    if (!available.length) return setToast("현재 등급에서 고용 가능한 길드원을 모두 모았습니다.");
-    const roll = available[Math.floor(Math.random() * available.length)];
     setSave((current) => {
-      const owned = [...current.owned, roll.id];
-      const party = current.party.length < 4 ? [...current.party, roll.id] : current.party;
-      const next = { ...current, gold: current.gold - cost, owned, party, progress: { ...current.progress, [roll.id]: { level: 1, xp: 0, gear: 0 } } };
-      return { ...next, candidates: randomCandidates(next) };
+      const nextProgress = { ...current.progress };
+      delete nextProgress[member.id];
+      return {
+        ...current,
+        gold: current.gold + salePrice,
+        owned: current.owned.filter((memberId) => memberId !== member.id),
+        progress: nextProgress,
+      };
     });
-    playGuildMemberHireSound();
-    setToast(`운명의 계약! ${roll.name} 합류 · ${combatTraitFor(roll).title} 효과가 즉시 적용됩니다.`);
+    setPendingSaleId(null);
+    setToast(`${member.name} 계약 해지 · ${compactNumber(salePrice)} G를 돌려받았습니다.`);
   }
 
   function selectGuildFacility(facility: GuildFacility) {
+    setPendingSaleId(null);
     playMenuTabSound();
     setActiveFacility(facility);
   }
@@ -1086,6 +1109,8 @@ export default function Game() {
     setDeveloperStage(null);
     setDeveloperClickLevel(CLICK_ATTACK_PATTERNS.length - 1);
     setFieldMonsters([]);
+    setHitFx(null);
+    setActiveHitFxs([]);
     setLootDrops([]);
     setLootPhase("idle");
     setCollectedGold(0);
@@ -1160,7 +1185,7 @@ export default function Game() {
               researchTotal={UPGRADE_NODES.length}
               weaponName={clickAttackPattern(save.weaponLevel).weaponName}
               partyCount={save.party.length}
-              candidateCount={save.candidates.length}
+              candidateCount={MEMBERS.length}
               pulse={territoryPulse}
               onSelect={selectGuildFacility}
             />
@@ -1230,20 +1255,22 @@ export default function Game() {
 
           {activeFacility === "tavern" && <>
           <TavernHall
-            candidates={save.candidates.map(memberById)}
             members={MEMBERS}
             ownedIds={save.owned}
             progress={save.progress}
             partyIds={save.party}
             tavernLevel={effectiveUpgrades.tavern}
             gold={save.gold}
-            refreshCost={Math.max(20, 60 - effectiveUpgrades.tavern * 5)}
+            recruitResults={recruitResults}
+            recruitSequence={recruitSequence}
+            pendingSaleId={pendingSaleId}
             formatNumber={compactNumber}
             getAttack={(member, progress) => attackFor(member, progress)}
-            onRefresh={refreshCandidates}
-            onRandomHire={randomHire}
-            onHire={hire}
+            onRecruit={recruitGuildMembers}
             onToggleParty={toggleParty}
+            onRequestSale={requestMemberSale}
+            onCancelSale={() => setPendingSaleId(null)}
+            onConfirmSale={confirmMemberSale}
           />
           </>}
           </div>
@@ -1342,46 +1369,12 @@ export default function Game() {
               </div>
               {lootCollecting && <span className="sr-only" role="status">토벌이 끝나 전장의 골드와 재료를 회수하고 있습니다. 골드 {compactNumber(collectedGold)} / {compactNumber(plannedGold)}, {stageMaterial.name} {collectedMaterial} / {plannedMaterial}</span>}
 
-              {hitFx && <>
-                {hitFx.shockwave && <>
-                  <span key={`shockwave-screen-${hitFx.id}`} className="shockwave-screen-impact" style={{ "--proc-x": `${hitFx.x}%`, "--proc-y": `${hitFx.y}%` } as React.CSSProperties} aria-hidden="true"><i /><i /></span>
-                  <span key={`shockwave-emblem-${hitFx.id}`} className="shockwave-activation-emblem" aria-hidden="true"><Image src={UPGRADE_ICON_BY_KEY.shockwave} alt="" width={62} height={62} /><i /><i /></span>
-                </>}
-                <span key={`range-${hitFx.id}`} className={`attack-range-impact click-tier-${hitFx.tier} ${hitFx.hitCount ? "has-targets" : "missed"} ${hitFx.shockwave ? "is-shockwave" : ""}`} style={{ left: `${hitFx.x}%`, top: `${hitFx.y}%`, width: `${hitFx.radius * 2}%` }} aria-hidden="true"><i /></span>
-                <span key={hitFx.id} className={`click-attack-fx field-click-fx click-tier-${hitFx.tier} variant-${hitFx.variant} ${hitFx.critical ? "is-critical" : ""} ${hitFx.combo ? "is-combo" : ""} ${hitFx.shockwave ? "is-shockwave" : ""} ${hitFx.momentum ? "has-momentum" : ""}`} style={{ left: `${hitFx.x}%`, top: `${hitFx.y}%` }} aria-hidden="true">
-                  <span className="fx-motion-layer">
-                    <i className="fx-aim-rune" />
-                    <i className="fx-shockwave fx-shockwave-one" />
-                    <i className="fx-shockwave fx-shockwave-two" />
-                    <i className="fx-master-blade" />
-                    <i className="fx-slash fx-slash-one" />
-                    <i className="fx-slash fx-slash-two" />
-                    <i className="fx-slash fx-slash-three" />
-                    <i className="fx-slash fx-slash-four" />
-                    <i className="fx-slash fx-slash-five" />
-                    {hitFx.critical && <span className="critical-impact-burst">{CLICK_EFFECT_BLADES.map((index) => <i key={index} style={{ "--critical-ray": `${index * 45}deg` } as React.CSSProperties} />)}</span>}
-                    {hitFx.combo && <span className="combo-follow-through"><i /><i /><i /></span>}
-                    {hitFx.executionCount > 0 && <span className="execution-impact-cut"><i /><i /><i /></span>}
-                    <i className="fx-asset fx-asset-slash" />
-                    <i className="fx-asset fx-asset-rune" />
-                    <i className="fx-asset fx-asset-light" />
-                    <span className="fx-vivid-stage">
-                      <i className="fx-vivid fx-vivid-primary" />
-                      <i className="fx-vivid fx-vivid-secondary" />
-                      <i className="fx-vivid fx-vivid-impact" />
-                      <span className="fx-signature-mark"><i /><i /><i /><b>{clickAttackPattern(hitFx.tier).glyph}</b></span>
-                      <span className="fx-blade-rain">{CLICK_EFFECT_BLADES.map((index) => <i key={index} style={{ "--blade-x": `${(index - 4) * 42}px`, "--blade-delay": `${index * 45}ms`, "--blade-tilt": `${-18 + index * 5}deg` } as React.CSSProperties} />)}</span>
-                      <span className="fx-orbit-motes">{CLICK_EFFECT_SPARKS.map((index) => <i key={index} style={{ "--mote-angle": `${index * 30}deg`, "--mote-distance": `${105 + index % 3 * 34}px`, "--mote-delay": `${index * 32}ms` } as React.CSSProperties} />)}</span>
-                    </span>
-                    <span className="fx-asset-particles">{CLICK_EFFECT_PARTICLES.map((index) => <i key={index} style={{ "--particle-angle": `${index * 36 + hitFx.variant * 11}deg`, "--particle-distance": `${115 + index % 4 * 30 + hitFx.tier * 5}px`, "--particle-delay": `${index % 5 * 45}ms` } as React.CSSProperties} />)}</span>
-                    <span className="fx-sparks">{CLICK_EFFECT_SPARKS.map((index) => <i key={index} className="fx-spark" style={{ "--spark-angle": `${index * 30 + hitFx.variant * 7}deg`, "--spark-distance": `${82 + index % 3 * 18 + hitFx.tier * 9}px`, "--spark-delay": `${index % 4 * 35}ms` } as React.CSSProperties} />)}</span>
-                  </span>
-                  {hitFx.hitCount > 0 && (hitFx.combo ? <span className="combo-damage-pair">
-                    <strong className="fx-damage combo-damage-first">−{compactNumber(Math.ceil(hitFx.damage / 2))}</strong>
-                    <strong className="fx-damage combo-damage-second">−{compactNumber(Math.floor(hitFx.damage / 2))}</strong>
-                  </span> : <strong className={`fx-damage ${hitFx.executionCount ? "execution-damage" : ""}`}>−{compactNumber(hitFx.damage)}</strong>)}
-                </span>
-              </>}
+              {activeHitFxs.map((effect) => <WeaponAttackEffect
+                key={effect.id}
+                effect={effect}
+                glyph={clickAttackPattern(effect.tier).glyph}
+                formatNumber={compactNumber}
+              />)}
 
               {hitFx && <span className="sr-only" role="status">{activeCombatProcs.length ? `${activeCombatProcs.map((proc) => `${proc.title} 레벨 ${proc.level}`).join(", ")} 발동. ` : "일반 직접 공격. "}플레이어의 {clickAttackPattern(hitFx.tier).title}, 범위 안의 몬스터 {hitFx.hitCount}체 타격</span>}
             </div>

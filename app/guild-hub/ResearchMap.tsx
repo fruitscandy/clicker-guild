@@ -53,7 +53,7 @@ const BRANCH_DETAILS: Record<BranchFamily, { summary: string; impact: string }> 
   loot: { summary: "토벌 완료 시 길드원 장비를 획득할 확률을 높입니다.", impact: "반복 원정에서 장비 성장 기회를 늘려 길드원의 장기 전투력을 강화합니다." },
   guild: { summary: "출전한 길드원의 일반 공격과 기술 피해를 함께 높입니다.", impact: "플레이어가 직접 클릭하지 않는 동안에도 파티 전체의 자동 전투 화력이 꾸준히 증가합니다." },
   gold: { summary: "토벌 성공으로 획득하는 골드 보상을 늘립니다.", impact: "연구, 무기 제작, 길드원 고용에 사용할 성장 자금을 더 빠르게 모을 수 있습니다." },
-  tavern: { summary: "여관에서 만날 수 있는 길드원의 최대 등급을 높입니다.", impact: "더 높은 등급의 신규 길드원을 고용 후보로 발견해 파티 조합의 선택지를 넓힙니다." },
+  tavern: { summary: "여관 영입에서 상위 등급 길드원이 등장할 확률을 높입니다.", impact: "모든 등급은 처음부터 등장하며, 증축할수록 B·A·S 등급 계약을 만날 가능성이 커집니다." },
 };
 
 const DIRECTION_GROUPS: Array<{
