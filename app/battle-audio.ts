@@ -1,6 +1,13 @@
 import type { LootSoundProfile } from "./stage-materials";
+import {
+  effectiveSfxVolume,
+  readAudioSettings,
+  subscribeAudioSettings,
+} from "./audio-settings";
 
 let battleAudioContext: AudioContext | null = null;
+let sfxMasterGain: GainNode | null = null;
+let listeningToAudioSettings = false;
 
 const GOLD_COIN_SAMPLE_URLS = [
   "/assets/audio/loot/gold-coin-clink-01.mp3",
@@ -17,6 +24,29 @@ function getAudioContext() {
   if (!AudioContextClass) return null;
   battleAudioContext ??= new AudioContextClass();
   return battleAudioContext;
+}
+
+function getSfxOutput(context: AudioContext) {
+  if (!sfxMasterGain) {
+    const initialSettings = readAudioSettings();
+    sfxMasterGain = context.createGain();
+    sfxMasterGain.gain.setValueAtTime(effectiveSfxVolume(initialSettings), context.currentTime);
+    sfxMasterGain.connect(context.destination);
+  }
+
+  if (!listeningToAudioSettings) {
+    listeningToAudioSettings = true;
+    subscribeAudioSettings((settings) => {
+      if (!sfxMasterGain || !battleAudioContext) return;
+      sfxMasterGain.gain.setTargetAtTime(
+        effectiveSfxVolume(settings),
+        battleAudioContext.currentTime,
+        0.025,
+      );
+    });
+  }
+
+  return sfxMasterGain;
 }
 
 function prepareGoldCoinSamples(context: AudioContext) {
@@ -56,7 +86,7 @@ function playGoldCoinSample(context: AudioContext, start: number, dropIndex: num
   source.playbackRate.setValueAtTime(pitchVariation, start);
   gain.gain.setValueAtTime(sampleIndex === 0 ? 0.2 : 0.27, start);
   source.connect(gain);
-  gain.connect(context.destination);
+  gain.connect(getSfxOutput(context));
   source.start(start);
   return true;
 }
@@ -80,7 +110,7 @@ function tone(
   gain.gain.exponentialRampToValueAtTime(volume, start + attackDuration);
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
   oscillator.connect(gain);
-  gain.connect(context.destination);
+  gain.connect(getSfxOutput(context));
   oscillator.start(start);
   oscillator.stop(start + duration + 0.02);
 }
@@ -112,15 +142,32 @@ function noiseBurst(
   source.buffer = buffer;
   source.connect(filter);
   filter.connect(gain);
-  gain.connect(context.destination);
+  gain.connect(getSfxOutput(context));
   source.start(start);
 }
 
 export function unlockBattleAudio() {
   const context = getAudioContext();
   if (!context) return;
+  getSfxOutput(context);
   void prepareGoldCoinSamples(context);
   if (context.state !== "running") void context.resume().catch(() => undefined);
+}
+
+export function playSoundSettingsPreview() {
+  const context = getAudioContext();
+  if (!context) return;
+  getSfxOutput(context);
+  const play = () => {
+    const start = context.currentTime;
+    tone(context, 587, start, 0.13, 0.03, "triangle", 740);
+    tone(context, 880, start + 0.07, 0.2, 0.025, "sine", 1175);
+  };
+  if (context.state === "running") {
+    play();
+    return;
+  }
+  void context.resume().then(play).catch(() => undefined);
 }
 
 export function playLootDropSound(profile: LootSoundProfile, dropIndex = 0) {
