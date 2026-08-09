@@ -21,7 +21,9 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materia
   const [previewTier, setPreviewTier] = useState(currentLevel);
   const current = weapons[currentLevel];
   const next = weapons[currentLevel + 1] ?? null;
-  const preview = weapons[previewTier] ?? current;
+  const maxPreviewTier = Math.min(weapons.length - 1, currentLevel + 1);
+  const visiblePreviewTier = Math.min(previewTier, maxPreviewTier);
+  const preview = weapons[visiblePreviewTier] ?? current;
   const previewUnlocked = preview.tier <= currentLevel;
   const previewCraftable = preview.tier === currentLevel + 1;
   const nextRecipe = next ? weaponMaterialRecipe(next.tier) : null;
@@ -34,7 +36,7 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materia
   const vaultMaterials = allStageMaterials().map((material) => ({ material, amount: materials[material.id] ?? 0 }));
 
   function movePreview(direction: -1 | 1) {
-    setPreviewTier((tier) => Math.max(0, Math.min(weapons.length - 1, tier + direction)));
+    setPreviewTier(Math.max(0, Math.min(maxPreviewTier, visiblePreviewTier + direction)));
   }
 
   function craftNextWeapon() {
@@ -43,12 +45,12 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materia
     onUpgrade();
   }
 
-  return <section className={`${styles.workshop} panel facility-first-panel`} aria-label="불꽃 대장간 무기 강화">
+  return <section className={`${styles.workshop} panel facility-first-panel`} aria-label="불꽃 대장간 무기 제작">
     <header className={styles.header}>
       <div>
         <span className="eyebrow">FLAME FORGE · MASTERWORK ARSENAL</span>
         <h3>불꽃 대장간</h3>
-        <p>대장간은 플레이어의 클릭 무기 공격력과 외형만 올립니다. 길드원 패시브 공격력은 길드 강화 연구에서 따로 성장합니다.</p>
+        <p>새 무기를 제작하면 플레이어의 클릭 무기 공격력이 높아집니다. 무기는 현재 단계의 다음 무기부터 하나씩 완성됩니다.</p>
       </div>
       <div className={styles.resources} aria-label="대장간 보유 자원">
         <span><i className={styles.gold} />골드<strong>{formatNumber(gold)}</strong></span>
@@ -68,24 +70,23 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materia
       </div>
 
       <div className={styles.weaponStage}>
-        <button className={`${styles.arrow} ${styles.leftArrow}`} onClick={() => movePreview(-1)} disabled={previewTier === 0} aria-label="이전 무기 보기">‹</button>
+        <button className={`${styles.arrow} ${styles.leftArrow}`} onClick={() => movePreview(-1)} disabled={visiblePreviewTier === 0} aria-label="이전 무기 보기">‹</button>
         <div className={styles.anvilGlow} aria-hidden="true" />
         <div className={styles.weaponStand}>
-          <span className={styles.blueprintState}>{previewUnlocked ? "완성품" : previewCraftable ? "제작 가능" : "도면 잠김"}</span>
-          <WeaponArt tier={preview.tier} glyph={preview.glyph} label={preview.weaponName} locked={!previewUnlocked && !previewCraftable} className={styles.heroWeapon} />
+          <span className={styles.blueprintState}>{previewUnlocked ? (preview.tier === currentLevel ? "현재 장착" : "제작 완료") : "다음 무기"}</span>
+          {previewUnlocked
+            ? <WeaponArt tier={preview.tier} glyph={preview.glyph} label={preview.weaponName} className={styles.heroWeapon} />
+            : <WeaponArt tier={preview.tier} glyph={preview.glyph} label="다음 무기 실루엣" locked className={styles.heroWeapon} />}
           <i className={styles.anvil} aria-hidden="true" />
         </div>
-        <button className={`${styles.arrow} ${styles.rightArrow}`} onClick={() => movePreview(1)} disabled={previewTier === weapons.length - 1} aria-label="다음 무기 보기">›</button>
+        <button className={`${styles.arrow} ${styles.rightArrow}`} onClick={() => movePreview(1)} disabled={visiblePreviewTier === maxPreviewTier} aria-label="다음 무기 보기">›</button>
       </div>
 
       <aside className={styles.weaponDetails}>
         <span className={styles.tierLabel}>WEAPON {String(preview.tier + 1).padStart(2, "0")} / {weapons.length}</span>
-        <h4>{previewUnlocked || previewCraftable ? preview.weaponName : "미확인 무기 도면"}</h4>
-        <p>{previewUnlocked || previewCraftable ? preview.subtitle : "앞 단계 무기를 완성해야 이 도면을 해독할 수 있습니다."}</p>
+        <h4>{previewUnlocked ? preview.weaponName : "다음 무기"}</h4>
         <dl>
-          <div><dt>클릭 공격력</dt><dd>{previewUnlocked || previewCraftable ? formatNumber(Math.round(BASE_CLICK_DAMAGE * preview.damageScale)) : "???"}</dd></div>
-          <div><dt>공격 연출</dt><dd>{previewUnlocked || previewCraftable ? `${preview.visualHits} HIT` : "???"}</dd></div>
-          <div><dt>강화 효과</dt><dd>공격력만 상승</dd></div>
+          <div><dt>공격력</dt><dd>{previewUnlocked ? formatNumber(Math.round(BASE_CLICK_DAMAGE * preview.damageScale)) : "???"}</dd></div>
         </dl>
         {previewCraftable && nextRecipe && <div className={styles.costPanel}>
           <span>제작 비용</span>
@@ -95,21 +96,19 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materia
           </div>
           <small>{canAffordNext ? "골드와 재료 준비 완료" : gold < preview.cost ? `${formatNumber(preview.cost - gold)} G 부족` : firstShortage ? `${firstShortage.material.name} ${firstShortage.amount - firstShortage.owned}개 부족 · STAGE ${firstShortage.material.firstStage}~${firstShortage.material.lastStage}` : "제작 조건 확인 중"}</small>
         </div>}
-        {previewUnlocked && <div className={styles.ownedPanel}><span>{preview.tier === currentLevel ? "현재 장착 중" : "제작 완료"}</span><strong>{preview.title}</strong><small>전투에서 커서를 움직여 무기 외형을 확인하세요.</small></div>}
-        {!previewUnlocked && !previewCraftable && <div className={styles.lockedPanel}><span>연속 제작 필요</span><strong>{current.weaponName} 이후 도면</strong><small>현재 무기 다음 단계부터 차례대로 제작할 수 있습니다.</small></div>}
       </aside>
     </div>
 
     <div className={styles.craftBar}>
       <div className={styles.equippedSummary}>
         <WeaponArt tier={current.tier} glyph={current.glyph} label={current.weaponName} className={styles.equippedWeapon} />
-        <span><small>PLAYER WEAPON · +{current.tier}</small><strong>{current.weaponName}</strong><em>{current.title} · 클릭 공격력 {formatNumber(Math.round(BASE_CLICK_DAMAGE * current.damageScale))}</em></span>
+        <span><small>PLAYER WEAPON · CURRENT</small><strong>{current.weaponName}</strong><em>공격력 {formatNumber(Math.round(BASE_CLICK_DAMAGE * current.damageScale))}</em></span>
       </div>
       {next ? <button className={styles.craftButton} onClick={craftNextWeapon} disabled={!canAffordNext}>
         <span>다음 무기 제작</span>
-        <strong>{next.weaponName}</strong>
+        <strong>미확인 무기</strong>
         <small>{formatNumber(next.cost)} G · {recipeProgress.map(({ material, amount }) => `${material.name} ${amount}개`).join(" + ")}</small>
-      </button> : <div className={styles.masterwork}><span>MASTERWORK COMPLETE</span><strong>길드마스터 신검 완성</strong><small>15종 무기와 모든 직접 공격 연출을 해금했습니다.</small></div>}
+      </button> : <div className={styles.masterwork}><span>MASTERWORK COMPLETE</span><strong>길드마스터 신검 완성</strong><small>최종 무기 공격력 {formatNumber(Math.round(BASE_CLICK_DAMAGE * current.damageScale))}</small></div>}
     </div>
 
     <div className={styles.materialVault}>
@@ -122,23 +121,27 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materia
       </div>
     </div>
 
-    <div className={styles.arsenalHeading}><span>무기 진열대</span><strong>{currentLevel + 1}/{weapons.length} 완성</strong><small>카드를 눌러 무기의 외형과 성능을 미리 확인하세요.</small></div>
+    <div className={styles.arsenalHeading}><span>무기 진열대</span><strong>{currentLevel + 1}/{weapons.length} 완성</strong><small>완성한 무기와 바로 다음 무기의 실루엣만 확인할 수 있습니다.</small></div>
     <div className={styles.arsenal} role="list" aria-label="15종 무기 제작 단계">
       {weapons.map((weapon) => {
         const unlocked = weapon.tier <= currentLevel;
         const craftable = weapon.tier === currentLevel + 1;
-        const selected = weapon.tier === previewTier;
+        const hidden = weapon.tier > currentLevel + 1;
+        const selected = !hidden && weapon.tier === visiblePreviewTier;
         return <button
           key={weapon.key}
-          className={`${styles.weaponCard} ${unlocked ? styles.unlocked : styles.lockedCard} ${craftable ? styles.craftable : ""} ${selected ? styles.selected : ""}`}
+          className={`${styles.weaponCard} ${unlocked ? styles.unlocked : styles.lockedCard} ${craftable ? styles.craftable : ""} ${hidden ? styles.hiddenCard : ""} ${selected ? styles.selected : ""}`}
           onClick={() => setPreviewTier(weapon.tier)}
+          disabled={hidden}
           aria-pressed={selected}
-          aria-label={`${weapon.tier + 1}단계 ${unlocked || craftable ? weapon.weaponName : "미확인 무기 도면"} 보기`}
+          aria-label={`${weapon.tier + 1}단계 ${unlocked ? weapon.weaponName : craftable ? "다음 무기 실루엣" : "미공개 무기"}${hidden ? "" : " 보기"}`}
         >
           <span className={styles.cardTier}>{String(weapon.tier + 1).padStart(2, "0")}</span>
-          <WeaponArt tier={weapon.tier} glyph={weapon.glyph} label={weapon.weaponName} locked={!unlocked && !craftable} className={styles.cardWeapon} />
-          <strong>{unlocked || craftable ? weapon.weaponName : "미확인 도면"}</strong>
-          <small>{unlocked ? weapon.title : craftable ? `${formatNumber(weapon.cost)} G` : "LOCKED"}</small>
+          {hidden
+            ? <span className={styles.hiddenCardGlyph} aria-hidden="true">???</span>
+            : <WeaponArt tier={weapon.tier} glyph={weapon.glyph} label={unlocked ? weapon.weaponName : "다음 무기 실루엣"} locked={!unlocked} className={styles.cardWeapon} />}
+          <strong>{unlocked ? weapon.weaponName : craftable ? "다음 무기" : "???"}</strong>
+          <small>{unlocked ? `공격력 ${formatNumber(Math.round(BASE_CLICK_DAMAGE * weapon.damageScale))}` : craftable ? `${formatNumber(weapon.cost)} G` : "???"}</small>
         </button>;
       })}
     </div>

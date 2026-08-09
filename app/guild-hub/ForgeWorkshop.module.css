@@ -70,11 +70,10 @@
 
 .weaponDetails { position: relative; z-index: 2; align-self: center; min-width: 0; padding: 17px; color: #eadcc7; background: linear-gradient(145deg,rgba(44,32,27,.96),rgba(24,19,17,.94)); border: 1px solid #876044; border-top: 4px solid #c97937; border-radius: 8px; box-shadow: 0 12px 24px rgba(0,0,0,.36),inset 0 1px rgba(255,255,255,.05); }
 .tierLabel { color: #e6a24d; font-size: 7px; font-weight: 1000; letter-spacing: .14em; }
-.weaponDetails h4 { margin: 6px 0 4px; color: #fff0c6; font: 900 22px Georgia,"Noto Serif KR",serif; }.weaponDetails > p { min-height: 34px; margin: 0 0 13px; color: #bca891; font-size: 9px; line-height: 1.55; }
-.weaponDetails dl { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; margin: 0; }
+.weaponDetails h4 { margin: 6px 0 13px; color: #fff0c6; font: 900 22px Georgia,"Noto Serif KR",serif; }
+.weaponDetails dl { display: grid; grid-template-columns: 1fr; gap: 5px; margin: 0; }
 .weaponDetails dl div { min-width: 0; padding: 8px 5px; background: #171311; border: 1px solid #5f4535; border-radius: 4px; text-align: center; }.weaponDetails dt { color: #9f8e7c; font-size: 6px; }.weaponDetails dd { margin: 3px 0 0; overflow: hidden; color: #f4d68d; font-size: 9px; font-weight: 1000; text-overflow: ellipsis; white-space: nowrap; }
-.costPanel,.ownedPanel,.lockedPanel { display: grid; gap: 3px; margin-top: 11px; padding: 10px; background: #191411; border: 1px solid #795337; border-radius: 5px; }.costPanel span,.ownedPanel span,.lockedPanel span { color: #bda58b; font-size: 7px; font-weight: 900; }.costPanel strong,.ownedPanel strong,.lockedPanel strong { color: #ffe09a; font-size: 13px; }.costPanel small,.ownedPanel small,.lockedPanel small { color: #a49382; font-size: 7px; line-height: 1.4; }.costPanel .shortage { color: #ef7058; }
-.ownedPanel { border-color: #687b55; background: #182018; }.ownedPanel strong { color: #bde48f; }.lockedPanel { filter: grayscale(.25); }
+.costPanel { display: grid; gap: 3px; margin-top: 11px; padding: 10px; background: #191411; border: 1px solid #795337; border-radius: 5px; }.costPanel span { color: #bda58b; font-size: 7px; font-weight: 900; }.costPanel strong { color: #ffe09a; font-size: 13px; }.costPanel small { color: #a49382; font-size: 7px; line-height: 1.4; }.costPanel .shortage { color: #ef7058; }
 .recipeCosts { display: grid; gap: 4px; }
 .recipeCosts strong { display: flex; align-items: center; gap: 6px; }
 .costMaterialIcon { flex: 0 0 auto; width: 25px; height: 25px; border-radius: 5px; }
@@ -94,7 +93,10 @@
 .arsenal { display: grid; grid-template-columns: repeat(15,minmax(82px,1fr)); gap: 7px; padding: 5px 18px 20px; overflow-x: auto; background: #241a16; scrollbar-color: #9b6539 #1b1411; }
 .weaponCard { position: relative; display: grid; justify-items: center; min-width: 82px; padding: 8px 5px 9px; color: #84796d; background: linear-gradient(#2d2723,#1d1917); border: 1px solid #57473b; border-radius: 6px; cursor: pointer; transition: transform .15s ease,border-color .15s ease,filter .15s ease; }.weaponCard:hover { transform: translateY(-3px); border-color: #a8784a; }.weaponCard.selected { border-color: #ffd678; box-shadow: 0 0 0 2px rgba(246,194,91,.13),0 0 16px rgba(222,140,48,.28); transform: translateY(-4px); }.weaponCard.unlocked { color: #e9d8bf; background: linear-gradient(#443125,#29201b); }.weaponCard.craftable { color: #ffe4a3; border-color: #d68e3c; background: linear-gradient(#51301f,#2d2019); animation: craftableGlow 1.8s ease-in-out infinite; }
 .weaponCard.lockedCard { color: #746b63; background: linear-gradient(#292522,#1b1816); }
+.weaponCard.hiddenCard { color: #5f5852; border-color: #443b35; background: linear-gradient(#24211f,#181614); cursor: default; }
+.weaponCard.hiddenCard:hover { border-color: #443b35; transform: none; }
 .cardTier { position: absolute; right: 5px; top: 4px; color: #a98b6f; font-size: 6px; font-weight: 1000; }.cardWeapon { width: 51px; height: 72px; margin: 2px 0 4px; }.weaponCard strong { width: 100%; overflow: hidden; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }.weaponCard small { width: 100%; margin-top: 2px; overflow: hidden; color: #a69684; font-size: 6px; text-overflow: ellipsis; white-space: nowrap; }.weaponCard.craftable small { color: #f1bc67; }
+.hiddenCardGlyph { display: grid; place-items: center; width: 51px; height: 72px; margin: 2px 0 4px; color: #6d655e; background: rgba(10,9,8,.34); border: 1px dashed #4d443d; border-radius: 5px; font: 900 14px Georgia,serif; letter-spacing: .08em; }
 
 @keyframes forgePulse { to { opacity: .58; transform: scale(1.08); } }
 @keyframes emberRise { 0% { opacity: 0; transform: translateY(0) scale(.4); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-180px) translateX(32px) scale(1.3); } }
@@ -106,7 +108,7 @@
 }
 
 @media (max-width: 680px) {
-  .header { display: grid; }.resources { grid-template-columns: 1fr 1fr; }.recipeResource { grid-column: 1 / -1; }.forgeFloor { grid-template-columns: 1fr; min-height: 910px; padding-inline: 12px; }.weaponStage { grid-column: 1; grid-row: 1; }.weaponDetails { grid-column: 1; grid-row: 2; }.forgeLore { grid-column: 1; grid-row: 3; }.craftBar { padding-inline: 10px; }.equippedSummary { grid-template-columns: 54px 1fr; }.weaponDetails dl { grid-template-columns: 1fr 1fr 1fr; }.arsenalHeading,.arsenal { padding-inline: 10px; }.materialVault { padding-inline: 10px; }.vaultGrid { grid-template-columns: repeat(2,minmax(124px,1fr)); }
+  .header { display: grid; }.resources { grid-template-columns: 1fr 1fr; }.recipeResource { grid-column: 1 / -1; }.forgeFloor { grid-template-columns: 1fr; min-height: 910px; padding-inline: 12px; }.weaponStage { grid-column: 1; grid-row: 1; }.weaponDetails { grid-column: 1; grid-row: 2; }.forgeLore { grid-column: 1; grid-row: 3; }.craftBar { padding-inline: 10px; }.equippedSummary { grid-template-columns: 54px 1fr; }.arsenalHeading,.arsenal { padding-inline: 10px; }.materialVault { padding-inline: 10px; }.vaultGrid { grid-template-columns: repeat(2,minmax(124px,1fr)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
