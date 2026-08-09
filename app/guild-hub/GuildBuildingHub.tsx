@@ -62,7 +62,6 @@ export function GuildBuildingHub(props: GuildBuildingHubProps) {
           </button>
         ))}
 
-        <div className={styles.sceneHint}><span>건물을 선택하세요</span><strong>{GUILD_FACILITIES.find((facility) => facility.id === props.activeFacility)?.title}</strong><small>선택한 시설의 콘텐츠가 아래에 열립니다.</small></div>
       </div>
     </section>
   );

@@ -228,14 +228,27 @@
   border: 1px solid rgba(239, 194, 99, .54);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, .28);
-  transform: translateX(-50%);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 7px);
   text-align: center;
+  transition: opacity .16s ease, visibility .16s ease, transform .16s ease;
+  pointer-events: none;
 }
 
 .mainHall .buildingLabel { bottom: 9%; }
 .buildingLabel b { color: #eab94f; font-size: 8px; letter-spacing: .08em; }
 .buildingLabel strong { font-size: 11px; }
 .buildingLabel small { margin-top: 2px; color: #c8bda9; font-size: 8px; }
+
+.mainHall:hover .buildingLabel,
+.mainHall:focus-visible .buildingLabel,
+.facility:hover .buildingLabel,
+.facility:focus-visible .buildingLabel {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%);
+}
 
 .active .buildingLabel {
   color: #2b241c;
@@ -245,24 +258,6 @@
 }
 .active .buildingLabel b,
 .active .buildingLabel small { color: #5f4422; }
-
-.sceneHint {
-  position: absolute;
-  left: 20px;
-  bottom: 18px;
-  z-index: 18;
-  display: grid;
-  max-width: 235px;
-  padding: 10px 12px;
-  color: #f8ecd4;
-  background: rgba(22, 29, 25, .87);
-  border-left: 4px solid #dca941;
-  border-radius: 6px;
-  pointer-events: none;
-}
-.sceneHint span { color: #dca941; font-size: 7px; font-weight: 1000; letter-spacing: .12em; }
-.sceneHint strong { margin-top: 2px; font-size: 13px; }
-.sceneHint small { margin-top: 2px; color: #bfb8a9; font-size: 8px; }
 
 @keyframes hallUpgrade {
   0% { opacity: .3; filter: brightness(2) drop-shadow(0 0 26px #ffe17d); transform: translateY(18px) scale(.88); }
@@ -285,7 +280,6 @@
   .facility:hover, .facility:focus-visible, .facility.active { transform: translateY(-4px) scale(.72); }
   .research { right: -2%; top: 76px; }
   .tavern { left: -5%; bottom: 126px; }.forge { right: -2%; bottom: 126px; }
-  .sceneHint { left: 12px; right: 12px; bottom: 10px; max-width: none; }
   .mainHall .buildingLabel { bottom: 5%; }
 }
 

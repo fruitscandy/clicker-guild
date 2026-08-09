@@ -12,6 +12,9 @@ test("guild territory art and hall upgrade UI share the game tone", async () => 
 
   assert.match(styles, /url\("\/assets\/guild\/guild-territory-backdrop-v1\.png"\)/);
   assert.doesNotMatch(hub, /styles\.(?:sky|mountain|road)/);
+  assert.doesNotMatch(hub, /styles\.sceneHint/);
+  assert.match(styles, /\.buildingLabel \{[\s\S]*?opacity: 0;[\s\S]*?visibility: hidden;/);
+  assert.match(styles, /\.mainHall:hover \.buildingLabel,[\s\S]*?\.facility:focus-visible \.buildingLabel \{[\s\S]*?opacity: 1;[\s\S]*?visibility: visible;/);
   assert.match(game, /<h3>시설 해금 현황<\/h3>/, "the legacy panel remains isolated in read-only Game markup");
   assert.match(styles, /:global\(\.facility-hall \.guild-hall-management > \.upgrade-panel\) \{\s*display: none;/);
   assert.match(styles, /:global\(\.facility-hall \.guild-hall-management\) \{\s*grid-template-columns: 1fr;/);
