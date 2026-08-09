@@ -21,8 +21,8 @@ test("server-renders the Guildmaster game shell", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>모험가 길드 \| 길드마스터 클리커 RPG<\/title>/i);
-  assert.match(html, /길드 관리/);
-  assert.match(html, /토벌 출정/);
+  assert.match(html, /길드 영지/);
+  assert.match(html, /사냥터/);
   assert.match(html, /초보자의 숲/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
@@ -242,4 +242,25 @@ test("uses expedition state instead of locked navigation tabs", async () => {
   assert.doesNotMatch(game, /type Tab|setTab|main-tabs|LOCKED/);
   assert.doesNotMatch(game, /tab !== "field"|tab === "field"/);
   assert.doesNotMatch(globalStyles, /main-tabs|live-dot|livePulse/);
+});
+
+test("launches expeditions from the hunting ground inside the guild territory", async () => {
+  const [game, huntingGround, huntingStyles, huntingAssets] = await Promise.all([
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/HuntingGround.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/HuntingGround.module.css", import.meta.url), "utf8"),
+    readdir(new URL("../public/assets/guild/hunting/", import.meta.url)),
+  ]);
+
+  assert.doesNotMatch(game, /GUILD TERRITORY|<h2>길드 관리<\/h2>|expedition-actions/);
+  assert.match(game, /aria-label="길드 영지"/);
+  assert.match(game, /<TerritoryHuntingGround/);
+  assert.match(game, /<HuntingGroundPanel/);
+  assert.match(game, /title="사냥터 지도 · 토벌 목표 선택"/);
+  assert.match(huntingGround, /토벌 지도 열기/);
+  assert.match(huntingGround, /이 웨이브 출정/);
+  assert.match(huntingGround, /hunting-ground-outpost-v2\.png/);
+  assert.match(huntingStyles, /\.territoryCanvas/);
+  assert.match(huntingStyles, /\.fieldPreview/);
+  assert.ok(huntingAssets.includes("hunting-ground-outpost-v2.png"));
 });
