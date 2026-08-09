@@ -28,6 +28,13 @@ test("the battle field mounts only the restrained weapon effect component", () =
   }
 });
 
+test("rapid clicks keep independent weapon effects alive until their own animation ends", () => {
+  assert.match(gameSource, /const \[activeHitFxs, setActiveHitFxs\] = useState<ClickAttackFx\[\]>\(\[\]\)/);
+  assert.match(gameSource, /activeHitFxs\.map\(\(effect\) => <WeaponAttackEffect/);
+  assert.match(gameSource, /current\.filter\(\(effect\) => effect\.id !== effectId\)/);
+  assert.match(gameSource, /MAX_SIMULTANEOUS_CLICK_FX = 48/);
+});
+
 test("all 15 weapons select one unique effect motif without tier accumulation", () => {
   const motifNames = [...effectSource.matchAll(/motif: "(motif[A-Za-z]+)"/g)].map((match) => match[1]);
 

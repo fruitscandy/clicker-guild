@@ -85,6 +85,8 @@ type ClickAttackFx = {
   radius: number;
 };
 
+const MAX_SIMULTANEOUS_CLICK_FX = 48;
+
 type MemberWeaponFx = {
   id: number;
   memberId: string;
@@ -422,6 +424,7 @@ export default function Game() {
   const [clicks, setClicks] = useState(0);
   const [momentumStacks, setMomentumStacks] = useState(0);
   const [hitFx, setHitFx] = useState<ClickAttackFx | null>(null);
+  const [activeHitFxs, setActiveHitFxs] = useState<ClickAttackFx[]>([]);
   const [memberWeaponFx, setMemberWeaponFx] = useState<MemberWeaponFx[]>([]);
   const [lostMembers, setLostMembers] = useState<string[]>([]);
   const [territoryPulse, setTerritoryPulse] = useState(0);
@@ -813,7 +816,7 @@ export default function Game() {
     const executionCount = executionTargets.length;
     const effectId = clickFxCounter.current + 1;
     clickFxCounter.current = effectId;
-    setHitFx({
+    const nextHitFx: ClickAttackFx = {
       id: effectId,
       tier: activeClickPattern.tier,
       variant: effectId % activeClickPattern.variants,
@@ -829,9 +832,14 @@ export default function Game() {
       x,
       y,
       radius: effectiveRange,
-    });
+    };
+    setHitFx(nextHitFx);
+    setActiveHitFxs((current) => [...current.slice(-(MAX_SIMULTANEOUS_CLICK_FX - 1)), nextHitFx]);
     const feedbackDuration = shockwave ? 1750 : executionCount || critical || combo || nextMomentum ? 1250 : activeClickPattern.duration;
-    window.setTimeout(() => setHitFx((current) => current?.id === effectId ? null : current), Math.max(activeClickPattern.duration, feedbackDuration));
+    window.setTimeout(() => {
+      setHitFx((current) => current?.id === effectId ? null : current);
+      setActiveHitFxs((current) => current.filter((effect) => effect.id !== effectId));
+    }, Math.max(activeClickPattern.duration, feedbackDuration));
     if (targets.length) playCombatProcSound({ critical, combo, shockwave, execution: executionCount > 0, momentumMaxed });
     damageMonsters(targets.map((monster) => monster.id), damage, true, activeClickPattern.tier);
     clickCount.current = nextClicks;
@@ -860,6 +868,7 @@ export default function Game() {
     lastSkill.current = {};
     setMemberWeaponFx([]);
     setHitFx(null);
+    setActiveHitFxs([]);
     clickCount.current = 0;
     momentumState.current = { lastAt: 0, stacks: 0 };
     setClicks(0);
@@ -893,6 +902,7 @@ export default function Game() {
     setDefeat(false);
     setFieldMonsters([]);
     setMemberWeaponFx([]);
+    setActiveHitFxs([]);
     setWeaponCursor((cursor) => ({ ...cursor, visible: false }));
     setLootDrops([]);
     setLootPhase("idle");
@@ -931,6 +941,7 @@ export default function Game() {
     const pattern = clickAttackPattern(level);
     setDeveloperClickLevel(level);
     setHitFx(null);
+    setActiveHitFxs([]);
     setToast(`플레이어 무기 ${pattern.tier + 1}/15 · ${pattern.weaponName} · ${pattern.title} 미리보기입니다.`);
   }
 
@@ -1098,6 +1109,8 @@ export default function Game() {
     setDeveloperStage(null);
     setDeveloperClickLevel(CLICK_ATTACK_PATTERNS.length - 1);
     setFieldMonsters([]);
+    setHitFx(null);
+    setActiveHitFxs([]);
     setLootDrops([]);
     setLootPhase("idle");
     setCollectedGold(0);
@@ -1356,12 +1369,12 @@ export default function Game() {
               </div>
               {lootCollecting && <span className="sr-only" role="status">토벌이 끝나 전장의 골드와 재료를 회수하고 있습니다. 골드 {compactNumber(collectedGold)} / {compactNumber(plannedGold)}, {stageMaterial.name} {collectedMaterial} / {plannedMaterial}</span>}
 
-              {hitFx && <WeaponAttackEffect
-                key={hitFx.id}
-                effect={hitFx}
-                glyph={clickAttackPattern(hitFx.tier).glyph}
+              {activeHitFxs.map((effect) => <WeaponAttackEffect
+                key={effect.id}
+                effect={effect}
+                glyph={clickAttackPattern(effect.tier).glyph}
                 formatNumber={compactNumber}
-              />}
+              />)}
 
               {hitFx && <span className="sr-only" role="status">{activeCombatProcs.length ? `${activeCombatProcs.map((proc) => `${proc.title} 레벨 ${proc.level}`).join(", ")} 발동. ` : "일반 직접 공격. "}플레이어의 {clickAttackPattern(hitFx.tier).title}, 범위 안의 몬스터 {hitFx.hitCount}체 타격</span>}
             </div>
