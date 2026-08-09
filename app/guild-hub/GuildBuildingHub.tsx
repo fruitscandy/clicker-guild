@@ -59,6 +59,8 @@ export function GuildBuildingHub(props: GuildBuildingHubProps) {
               ? <span className={`${styles.facilityBuilding} ${styles.tavernBuildingArt}`} aria-hidden="true" />
               : facility.id === "forge"
               ? <span className={`${styles.facilityBuilding} ${styles.forgeBuildingArt}`} aria-hidden="true" />
+              : facility.id === "research"
+              ? <span className={`${styles.facilityBuilding} ${styles.researchBuildingArt}`} aria-hidden="true" />
               : <span className={styles.facilityBuilding} aria-hidden="true"><i>{facility.glyph}</i><b /></span>}
             <span className={styles.buildingLabel}><strong>{facility.title}</strong><small>{facilityStatus[facility.id](props)}</small></span>
           </button>
