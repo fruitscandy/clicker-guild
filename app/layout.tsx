@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import WeaponAttackAudio from "./WeaponAttackAudio";
 
 export const metadata: Metadata = {
   title: "모험가 길드 | 길드마스터 클리커 RPG",
@@ -17,7 +18,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        <WeaponAttackAudio />
+        {children}
+      </body>
     </html>
   );
 }
