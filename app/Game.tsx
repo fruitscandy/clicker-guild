@@ -2,7 +2,17 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { playLootCollectSound, playLootCompleteSound, playLootDropSound, unlockBattleAudio } from "./battle-audio";
+import {
+  playExpeditionFailSound,
+  playExpeditionStartSound,
+  playGuildMemberHireSound,
+  playLootCollectSound,
+  playLootCompleteSound,
+  playLootDropSound,
+  playMenuTabSound,
+  playMonsterHitSound,
+  unlockBattleAudio,
+} from "./battle-audio";
 import {
   createBattleLootPlan,
   GOLD_LOOT_TRAVEL_MS,
@@ -645,6 +655,7 @@ export default function Game() {
   const failBattle = useCallback(() => {
     if (victoryLock.current) return;
     victoryLock.current = true;
+    playExpeditionFailSound();
     clearLootTimers();
     setBattleActive(false);
     setBattleDeadline(null);
@@ -671,6 +682,7 @@ export default function Game() {
 
   const damageMonsters = useCallback((targetIds: string[], damage: number, allowExecution = false, impactTier = 0) => {
     if (!targetIds.length) return;
+    playMonsterHitSound(impactTier, targetIds.length);
     const targets = new Set(targetIds);
     const hitAt = Date.now();
     setFieldMonsters((current) => {
@@ -821,6 +833,7 @@ export default function Game() {
       return;
     }
     const nextStage = getStage(stageNumber);
+    playExpeditionStartSound(nextStage.boss);
     const nextMaterial = stageMaterialFor(stageNumber);
     const durationSeconds = developerMode ? DEV_BATTLE_SECONDS : (nextStage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + save.upgrades.time * 5 + traitCounts.support * 3;
     const monsters = spawnMonsterPack(nextStage);
@@ -966,6 +979,7 @@ export default function Game() {
       const next = { ...current, gold: current.gold - member.cost, owned, party, progress: { ...current.progress, [id]: { level: 1, xp: 0, gear: 0 } } };
       return { ...next, candidates: randomCandidates(next) };
     });
+    playGuildMemberHireSound();
     setToast(`${member.name} 합류 · ${combatTraitFor(member).title} 효과가 전투에 즉시 적용됩니다!`);
   }
 
@@ -991,7 +1005,18 @@ export default function Game() {
       const next = { ...current, gold: current.gold - cost, owned, party, progress: { ...current.progress, [roll.id]: { level: 1, xp: 0, gear: 0 } } };
       return { ...next, candidates: randomCandidates(next) };
     });
+    playGuildMemberHireSound();
     setToast(`운명의 계약! ${roll.name} 합류 · ${combatTraitFor(roll).title} 효과가 즉시 적용됩니다.`);
+  }
+
+  function switchMainTab(nextTab: Tab) {
+    playMenuTabSound();
+    setTab(nextTab);
+  }
+
+  function selectGuildFacility(facility: GuildFacility) {
+    playMenuTabSound();
+    setActiveFacility(facility);
   }
 
   function toggleParty(id: string) {
@@ -1094,8 +1119,8 @@ export default function Game() {
       </section>
 
       <nav className="main-tabs" aria-label="주요 화면">
-        <button className={tab === "guild" ? "active" : ""} onClick={() => setTab("guild")}><span>🏰</span> 길드 관리</button>
-        <button className={tab === "field" ? "active" : ""} disabled={!battleActive} title="토벌 출정 후 전투 화면이 열립니다"><span>⚔️</span> 필드 상황 <b className="live-dot">LOCKED</b></button>
+        <button className={tab === "guild" ? "active" : ""} onClick={() => switchMainTab("guild")}><span>🏰</span> 길드 관리</button>
+        <button className={tab === "field" ? "active" : ""} onClick={() => switchMainTab("field")} disabled={!battleActive} title="토벌 출정 후 전투 화면이 열립니다"><span>⚔️</span> 필드 상황 <b className="live-dot">LOCKED</b></button>
       </nav>
 
       <div className="toast" role="status"><span aria-hidden="true">✦</span>{toast}</div>
@@ -1117,7 +1142,7 @@ export default function Game() {
             partyCount={save.party.length}
             candidateCount={save.candidates.length}
             pulse={territoryPulse}
-            onSelect={setActiveFacility}
+            onSelect={selectGuildFacility}
           />
 
           <div className={`guild-facility-content facility-${activeFacility}`}>
