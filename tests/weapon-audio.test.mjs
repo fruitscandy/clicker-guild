@@ -73,3 +73,14 @@ test("클라이언트 오디오 컨트롤러가 앱 전체에 한 번 마운트�
   assert.match(component, /useEffect\(\(\) => installWeaponAttackAudio\(\), \[\]\)/);
   assert.match(layout, /<WeaponAttackAudio \/>/);
 });
+
+test("무기 공격음이 전역 효과음 음량과 음소거를 실시간으로 따른다", () => {
+  assert.match(source, /effectiveSfxVolume/);
+  assert.match(source, /readAudioSettings/);
+  assert.match(source, /subscribeAudioSettings/);
+  assert.match(source, /WEAPON_MIX_GAIN \* effectiveSfxVolume\(readAudioSettings\(\)\)/);
+  assert.match(source, /WEAPON_MIX_GAIN \* effectiveSfxVolume\(settings\)/);
+  assert.match(source, /bus\.master\.gain\.setTargetAtTime/);
+  assert.match(source, /unsubscribeAudioSettings\(\)/);
+  assert.doesNotMatch(source, /master\.gain\.value = 0\.82/);
+});

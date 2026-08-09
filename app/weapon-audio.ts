@@ -1,3 +1,9 @@
+import {
+  effectiveSfxVolume,
+  readAudioSettings,
+  subscribeAudioSettings,
+} from "./audio-settings";
+
 export type BladeImpactWeight = "light" | "medium" | "heavy";
 
 export type WeaponSoundProfile = {
@@ -79,6 +85,7 @@ type WeaponSoundBank = {
 type WeaponAudioBus = {
   dry: GainNode;
   reverb: GainNode;
+  master: GainNode;
 };
 
 type SampleOptions = {
@@ -95,6 +102,7 @@ type SampleOptions = {
 const audioBuses = new WeakMap<AudioContext, WeaponAudioBus>();
 const transientBuffers = new WeakMap<AudioContext, AudioBuffer>();
 const activeBursts = new WeakMap<AudioContext, AudioScheduledSourceNode[][]>();
+const WEAPON_MIX_GAIN = 0.82;
 
 function clampTier(tier: number) {
   return Math.min(WEAPON_SOUND_PROFILES.length - 1, Math.max(0, Math.round(tier)));
@@ -111,7 +119,10 @@ function getAudioBus(context: AudioContext) {
   const master = context.createGain();
   const compressor = context.createDynamicsCompressor();
 
-  master.gain.value = 0.82;
+  master.gain.setValueAtTime(
+    WEAPON_MIX_GAIN * effectiveSfxVolume(readAudioSettings()),
+    context.currentTime,
+  );
   wet.gain.value = 0.18;
   compressor.threshold.value = -15;
   compressor.knee.value = 10;
@@ -137,7 +148,7 @@ function getAudioBus(context: AudioContext) {
   master.connect(compressor);
   compressor.connect(context.destination);
 
-  const bus = { dry, reverb };
+  const bus = { dry, reverb, master };
   audioBuses.set(context, bus);
   return bus;
 }
@@ -403,6 +414,15 @@ export function installWeaponAttackAudio() {
   let bankPromise: Promise<WeaponSoundBank> | null = null;
   let variation = 0;
   let disposed = false;
+  const unsubscribeAudioSettings = subscribeAudioSettings((settings) => {
+    if (!context || context.state === "closed") return;
+    const bus = getAudioBus(context);
+    bus.master.gain.setTargetAtTime(
+      WEAPON_MIX_GAIN * effectiveSfxVolume(settings),
+      context.currentTime,
+      0.025,
+    );
+  });
   document.documentElement.dataset.weaponAudio = "loading";
 
   const prepareAudio = () => {
@@ -441,6 +461,7 @@ export function installWeaponAttackAudio() {
   document.addEventListener("pointerdown", playFromPointer, { capture: true });
   return () => {
     disposed = true;
+    unsubscribeAudioSettings();
     document.removeEventListener("pointerdown", playFromPointer, { capture: true });
     delete document.documentElement.dataset.weaponAudio;
     if (context && context.state !== "closed") void context.close();

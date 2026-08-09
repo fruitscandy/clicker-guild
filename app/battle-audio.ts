@@ -27,6 +27,12 @@ const GOLD_COIN_SAMPLE_URLS = [
   "/assets/audio/loot/gold-coin-jingle-02.mp3",
 ] as const;
 
+// Reward cues and the victory fanfare compete with a dense stream of combat
+// transients. Boost only those semantic groups so the global SFX slider can
+// stay comfortable for weapon hits.
+const REWARD_MIX_GAIN = 1.6;
+const VICTORY_MIX_GAIN = 1.5;
+
 let goldCoinSampleBuffers: AudioBuffer[] = [];
 let goldCoinSamplePromise: Promise<void> | null = null;
 
@@ -62,6 +68,13 @@ function getSfxOutput(context: AudioContext) {
   return sfxMasterGain;
 }
 
+function createSfxMixBus(context: AudioContext, volume: number) {
+  const mixBus = context.createGain();
+  mixBus.gain.setValueAtTime(volume, context.currentTime);
+  mixBus.connect(getSfxOutput(context));
+  return mixBus;
+}
+
 function prepareGoldCoinSamples(context: AudioContext) {
   if (goldCoinSampleBuffers.length === GOLD_COIN_SAMPLE_URLS.length) return Promise.resolve();
   if (goldCoinSamplePromise) return goldCoinSamplePromise;
@@ -81,7 +94,7 @@ function prepareGoldCoinSamples(context: AudioContext) {
   return goldCoinSamplePromise;
 }
 
-function playGoldCoinSample(context: AudioContext, start: number, dropIndex: number) {
+function playGoldCoinSample(context: AudioContext, start: number, dropIndex: number, output: AudioNode) {
   if (!goldCoinSampleBuffers.length) {
     void prepareGoldCoinSamples(context);
     return false;
@@ -99,7 +112,7 @@ function playGoldCoinSample(context: AudioContext, start: number, dropIndex: num
   source.playbackRate.setValueAtTime(pitchVariation, start);
   gain.gain.setValueAtTime(sampleIndex === 0 ? 0.2 : 0.27, start);
   source.connect(gain);
-  gain.connect(getSfxOutput(context));
+  gain.connect(output);
   source.start(start);
   return true;
 }
@@ -113,6 +126,7 @@ function tone(
   type: OscillatorType = "sine",
   endFrequency = frequency,
   attackDuration = Math.min(0.018, duration * 0.2),
+  output: AudioNode = getSfxOutput(context),
 ) {
   const oscillator = context.createOscillator();
   const gain = context.createGain();
@@ -123,7 +137,7 @@ function tone(
   gain.gain.exponentialRampToValueAtTime(volume, start + attackDuration);
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
   oscillator.connect(gain);
-  gain.connect(getSfxOutput(context));
+  gain.connect(output);
   oscillator.start(start);
   oscillator.stop(start + duration + 0.02);
 }
@@ -135,6 +149,7 @@ function noiseBurst(
   volume: number,
   frequency: number,
   endFrequency = frequency,
+  output: AudioNode = getSfxOutput(context),
 ) {
   const frameCount = Math.max(1, Math.floor(context.sampleRate * duration));
   const buffer = context.createBuffer(1, frameCount, context.sampleRate);
@@ -155,7 +170,7 @@ function noiseBurst(
   source.buffer = buffer;
   source.connect(filter);
   filter.connect(gain);
-  gain.connect(getSfxOutput(context));
+  gain.connect(output);
   source.start(start);
 }
 
@@ -239,6 +254,7 @@ export function playExpeditionFailSound() {
 export function playStageClearSound(boss = false) {
   playWhenAudioIsReady((context) => {
     const start = context.currentTime + 0.018;
+    const victoryMix = createSfxMixBus(context, VICTORY_MIX_GAIN);
     const melody = boss ? [294, 370, 440, 587] : [392, 494, 587, 784];
     const offsets = [0, 0.09, 0.18, 0.32];
     const root = boss ? 147 : 196;
@@ -246,21 +262,21 @@ export function playStageClearSound(boss = false) {
 
     // A soft impact opens space after the last combat hit, then a four-note
     // major fanfare and a sustained chord make the result read as a victory.
-    noiseBurst(context, start, boss ? 0.32 : 0.19, boss ? 0.025 : 0.015, boss ? 880 : 1850, boss ? 105 : 520);
-    tone(context, boss ? 73 : 98, start, boss ? 0.58 : 0.4, boss ? 0.042 : 0.028, "triangle", boss ? 49 : 73, 0.004);
-    if (boss) tone(context, 110, start + 0.025, 0.5, 0.022, "sine", 73, 0.006);
+    noiseBurst(context, start, boss ? 0.32 : 0.19, boss ? 0.025 : 0.015, boss ? 880 : 1850, boss ? 105 : 520, victoryMix);
+    tone(context, boss ? 73 : 98, start, boss ? 0.58 : 0.4, boss ? 0.042 : 0.028, "triangle", boss ? 49 : 73, 0.004, victoryMix);
+    if (boss) tone(context, 110, start + 0.025, 0.5, 0.022, "sine", 73, 0.006, victoryMix);
 
     melody.forEach((frequency, index) => {
       const noteStart = start + offsets[index];
       const duration = index === melody.length - 1 ? (boss ? 0.72 : 0.58) : 0.25;
-      tone(context, frequency, noteStart, duration, boss ? 0.023 : 0.021, "triangle", frequency * 1.012, 0.006);
-      tone(context, frequency * 2, noteStart + 0.012, duration * 0.72, boss ? 0.006 : 0.008, "sine", frequency * 2.025, 0.004);
+      tone(context, frequency, noteStart, duration, boss ? 0.023 : 0.021, "triangle", frequency * 1.012, 0.006, victoryMix);
+      tone(context, frequency * 2, noteStart + 0.012, duration * 0.72, boss ? 0.006 : 0.008, "sine", frequency * 2.025, 0.004, victoryMix);
     });
 
     [root, root * 1.25, root * 1.5].forEach((frequency, index) => {
-      tone(context, frequency, start + 0.38, boss ? 0.72 : 0.56, boss ? 0.018 : 0.014, index === 0 ? "triangle" : "sine", frequency * 1.008, 0.018);
+      tone(context, frequency, start + 0.38, boss ? 0.72 : 0.56, boss ? 0.018 : 0.014, index === 0 ? "triangle" : "sine", frequency * 1.008, 0.018, victoryMix);
     });
-    noiseBurst(context, start + 0.3, boss ? 0.28 : 0.2, boss ? 0.011 : 0.009, boss ? 3100 : 4600, boss ? 6800 : 7600);
+    noiseBurst(context, start + 0.3, boss ? 0.28 : 0.2, boss ? 0.011 : 0.009, boss ? 3100 : 4600, boss ? 6800 : 7600, victoryMix);
   });
 }
 
@@ -403,30 +419,31 @@ export function playLootDropSound(profile: LootSoundProfile, dropIndex = 0) {
   const context = getAudioContext();
   if (!context || context.state !== "running") return;
   const start = context.currentTime;
+  const rewardMix = createSfxMixBus(context, REWARD_MIX_GAIN);
   const variation = (dropIndex % 5 - 2) * 13;
 
   if (profile === "coin") {
-    if (playGoldCoinSample(context, start, dropIndex)) return;
+    if (playGoldCoinSample(context, start, dropIndex, rewardMix)) return;
     // The recorded CC0 samples are normally preloaded at battle start. This
     // compact fallback only covers a first-frame cache miss or network failure.
-    tone(context, 2380 + variation * 3, start, 0.12, 0.022, "triangle", 1510 + variation * 2, 0.002);
-    tone(context, 3650 + variation * 4, start + 0.035, 0.09, 0.012, "sine", 2460 + variation * 2, 0.0015);
-    noiseBurst(context, start, 0.024, 0.007, 7200, 3900);
+    tone(context, 2380 + variation * 3, start, 0.12, 0.022, "triangle", 1510 + variation * 2, 0.002, rewardMix);
+    tone(context, 3650 + variation * 4, start + 0.035, 0.09, 0.012, "sine", 2460 + variation * 2, 0.0015, rewardMix);
+    noiseBurst(context, start, 0.024, 0.007, 7200, 3900, rewardMix);
     return;
   }
   if (profile === "coin-pouch") {
-    tone(context, 170 + variation / 4, start, 0.16, 0.03, "triangle", 105 + variation / 5);
-    noiseBurst(context, start, 0.085, 0.015, 1050, 620);
+    tone(context, 170 + variation / 4, start, 0.16, 0.03, "triangle", 105 + variation / 5, undefined, rewardMix);
+    noiseBurst(context, start, 0.085, 0.015, 1050, 620, rewardMix);
     [0.016, 0.046, 0.078].forEach((offset, index) => {
-      tone(context, 1120 + variation * 2 + index * 180, start + offset, 0.09, 0.012, "sine", 840 + variation + index * 120);
+      tone(context, 1120 + variation * 2 + index * 180, start + offset, 0.09, 0.012, "sine", 840 + variation + index * 120, undefined, rewardMix);
     });
     return;
   }
   if (profile === "cash-bundle") {
-    tone(context, 128 + variation / 6, start + 0.01, 0.16, 0.026, "triangle", 78 + variation / 8);
-    tone(context, 520 + variation, start + 0.018, 0.1, 0.011, "triangle", 330 + variation / 2);
-    noiseBurst(context, start, 0.11, 0.022, 2800, 920);
-    noiseBurst(context, start + 0.035, 0.07, 0.012, 4100, 1700);
+    tone(context, 128 + variation / 6, start + 0.01, 0.16, 0.026, "triangle", 78 + variation / 8, undefined, rewardMix);
+    tone(context, 520 + variation, start + 0.018, 0.1, 0.011, "triangle", 330 + variation / 2, undefined, rewardMix);
+    noiseBurst(context, start, 0.11, 0.022, 2800, 920, rewardMix);
+    noiseBurst(context, start + 0.035, 0.07, 0.012, 4100, 1700, rewardMix);
     return;
   }
   if (profile === "seed-amber") {
@@ -511,20 +528,22 @@ export function playLootCollectSound(profile: LootSoundProfile, index: number, t
   const base = bases[profile];
   const frequency = base * Math.pow(2, progress * 0.76);
   const start = context.currentTime;
+  const rewardMix = createSfxMixBus(context, REWARD_MIX_GAIN);
   const voice: OscillatorType = profile === "magma-core" || profile === "black-iron" || profile === "blood-obsidian" || profile === "cash-bundle" ? "triangle" : "sine";
-  tone(context, frequency, start, 0.13, 0.027, voice, frequency * 1.09);
-  tone(context, frequency * 2.01, start + 0.016, 0.075, 0.01, "triangle", frequency * 2.08);
-  if (profile === "cash-bundle") noiseBurst(context, start, 0.045, 0.005, 2600, 1300);
+  tone(context, frequency, start, 0.13, 0.027, voice, frequency * 1.09, undefined, rewardMix);
+  tone(context, frequency * 2.01, start + 0.016, 0.075, 0.01, "triangle", frequency * 2.08, undefined, rewardMix);
+  if (profile === "cash-bundle") noiseBurst(context, start, 0.045, 0.005, 2600, 1300, rewardMix);
 }
 
 export function playLootCompleteSound() {
   const context = getAudioContext();
   if (!context || context.state !== "running") return;
   const start = context.currentTime;
+  const rewardMix = createSfxMixBus(context, REWARD_MIX_GAIN);
   [784, 988, 1175].forEach((frequency, index) => {
-    tone(context, frequency, start + index * 0.055, 0.28, 0.025, "sine", frequency * 1.015);
+    tone(context, frequency, start + index * 0.055, 0.28, 0.025, "sine", frequency * 1.015, undefined, rewardMix);
   });
-  tone(context, 392, start, 0.38, 0.016, "triangle", 523);
+  tone(context, 392, start, 0.38, 0.016, "triangle", 523, undefined, rewardMix);
 }
 
 export function playGoldDropSound(dropIndex = 0) { playLootDropSound("coin", dropIndex); }
