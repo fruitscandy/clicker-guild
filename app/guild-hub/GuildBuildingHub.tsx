@@ -35,10 +35,6 @@ export function GuildBuildingHub(props: GuildBuildingHubProps) {
   return (
     <section className={styles.hub} aria-label="길드 건물 선택">
       <div className={styles.scene} style={sceneStyle}>
-        <div className={styles.sky} aria-hidden="true"><i /><i /><i /></div>
-        <div className={styles.mountain} aria-hidden="true" />
-        <div className={styles.road} aria-hidden="true" />
-
         <button
           className={`${styles.mainHall} ${props.activeFacility === "hall" ? styles.active : ""}`}
           onClick={() => props.onSelect("hall")}
