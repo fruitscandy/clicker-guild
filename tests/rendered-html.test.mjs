@@ -56,3 +56,49 @@ test("ships region-specific monsters with hit and death actions", async () => {
   assert.match(css, /@keyframes packMonsterArtDefeat/);
   assert.match(css, /@keyframes packMonsterSoul/);
 });
+
+test("routes guild management through buildings and gates four-way research", async () => {
+  const [game, progression, hub, researchMap] = await Promise.all([
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/guild-progression.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/GuildBuildingHub.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/ResearchMap.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(game, /guildHallLevel/);
+  assert.match(game, /purchaseGuildHallUpgrade/);
+  assert.match(game, /requiredHallLevelForNode/);
+  assert.match(game, /activeFacility === "tavern"/);
+  assert.match(game, /activeFacility === "forge"/);
+  assert.match(game, /activeFacility === "research"/);
+  assert.match(game, /activeFacility === "training"/);
+  assert.match(progression, /researchDepth: 7/);
+  assert.match(progression, /inferHallLevelFromNodes/);
+  assert.match(hub, /길드 건물 선택/);
+  assert.match(researchMap, /직접 공격/);
+  assert.match(researchMap, /전투 리듬/);
+  assert.match(researchMap, /원정 지원/);
+  assert.match(researchMap, /길드 경영/);
+  assert.match(researchMap, /본관 Lv\.\$\{requiredHallLevel\} 필요/);
+});
+
+test("upgrades the flame forge and carries the equipped weapon into the combat cursor", async () => {
+  const [guildAssets, game, hub, forge, weaponArt] = await Promise.all([
+    readdir(new URL("../public/assets/guild/forge/", import.meta.url)),
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/GuildBuildingHub.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/ForgeWorkshop.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/WeaponArt.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.ok(guildAssets.includes("flame-forge-v1.png"));
+  assert.match(hub, /forgeBuildingArt/);
+  assert.match(forge, /FLAME FORGE · MASTERWORK ARSENAL/);
+  assert.match(forge, /공격력만 상승/);
+  assert.match(forge, /무기 진열대/);
+  assert.match(game, /<ForgeWorkshop/);
+  assert.match(game, /<WeaponCursor weapon=\{activeClickPattern\}/);
+  assert.match(game, /onPointerMove=\{trackWeaponCursor\}/);
+  assert.match(weaponArt, /WEAPON_PALETTES/);
+  assert.match(weaponArt, /cursorVisible/);
+});

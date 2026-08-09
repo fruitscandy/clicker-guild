@@ -13,11 +13,16 @@ import {
 } from "./battle-loot";
 import { fieldAssetForRegion } from "./field-assets";
 import { compactNumber, getStage, MEMBERS, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "./game-data";
+import { ForgeWorkshop } from "./guild-hub/ForgeWorkshop";
+import { GuildBuildingHub } from "./guild-hub/GuildBuildingHub";
+import { ResearchMap, type ResearchNodeView } from "./guild-hub/ResearchMap";
+import { GUILD_HALL_STAGES, guildHallStage, inferHallLevelFromNodes, requiredHallLevelForNode, type GuildFacility } from "./guild-hub/guild-progression";
+import { WeaponCursor } from "./guild-hub/WeaponArt";
 import { memberAnimationSource, type MemberMotion } from "./member-animations";
 import { monsterAssetForStage } from "./monster-assets";
 import { StageMap } from "./stage-map";
 
-type Tab = "guild" | "field" | "tavern";
+type Tab = "guild" | "field";
 type LootPhase = "idle" | "fighting" | "collecting" | "complete";
 type MemberProgress = { level: number; xp: number; gear: number };
 type UpgradeKey = "range" | "critical" | "combo" | "execution" | "shockwave" | "momentum" | "time" | "scout" | "guild" | "gold" | "tavern" | "loot";
@@ -76,6 +81,7 @@ type SaveState = {
   owned: string[];
   party: string[];
   progress: Record<string, MemberProgress>;
+  guildHallLevel: number;
   weaponLevel: number;
   upgrades: Record<UpgradeKey, number>;
   nodes: string[];
@@ -129,6 +135,7 @@ const initialState: SaveState = {
   owned: ["roan"],
   party: ["roan"],
   progress: { roan: { level: 1, xp: 0, gear: 0 } },
+  guildHallLevel: 1,
   weaponLevel: 0,
   upgrades: { range: 0, critical: 0, combo: 0, execution: 0, shockwave: 0, momentum: 0, time: 0, scout: 0, guild: 0, gold: 0, tavern: 0, loot: 0 },
   nodes: ["foundation"],
@@ -229,20 +236,6 @@ const UPGRADE_NODES: UpgradeNode[] = [
 
   { id: "citadel", title: "전설의 길드 성채", description: "모든 성장 계통을 완성한 증표", glyph: "♛", cost: 6200, prerequisites: ["shockwave-3", "range-7", "crit-4", "combo-4", "execute-3", "time-4", "scout-3", "guild-5", "gold-4", "loot-3", "tavern-3", "momentum-3"], x: 94, y: 720 },
 ];
-
-const GUILD_GROWTH_STAGES = [
-  { level: 0, min: 0, target: 3, name: "개척 야영지", description: "작은 천막과 목조 회관에서 첫 의뢰를 받는 단계" },
-  { level: 1, min: 3, target: 9, name: "새싹 길드", description: "정식 간판과 작업장이 생기고 모험가가 모이기 시작한 영지" },
-  { level: 2, min: 9, target: 18, name: "성장 길드촌", description: "본관이 증축되고 여관과 훈련장이 자리를 잡은 길드촌" },
-  { level: 3, min: 18, target: 30, name: "번영 길드타운", description: "상단과 연구 시설이 모여 밤에도 불이 꺼지지 않는 거점" },
-  { level: 4, min: 30, target: 47, name: "명문 길드 요새", description: "석조 성벽과 감시탑으로 원정대를 지키는 대형 본부" },
-  { level: 5, min: 47, target: 47, name: "전설의 길드 성채", description: "모든 성장 계통을 완성한 대륙 최고의 모험가 성채" },
-] as const;
-
-function guildGrowthStage(growth: number, hasCitadel: boolean) {
-  if (hasCitadel) return GUILD_GROWTH_STAGES[5];
-  return [...GUILD_GROWTH_STAGES].reverse().find((stage) => growth >= stage.min) ?? GUILD_GROWTH_STAGES[0];
-}
 
 const BIOME_DETAILS: Record<string, { label: string; description: string }> = {
   forest: { label: "이끼 숲길", description: "수풀과 고목 사이로 햇살이 드는 초록 전장" },
@@ -356,6 +349,7 @@ function upgradeEffectText(key: UpgradeKey, level: number) {
 export default function Game() {
   const [save, setSave] = useState<SaveState>(initialState);
   const [tab, setTab] = useState<Tab>("guild");
+  const [activeFacility, setActiveFacility] = useState<GuildFacility>("hall");
   const [hydrated, setHydrated] = useState(false);
   const [battleActive, setBattleActive] = useState(false);
   const [fieldMonsters, setFieldMonsters] = useState<FieldMonster[]>([]);
@@ -381,6 +375,7 @@ export default function Game() {
   const [lootPhase, setLootPhase] = useState<LootPhase>("idle");
   const [collectedLoot, setCollectedLoot] = useState(0);
   const [plannedGold, setPlannedGold] = useState(0);
+  const [weaponCursor, setWeaponCursor] = useState({ x: 50, y: 50, visible: false });
   const lastAttack = useRef<Record<string, number>>({});
   const lastSkill = useRef<Record<string, number>>({});
   const clickFxCounter = useRef(0);
@@ -409,7 +404,6 @@ export default function Game() {
   const shockwaveLevel = developerMode ? UPGRADE_CAPS.shockwave : save.upgrades.shockwave;
   const momentumLevel = developerMode ? UPGRADE_CAPS.momentum : save.upgrades.momentum;
   const momentumMaxStacks = momentumLevel ? 3 + momentumLevel * 2 : 0;
-  const nextWeapon = save.weaponLevel < WEAPON_MAX_LEVEL ? clickAttackPattern(save.weaponLevel + 1) : null;
   const guildMultiplier = Math.pow(1.15, save.upgrades.guild);
   const goldMultiplier = Math.pow(1.1, save.upgrades.gold);
   const battleSeconds = developerMode ? DEV_BATTLE_SECONDS : (stage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + save.upgrades.time * 5;
@@ -420,20 +414,8 @@ export default function Game() {
   const droppedGold = useMemo(() => goldDrops.reduce((sum, drop) => sum + drop.amount, 0), [goldDrops]);
   const autoAttackPoint = useMemo(() => bestAttackPoint(aliveMonsters, attackRange), [aliveMonsters, attackRange]);
   const intelReport = battlefieldIntel(aliveMonsters.length, fieldMonsters.length, developerMode ? 3 : save.upgrades.scout);
-  const guildGrowth = Math.max(0, save.nodes.length - 1);
-  const hasCitadel = save.nodes.includes("citadel");
-  const guildStage = guildGrowthStage(guildGrowth, hasCitadel);
-  const nextGuildStage = GUILD_GROWTH_STAGES[Math.min(GUILD_GROWTH_STAGES.length - 1, guildStage.level + 1)];
-  const stageRange = Math.max(1, guildStage.target - guildStage.min);
-  const guildStageProgress = hasCitadel ? 100 : Math.min(100, Math.round((guildGrowth - guildStage.min) / stageRange * 100));
-  const spriteColumn = guildStage.level % 3;
-  const spriteRow = Math.floor(guildStage.level / 3);
-  const territoryStyle = {
-    "--guild-growth": guildGrowth,
-    "--guild-sprite-x": `${spriteColumn * 50}%`,
-    "--guild-sprite-y": `${spriteRow * 100}%`,
-    "--guild-minor-scale": `${1 + guildStageProgress * .00035}`,
-  } as React.CSSProperties;
+  const hallStage = guildHallStage(save.guildHallLevel);
+  const nextHallStage = GUILD_HALL_STAGES[save.guildHallLevel] ?? null;
 
   const combatPower = useMemo(() => {
     const partyPower = partyMembers.reduce((sum, member) => sum + attackFor(member, progressFor(member)) * developerPower, 0) * guildMultiplier;
@@ -451,7 +433,10 @@ export default function Game() {
         const migratedWeaponLevel = Math.min(WEAPON_MAX_LEVEL, Math.max(0, loaded.weaponLevel ?? loaded.upgrades?.click ?? 0));
         const knownNodes = (loaded.nodes ?? initialState.nodes).filter((id) => UPGRADE_NODES.some((node) => node.id === id));
         const validNodes = knownNodes.filter((id) => id !== "citadel" || UPGRADE_NODES.find((node) => node.id === "citadel")!.prerequisites.every((required) => knownNodes.includes(required)));
-        setSave({ ...initialState, ...loaded, weaponLevel: migratedWeaponLevel, nodes: validNodes.length ? validNodes : initialState.nodes, upgrades: migratedUpgrades, specials: { ...initialState.specials, ...loaded.specials } });
+        const migratedNodes = validNodes.length ? validNodes : initialState.nodes;
+        const inferredHallLevel = inferHallLevelFromNodes(migratedNodes);
+        const migratedHallLevel = Math.min(GUILD_HALL_STAGES.length, Math.max(inferredHallLevel, loaded.guildHallLevel ?? 1));
+        setSave({ ...initialState, ...loaded, guildHallLevel: migratedHallLevel, weaponLevel: migratedWeaponLevel, nodes: migratedNodes, upgrades: migratedUpgrades, specials: { ...initialState.specials, ...loaded.specials } });
       }
     } catch {
       setToast("저장 데이터를 불러오지 못해 새 게임으로 시작합니다.");
@@ -823,8 +808,31 @@ export default function Game() {
     setToast(`${nextWeapon.weaponName} 완성! 기본 공격력이 ${Math.round(nextWeapon.damageScale * 100)}%로 상승하고 ${nextWeapon.title} 연출이 해금되었습니다.`);
   }
 
+  function purchaseGuildHallUpgrade() {
+    if (!nextHallStage || hallStage.upgradeCost === null || hallStage.requiredResearch === null) {
+      setToast("길드 본관이 이미 전설의 성채 단계에 도달했습니다.");
+      return;
+    }
+    if (save.nodes.length < hallStage.requiredResearch) {
+      setToast(`본관 승급을 위해 현재 해금 구간의 연구를 ${hallStage.requiredResearch - save.nodes.length}개 더 완료해야 합니다.`);
+      return;
+    }
+    if (save.gold < hallStage.upgradeCost) {
+      setToast(`${nextHallStage.name} 승급에 필요한 골드가 부족합니다.`);
+      return;
+    }
+    setSave((current) => ({ ...current, gold: current.gold - hallStage.upgradeCost!, guildHallLevel: current.guildHallLevel + 1 }));
+    setTerritoryPulse((current) => current + 1);
+    setToast(`${nextHallStage.name} 완성! 길드 강화 연구가 ${nextHallStage.researchDepth}단계까지 확장되었습니다.`);
+  }
+
   function purchaseNode(node: UpgradeNode) {
     if (save.nodes.includes(node.id)) return;
+    const requiredHallLevel = requiredHallLevelForNode(node.id);
+    if (save.guildHallLevel < requiredHallLevel) {
+      setToast(`${node.title} 연구에는 길드 본관 Lv.${requiredHallLevel}이 필요합니다. 본관을 먼저 승급하세요.`);
+      return;
+    }
     if (!node.prerequisites.every((id) => save.nodes.includes(id))) return setToast("앞선 성장 노드를 먼저 해금해야 합니다.");
     if (save.gold < node.cost) return setToast("노드를 해금할 골드가 부족합니다. 필드에서 토벌을 반복하세요.");
     setSave((current) => ({
@@ -919,6 +927,7 @@ export default function Game() {
     revealedLootIds.current.clear();
     setLostMembers([]);
     setTab("guild");
+    setActiveFacility("hall");
     setToast("새로운 길드가 창설되었습니다. 파티를 편성하고 첫 토벌을 준비하세요.");
   }
 
@@ -927,7 +936,18 @@ export default function Game() {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = Math.max(0, Math.min(100, (event.clientX - rect.left) / rect.width * 100));
     const y = Math.max(0, Math.min(100, (event.clientY - rect.top) / rect.height * 100));
+    if (event.pointerType === "mouse") setWeaponCursor({ x, y, visible: true });
     directAttackAt(x, y, false);
+  }
+
+  function trackWeaponCursor(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== "mouse") return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setWeaponCursor({
+      x: Math.max(0, Math.min(100, (event.clientX - rect.left) / rect.width * 100)),
+      y: Math.max(0, Math.min(100, (event.clientY - rect.top) / rect.height * 100)),
+      visible: true,
+    });
   }
 
   return (
@@ -958,7 +978,6 @@ export default function Game() {
       <nav className="main-tabs" aria-label="주요 화면">
         <button className={tab === "guild" ? "active" : ""} onClick={() => setTab("guild")}><span>🏰</span> 길드 관리</button>
         <button className={tab === "field" ? "active" : ""} disabled={!battleActive} title="토벌 출정 후 전투 화면이 열립니다"><span>⚔️</span> 필드 상황 <b className="live-dot">LOCKED</b></button>
-        <button className={tab === "tavern" ? "active" : ""} onClick={() => setTab("tavern")}><span>🍺</span> 여관</button>
       </nav>
 
       <div className="toast" role="status"><span aria-hidden="true">✦</span>{toast}</div>
@@ -971,89 +990,62 @@ export default function Game() {
             <div className="heading-actions expedition-actions"><button className="secondary-button" onClick={() => setStagePicker(true)}>목표 · {stage.region.name} {stage.localStage}구역</button><button className="primary-button" onClick={() => startStage()}>토벌 출정 ⚔</button></div>
           </div>
 
-          <div className="guild-layout">
-            <div
-              className={`territory guild-territory territory-stage-${guildStage.level} ${hasCitadel ? "has-citadel" : ""}`}
-              style={territoryStyle}
-              aria-label={`${guildStage.name}, 연구 ${guildGrowth}/47 완료`}
-            >
-              <div className="guild-sky" aria-hidden="true"><i /><i /><i /></div>
-              <div className="sun" aria-hidden="true" />
-              <div className="territory-ridge ridge-back" aria-hidden="true" />
-              <div className="territory-ridge ridge-front" aria-hidden="true" />
-              <div className="territory-road" aria-hidden="true" />
-              <div className="territory-stage-badge"><small>TERRITORY {guildStage.level + 1}/6</small><strong>{guildStage.name}</strong></div>
+          <GuildBuildingHub
+            activeFacility={activeFacility}
+            hallLevel={save.guildHallLevel}
+            researchCount={save.nodes.length}
+            researchTotal={UPGRADE_NODES.length}
+            weaponName={clickAttackPattern(save.weaponLevel).weaponName}
+            partyCount={save.party.length}
+            candidateCount={save.candidates.length}
+            pulse={territoryPulse}
+            onSelect={setActiveFacility}
+          />
 
-              <div className="guild-sprite-platform" aria-hidden="true">
-                <div key={`${guildStage.level}-${territoryPulse}`} className={`guild-sprite-frame ${territoryPulse ? "is-upgrading" : ""}`}>
-                  <span className="guild-build-sweep" />
-                  <span className="guild-build-ring ring-one" /><span className="guild-build-ring ring-two" />
-                  <span className="guild-build-particles">{Array.from({ length: 10 }, (_, index) => <i key={index} />)}</span>
-                </div>
-              </div>
-              <div key={territoryPulse} className={`territory-growth-flare ${territoryPulse ? "is-active" : ""}`} aria-hidden="true"><span>영지 성장!</span></div>
-
-              <div className="territory-caption">
-                <div><strong>{guildStage.name}</strong><span>{guildStage.description}</span></div>
-                <div className="territory-growth-copy"><small>길드 성장도</small><b>{guildGrowth}/47</b></div>
-                <div className="territory-growth-meter"><i style={{ width: `${guildStageProgress}%` }} /></div>
-                <small className="next-territory-stage">{hasCitadel ? "최종 성채 완성" : `다음 외형 · ${nextGuildStage.name}까지 연구 ${Math.max(0, guildStage.target - guildGrowth)}개`}</small>
-              </div>
+          <div className={`guild-facility-content facility-${activeFacility}`}>
+          {activeFacility === "hall" && <div className="guild-layout guild-hall-management">
+            <div className="hall-upgrade-panel panel">
+              <div className="panel-title"><div><span className="eyebrow">GUILD HALL DEVELOPMENT</span><h3>길드 본관 승급</h3></div><span className="level-chip">본관 Lv.{hallStage.level}/6</span></div>
+              <div className="hall-current-stage"><span className="hall-stage-seal">{hallStage.level}</span><div><small>현재 건물</small><strong>{hallStage.name}</strong><p>{hallStage.description}</p></div></div>
+              <div className="growth-progress"><i style={{ width: `${(hallStage.level - 1) / (GUILD_HALL_STAGES.length - 1) * 100}%` }} /></div>
+              <div className="hall-unlock-summary"><span><b>현재 연구 한계</b><strong>{hallStage.researchDepth}단계</strong></span><span><b>완료 연구</b><strong>{save.nodes.length}/{UPGRADE_NODES.length}</strong></span><span><b>보유 골드</b><strong>{compactNumber(save.gold)} G</strong></span></div>
+              {nextHallStage && hallStage.upgradeCost !== null && hallStage.requiredResearch !== null ? <button className="hall-upgrade-button" onClick={purchaseGuildHallUpgrade}>
+                <small>NEXT · {nextHallStage.name}</small><strong>{compactNumber(hallStage.upgradeCost)} G로 본관 승급</strong><em>조건: 연구 {hallStage.requiredResearch}개 · {nextHallStage.researchDepth}단계까지 해금</em>
+              </button> : <div className="hall-max-stage"><span>♛</span><strong>전설의 길드 성채 완성</strong><small>모든 연구 깊이가 열렸습니다.</small></div>}
             </div>
 
             <div className="upgrade-panel panel">
-              <div className="panel-title"><div><span className="eyebrow">GROWTH OVERVIEW</span><h3>영지 성장 현황</h3></div><span className="level-chip">노드 {save.nodes.length}/{UPGRADE_NODES.length}</span></div>
+              <div className="panel-title"><div><span className="eyebrow">UNLOCK ROADMAP</span><h3>시설 해금 현황</h3></div><span className="level-chip">연구 깊이 {hallStage.researchDepth}</span></div>
+              <p className="panel-description">본관을 승급해야 강화 노드가 중심에서 더 멀리 뻗어 나갑니다. 이미 완료한 연구는 저장 호환 과정에서 다시 잠기지 않습니다.</p>
+              <div className="hall-level-path">{GUILD_HALL_STAGES.map((stageInfo) => <span key={stageInfo.level} className={`${stageInfo.level <= hallStage.level ? "unlocked" : ""} ${stageInfo.level === hallStage.level ? "current" : ""}`}><b>Lv.{stageInfo.level}</b><strong>{stageInfo.name}</strong><small>연구 {stageInfo.researchDepth}단계</small></span>)}</div>
+            </div>
+          </div>}
+
+          {activeFacility === "forge" && <ForgeWorkshop
+            weapons={CLICK_ATTACK_PATTERNS}
+            currentLevel={save.weaponLevel}
+            gold={save.gold}
+            bossTokens={save.bossTokens}
+            formatNumber={compactNumber}
+            onUpgrade={purchaseWeaponUpgrade}
+          />}
+
+          {activeFacility === "research" && <>
+            <div className="upgrade-panel research-overview panel facility-first-panel">
+              <div className="panel-title"><div><span className="eyebrow">GROWTH OVERVIEW</span><h3>길드 강화 현황</h3></div><span className="level-chip">본관 Lv.{hallStage.level} · 깊이 {hallStage.researchDepth}</span></div>
               <div className="growth-progress"><i style={{ width: `${save.nodes.length / UPGRADE_NODES.length * 100}%` }} /></div>
               <div className="growth-stats">
                 {(Object.keys(upgradeInfo) as UpgradeKey[]).map((key) => <div key={key}><span className="upgrade-icon">{upgradeInfo[key].accent}</span><span><strong>{upgradeInfo[key].title} · Lv.{save.upgrades[key]}</strong><small>{upgradeEffectText(key, save.upgrades[key])}</small></span></div>)}
               </div>
-              <div className="next-research"><span className="eyebrow">NEXT RESEARCH</span>{UPGRADE_NODES.filter((node) => !save.nodes.includes(node.id) && node.prerequisites.every((id) => save.nodes.includes(id))).slice(0, 2).map((node) => <span key={node.id}><b>{node.title}</b><small>{compactNumber(node.cost)} 골드</small></span>)}</div>
             </div>
-          </div>
+            <div className="upgrade-tree-panel panel">
+              <div className="panel-title"><div><span className="eyebrow">GUILD DEVELOPMENT MAP</span><h3>중앙 4방향 발전 노드</h3><p className="panel-description">중앙의 길드 기반에서 직접 공격·전투 리듬·원정 지원·길드 경영 네 방향으로 확장됩니다. 무기 공격력과 연출은 대장간에서만 강화됩니다.</p></div><span className="level-chip">보유 골드 {compactNumber(save.gold)}</span></div>
+              <ResearchMap nodes={UPGRADE_NODES} purchasedIds={save.nodes} hallLevel={save.guildHallLevel} formatCost={compactNumber} onPurchase={(node: ResearchNodeView) => { const fullNode = UPGRADE_NODES.find((item) => item.id === node.id); if (fullNode) purchaseNode(fullNode); }} />
+            </div>
+          </>}
 
-          <div className="weapon-forge-panel panel">
-            <div className="panel-title"><div><span className="eyebrow">WEAPON FORGE · 15 ARSENAL</span><h3>길드마스터 무기 공방</h3><p className="panel-description">발전 노드와 별개인 전용 강화입니다. 새 무기를 완성할 때마다 기본 공격력과 직접 공격 연출이 함께 진화합니다.</p></div><span className="level-chip">보유 {save.weaponLevel + 1}/15</span></div>
-            <div className="weapon-forge-current">
-              <span className={`weapon-forge-emblem weapon-tier-${save.weaponLevel}`}>{clickAttackPattern(save.weaponLevel).glyph}</span>
-              <span><small>현재 장착</small><strong>{clickAttackPattern(save.weaponLevel).weaponName}</strong><em>{clickAttackPattern(save.weaponLevel).title} · 기본 공격력 {Math.round(12 * clickAttackPattern(save.weaponLevel).damageScale)}</em></span>
-              {nextWeapon ? <button className="forge-upgrade-button" onClick={purchaseWeaponUpgrade} disabled={save.gold < nextWeapon.cost}><small>NEXT · {nextWeapon.weaponName}</small><strong>{compactNumber(nextWeapon.cost)} G로 제작</strong><em>공격력 {Math.round(12 * nextWeapon.damageScale)} · {nextWeapon.visualHits} HIT</em></button> : <div className="forge-complete"><small>MASTERWORK</small><strong>최종 무기 완성</strong><em>모든 공격 연출 해금</em></div>}
-            </div>
-            <div className="weapon-arsenal" aria-label="15종 무기 강화 단계">
-              {CLICK_ATTACK_PATTERNS.map((pattern) => {
-                const unlocked = pattern.tier <= save.weaponLevel;
-                const current = pattern.tier === save.weaponLevel;
-                return <article key={pattern.key} className={`${unlocked ? "unlocked" : "locked"} ${current ? "current" : ""}`} title={`${pattern.weaponName} · ${pattern.title} · 기본 공격력 ${Math.round(12 * pattern.damageScale)}`}><span>{unlocked ? pattern.glyph : "?"}</span><small>{String(pattern.tier + 1).padStart(2, "0")}</small><strong>{pattern.weaponName}</strong><em>{unlocked ? `${pattern.title} · 공격 ${Math.round(12 * pattern.damageScale)}` : `${compactNumber(pattern.cost)} G`}</em></article>;
-              })}
-            </div>
-          </div>
-
-          <div className="upgrade-tree-panel panel">
-            <div className="panel-title"><div><span className="eyebrow">GUILD DEVELOPMENT MAP</span><h3>길드 발전 노드</h3><p className="panel-description">무기 연출과 분리된 보조 성장입니다. 범위·치명타·충격파·몰입·원정 지원 효과를 세밀하게 연구합니다.</p></div><span className="level-chip">보유 골드 {compactNumber(save.gold)}</span></div>
-            <div className="tech-tree-scroll">
-              <div className="tech-tree" aria-label="길드 발전 노드 지도">
-                {UPGRADE_NODES.flatMap((node) => node.prerequisites.map((parentId) => {
-                  const parent = UPGRADE_NODES.find((item) => item.id === parentId)!;
-                  const nodeVisible = save.nodes.includes(node.id) || node.prerequisites.some((id) => save.nodes.includes(id));
-                  const parentVisible = save.nodes.includes(parent.id) || parent.prerequisites.some((id) => save.nodes.includes(id)) || parent.id === "foundation";
-                  const dx = (node.x - parent.x) * 10.5;
-                  const dy = node.y - parent.y;
-                  const length = Math.sqrt(dx * dx + dy * dy);
-                  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-                  return <i key={`${parentId}-${node.id}`} className={`node-connector ${save.nodes.includes(parentId) ? "reachable" : ""} ${save.nodes.includes(node.id) ? "completed" : ""} ${nodeVisible && parentVisible ? "visible" : ""}`} style={{ left: `${parent.x}%`, top: `${parent.y}px`, width: `${length}px`, transform: `rotate(${angle}deg)` }} />;
-                }))}
-                {UPGRADE_NODES.map((node) => {
-                  const purchased = save.nodes.includes(node.id);
-                  const available = node.prerequisites.every((id) => save.nodes.includes(id));
-                  const visible = node.id === "foundation" || purchased || available || node.prerequisites.some((id) => save.nodes.includes(id));
-                  return <button key={node.id} className={`tech-node ${purchased ? "purchased" : ""} ${available && !purchased ? "available" : ""} ${visible ? "visible" : "concealed"}`} style={{ left: `${node.x}%`, top: `${node.y}px` }} onClick={() => purchaseNode(node)} disabled={purchased || !available} aria-label={visible ? `${node.title}: ${node.description}` : "아직 발견되지 않은 연구 노드"}>
-                    <span className="node-glyph">{visible ? node.glyph : "?"}</span><strong>{visible ? node.title : "미발견 연구"}</strong><span className="node-effect">{visible ? node.description : "앞선 연구를 완료하면 효과가 드러납니다."}</span><small>{purchased ? "해금 완료" : available ? `${compactNumber(node.cost)} G` : visible ? "선행 노드 필요" : "경로를 확장하세요"}</small>
-                  </button>;
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div className="roster-section panel">
+          {activeFacility === "training" && <>
+          <div className="roster-section panel facility-first-panel">
             <div className="panel-title"><div><span className="eyebrow">MEMBER ROSTER</span><h3>길드원 편성</h3></div><span className="level-chip">출전 {save.party.length}/4</span></div>
             <p className="panel-description">카드를 눌러 토벌 파티에 넣거나 뺄 수 있습니다. 출전한 길드원만 경험치를 얻습니다.</p>
             <div className="roster-grid">
@@ -1066,7 +1058,7 @@ export default function Game() {
                   <span className="party-check">{selected ? "출전 중" : "편성"}</span>
                 </button>;
               })}
-              <button className="member-card recruit-card" onClick={() => setTab("tavern")}><span className="recruit-plus">＋</span><strong>새 길드원 고용</strong><small>여관에서 동료를 만나보세요</small></button>
+              <button className="member-card recruit-card" onClick={() => setActiveFacility("tavern")}><span className="recruit-plus">＋</span><strong>새 길드원 고용</strong><small>여관에서 동료를 만나보세요</small></button>
             </div>
           </div>
 
@@ -1075,6 +1067,20 @@ export default function Game() {
             <div className="special-grid">{(Object.keys(specialInfo) as SpecialKey[]).map((key) => <button key={key} className={`special-card ${save.specials[key] ? "unlocked" : ""}`} onClick={() => unlockSpecial(key)}>
               <span>{save.specials[key] ? "✓" : "◆"}</span><strong>{specialInfo[key].title}</strong><small>{specialInfo[key].description}</small><b>{save.specials[key] ? "해금 완료" : "보스 증표 1"}</b>
             </button>)}</div>
+          </div>
+          </>}
+
+          {activeFacility === "tavern" && <div className="tavern-facility">
+            <div className="facility-heading"><div><span className="eyebrow">THE WANDERING MUG</span><h3>방랑자의 잔 여관</h3><p>새로운 길드원을 만나 토벌대를 완성하세요. 중복 길드원은 등장하지 않습니다.</p></div><div className="heading-actions"><button className="secondary-button" onClick={refreshCandidates}>후보 갱신 · {Math.max(20, 60 - save.upgrades.tavern * 5)} G</button><button className="primary-button" onClick={randomHire}>운명의 계약 · 260 G</button></div></div>
+            <div className="tavern-room"><div className="tavern-light one" /><div className="tavern-light two" /><div className="shelf"><i /><i /><i /><i /><i /></div><div className="counter" /><span className="innkeeper">오늘도 좋은 인연이 기다리고 있어요!</span></div>
+            <div className="candidate-grid">
+              {save.candidates.length ? save.candidates.map((id) => { const member = memberById(id); return <article className="candidate-card panel" key={id}>
+                <div className="candidate-portrait" style={{ "--member-hue": member.hue } as React.CSSProperties}><span>{member.glyph}</span><i /></div>
+                <span className="large-rank" style={{ background: RANK_COLORS[member.rank] }}>{member.rank} RANK</span><h3>{member.name}</h3><p>{member.description}</p><dl><div><dt>직업</dt><dd>{member.job}</dd></div><div><dt>공격력</dt><dd>{member.attack}</dd></div><div><dt>공격 주기</dt><dd>{member.interval}초</dd></div><div><dt>고유 스킬</dt><dd>{member.skill}</dd></div></dl><button className="hire-button" onClick={() => hire(id)} disabled={save.gold < member.cost}>{compactNumber(member.cost)} 골드로 고용</button>
+              </article>; }) : <div className="empty-tavern panel"><span>🏆</span><h3>현재 해금된 모든 길드원을 고용했습니다!</h3><p>여관 증축 업그레이드로 더 높은 등급을 해금하세요.</p></div>}
+            </div>
+            <div className="collection-strip panel"><div><span className="eyebrow">COLLECTION</span><h3>길드원 도감</h3></div><div className="rank-progress">{RANK_ORDER.map((rank) => { const total = MEMBERS.filter((m) => m.rank === rank).length; const owned = MEMBERS.filter((m) => m.rank === rank && save.owned.includes(m.id)).length; return <span key={rank}><b style={{ background: RANK_COLORS[rank] }}>{rank}</b><i><em style={{ width: `${owned / total * 100}%` }} /></i><small>{owned}/{total}</small></span>; })}</div></div>
+          </div>}
           </div>
         </section>
       )}
@@ -1092,7 +1098,7 @@ export default function Game() {
           </div>
 
           <div className="battle-layout">
-            <div className={`arena hack-arena panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier} loot-phase-${lootPhase}`} style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties} onPointerDown={attackField} role="application" aria-label="클릭한 위치를 중심으로 범위 공격하는 몬스터 전장">
+            <div className={`arena hack-arena has-forge-cursor panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier} loot-phase-${lootPhase}`} style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties} onPointerDown={attackField} onPointerMove={trackWeaponCursor} onPointerLeave={() => setWeaponCursor((cursor) => ({ ...cursor, visible: false }))} role="application" aria-label="강화 무기 커서로 클릭한 위치를 중심으로 범위 공격하는 몬스터 전장">
               <Image className="field-background-art" src={fieldAsset.source} alt="" fill sizes="(max-width: 1180px) 100vw, 900px" priority={stage.stage <= 10} unoptimized draggable={false} />
               <div className="environment-tag"><span>{BIOME_DETAILS[stage.region.hue].label}</span><small>{BIOME_DETAILS[stage.region.hue].description}</small></div>
               <div className="battle-banner"><span>{stage.boss ? "BOSS SWARM" : `STAGE ${stage.stage}`}</span><strong>{stage.name} 무리</strong></div>
@@ -1101,6 +1107,7 @@ export default function Game() {
                 <span><small>{lootCollecting ? "회수 중" : "전장 전리품"}</small><strong>+{compactNumber(lootCollecting ? collectedLoot : droppedGold)} G</strong></span>
               </div>
               <div className="field-click-guide"><b>필드를 직접 누르세요</b><span>원 안의 모든 몬스터가 함께 베입니다</span></div>
+              <WeaponCursor weapon={activeClickPattern} point={weaponCursor} />
 
               <div className="fighters" aria-label="출전 길드원">
                 {partyMembers.map((member, index) => {
@@ -1242,20 +1249,6 @@ export default function Game() {
 
           {victory && <div className="victory-overlay"><div className="victory-card"><span className="victory-star">★</span><p>STAGE CLEAR</p><h2>토벌 성공!</h2><div className="outcome-rewards"><span>{developerMode ? "개발자 결과 · 저장 안 됨" : <>골드 <b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span>경험치 <b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span>보스 토벌 완료</span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? 100 : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(100, stage.stage + 1))}>다음 구역 출정</button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}>반복 토벌</button><button className="text-button" onClick={() => returnToGuild("토벌을 마치고 영지로 복귀했습니다.")}>영지로 복귀</button></div></div></div>}
           {defeat && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">☠</span><p>EXPEDITION FAILED</p><h2>원정대 전멸</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드에서는 손실이 저장되지 않습니다." : "출전 길드원이 명부에서 영구 삭제되었습니다."}</strong>{lostMembers.map((id) => <span key={id}>† {memberById(id).name}</span>)}<span>시간이 부족하다고 판단되면 전멸 전에 안전 후퇴해야 합니다.</span></div><button className="primary-button" onClick={() => returnToGuild(developerMode ? "개발자 전투에서 복귀했습니다." : "전사자 기록을 남기고 영지로 복귀했습니다. 여관에서 새 원정대를 모집하세요.")}>영지로 귀환</button></div></div>}
-        </section>
-      )}
-
-      {tab === "tavern" && (
-        <section className="screen tavern-screen" aria-label="여관">
-          <div className="section-heading"><div><span className="eyebrow">THE WANDERING MUG</span><h2>방랑자의 잔 여관</h2><p>새로운 길드원을 만나 토벌대를 완성하세요. 중복 길드원은 등장하지 않습니다.</p></div><div className="heading-actions"><button className="secondary-button" onClick={refreshCandidates}>후보 갱신 · {Math.max(20, 60 - save.upgrades.tavern * 5)} G</button><button className="primary-button" onClick={randomHire}>운명의 계약 · 260 G</button></div></div>
-          <div className="tavern-room"><div className="tavern-light one" /><div className="tavern-light two" /><div className="shelf"><i /><i /><i /><i /><i /></div><div className="counter" /><span className="innkeeper">오늘도 좋은 인연이 기다리고 있어요!</span></div>
-          <div className="candidate-grid">
-            {save.candidates.length ? save.candidates.map((id) => { const member = memberById(id); return <article className="candidate-card panel" key={id}>
-              <div className="candidate-portrait" style={{ "--member-hue": member.hue } as React.CSSProperties}><span>{member.glyph}</span><i /></div>
-              <span className="large-rank" style={{ background: RANK_COLORS[member.rank] }}>{member.rank} RANK</span><h3>{member.name}</h3><p>{member.description}</p><dl><div><dt>직업</dt><dd>{member.job}</dd></div><div><dt>공격력</dt><dd>{member.attack}</dd></div><div><dt>공격 주기</dt><dd>{member.interval}초</dd></div><div><dt>고유 스킬</dt><dd>{member.skill}</dd></div></dl><button className="hire-button" onClick={() => hire(id)} disabled={save.gold < member.cost}>{compactNumber(member.cost)} 골드로 고용</button>
-            </article>; }) : <div className="empty-tavern panel"><span>🏆</span><h3>현재 해금된 모든 길드원을 고용했습니다!</h3><p>여관 증축 업그레이드로 더 높은 등급을 해금하세요.</p></div>}
-          </div>
-          <div className="collection-strip panel"><div><span className="eyebrow">COLLECTION</span><h3>길드원 도감</h3></div><div className="rank-progress">{RANK_ORDER.map((rank) => { const total = MEMBERS.filter((m) => m.rank === rank).length; const owned = MEMBERS.filter((m) => m.rank === rank && save.owned.includes(m.id)).length; return <span key={rank}><b style={{ background: RANK_COLORS[rank] }}>{rank}</b><i><em style={{ width: `${owned / total * 100}%` }} /></i><small>{owned}/{total}</small></span>; })}</div></div>
         </section>
       )}
 
