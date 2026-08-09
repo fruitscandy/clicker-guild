@@ -102,3 +102,32 @@ test("upgrades the flame forge and carries the equipped weapon into the combat c
   assert.match(weaponArt, /WEAPON_PALETTES/);
   assert.match(weaponArt, /cursorVisible/);
 });
+
+test("rebuilds the tavern and training ground around character portraits", async () => {
+  const [memberEntries, game, tavern, tavernStyles, training, trainingStyles] = await Promise.all([
+    readdir(new URL("../public/assets/guild-members/", import.meta.url), { withFileTypes: true }),
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/TavernHall.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/TavernHall.module.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/TrainingGround.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/TrainingGround.module.css", import.meta.url), "utf8"),
+  ]);
+  const memberDirectories = memberEntries.filter((entry) => entry.isDirectory());
+  const portraitFiles = await Promise.all(memberDirectories.map((entry) => readdir(new URL(`../public/assets/guild-members/${entry.name}/`, import.meta.url))));
+
+  assert.equal(memberDirectories.length, 25);
+  assert.equal(portraitFiles.filter((files) => files.some((file) => file.endsWith("-idle-preview.webp"))).length, 25);
+  assert.match(game, /<TavernHall/);
+  assert.match(game, /<TrainingGround/);
+  assert.match(game, /function trainMember/);
+  assert.match(tavern, /ADVENTURER RECRUITMENT/);
+  assert.match(tavern, /초상화 도감/);
+  assert.match(tavern, /-idle-preview\.webp/);
+  assert.match(tavernStyles, /\.heroPortrait/);
+  assert.match(tavernStyles, /\.candidateRail/);
+  assert.match(training, /MEMBER DEVELOPMENT/);
+  assert.match(training, /집중 훈련/);
+  assert.match(training, /토벌대에 편성/);
+  assert.match(trainingStyles, /\.traineeStage/);
+  assert.match(trainingStyles, /\.trainingBoard/);
+});
