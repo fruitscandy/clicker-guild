@@ -17,7 +17,7 @@ test("uses discounted one and ten contract recruitment with transparent rank odd
   assert.ok(tenCost < singleCost * 10);
 
   const rateRows = [...balance.matchAll(/\{ F: ([\d.]+), E: ([\d.]+), D: ([\d.]+), C: ([\d.]+), B: ([\d.]+), A: ([\d.]+), S: ([\d.]+) \}/g)];
-  assert.equal(rateRows.length, 4);
+  assert.equal(rateRows.length, 6);
   for (const row of rateRows) {
     const rates = row.slice(1).map(Number);
     assert.equal(rates.reduce((sum, rate) => sum + rate, 0), 100);

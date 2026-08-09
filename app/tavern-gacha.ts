@@ -20,6 +20,8 @@ const RECRUIT_RATES_BY_TAVERN_LEVEL: ReadonlyArray<Record<Rank, number>> = [
   { F: 48, E: 26, D: 14, C: 7, B: 3.5, A: 1.2, S: 0.3 },
   { F: 44, E: 26, D: 16, C: 8, B: 4, A: 1.5, S: 0.5 },
   { F: 40, E: 25, D: 18, C: 9, B: 5, A: 2, S: 1 },
+  { F: 36, E: 24, D: 19, C: 10.5, B: 6.5, A: 2.8, S: 1.2 },
+  { F: 32, E: 23, D: 20, C: 11.5, B: 8, A: 3.8, S: 1.7 },
 ];
 
 export type RecruitResult = {

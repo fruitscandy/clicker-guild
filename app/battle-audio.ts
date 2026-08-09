@@ -14,13 +14,10 @@ let monsterHitVariation = 0;
 let lastCombatProcAt = -1;
 
 export type ProgressionSoundKind = "weapon-craft" | "research-unlock" | "guild-hall";
-export type RareRewardSoundKind = "gear" | "first-clear";
+export type RareRewardSoundKind = "first-clear";
 export type CombatProcSound = {
   critical?: boolean;
-  combo?: boolean;
   shockwave?: boolean;
-  execution?: boolean;
-  momentumMaxed?: boolean;
 };
 
 const GOLD_COIN_SAMPLE_URLS = [
@@ -357,17 +354,7 @@ export function playProgressionSound(kind: ProgressionSoundKind, tier = 1) {
 }
 
 export function playCombatProcSound(proc: CombatProcSound) {
-  const primary = proc.execution
-    ? "execution"
-    : proc.shockwave
-      ? "shockwave"
-      : proc.critical
-        ? "critical"
-        : proc.combo
-          ? "combo"
-          : proc.momentumMaxed
-            ? "momentum-max"
-            : null;
+  const primary = proc.shockwave ? "shockwave" : proc.critical ? "critical" : null;
   if (!primary) return;
 
   playWhenAudioIsReady((context) => {
@@ -376,12 +363,6 @@ export function playCombatProcSound(proc: CombatProcSound) {
     lastCombatProcAt = start;
     markEventSound(`combat:${primary}`);
 
-    if (primary === "execution") {
-      noiseBurst(context, start, 0.075, 0.022, 6200, 780);
-      tone(context, 1480, start, 0.12, 0.02, "sawtooth", 185, 0.0015);
-      tone(context, 82, start + 0.025, 0.24, 0.031, "triangle", 46, 0.002);
-      return;
-    }
     if (primary === "shockwave") {
       noiseBurst(context, start, 0.18, 0.025, 760, 92);
       tone(context, 128, start, 0.25, 0.034, "sine", 43, 0.002);
@@ -394,15 +375,6 @@ export function playCombatProcSound(proc: CombatProcSound) {
       tone(context, 2520, start + 0.018, 0.09, 0.009, "triangle", 1380, 0.001);
       return;
     }
-    if (primary === "combo") {
-      tone(context, 420, start, 0.085, 0.019, "triangle", 260, 0.002);
-      tone(context, 620, start + 0.055, 0.11, 0.022, "triangle", 360, 0.002);
-      noiseBurst(context, start + 0.052, 0.048, 0.01, 3200, 940);
-      return;
-    }
-    [440, 659, 988].forEach((frequency, index) => {
-      tone(context, frequency, start + index * 0.042, 0.17, 0.014, "sine", frequency * 1.16, 0.004);
-    });
   });
 }
 
@@ -410,15 +382,6 @@ export function playRareRewardSound(kind: RareRewardSoundKind) {
   playWhenAudioIsReady((context) => {
     const start = context.currentTime;
     markEventSound(`reward:${kind}`);
-
-    if (kind === "gear") {
-      noiseBurst(context, start, 0.055, 0.009, 5200, 2800);
-      [740, 1110, 1660].forEach((frequency, index) => {
-        tone(context, frequency, start + index * 0.05, 0.28, 0.017, "triangle", frequency * 1.12, 0.004);
-      });
-      tone(context, 185, start, 0.31, 0.018, "sine", 247, 0.008);
-      return;
-    }
 
     tone(context, 392, start, 0.2, 0.015, "triangle", 523, 0.006);
     tone(context, 659, start + 0.07, 0.24, 0.017, "sine", 784, 0.006);

@@ -24,36 +24,28 @@ type ResearchMapProps = {
   readOnly?: boolean;
 };
 
-type BranchFamily = "range" | "crit" | "shockwave" | "combo" | "execute" | "momentum" | "time" | "scout" | "loot" | "guild" | "gold" | "tavern";
+type BranchFamily = "range" | "crit" | "shockwave" | "auto" | "time" | "guild" | "gold" | "tavern";
 
 const BRANCH_LABELS: Record<BranchFamily, string> = {
-  range: "참격 범위",
-  crit: "치명타",
-  shockwave: "충격파",
-  combo: "연격 리듬",
-  execute: "처형술",
-  momentum: "전투 몰입",
-  time: "원정 보급",
-  scout: "전장 정찰",
-  loot: "전리품 감정",
-  guild: "길드 전술",
-  gold: "행운의 금고",
-  tavern: "여관 증축",
+  range: "공격 범위",
+  crit: "치명타 확률",
+  shockwave: "횟수 광역 공격",
+  auto: "자동 공격",
+  time: "전투 제한 시간",
+  guild: "길드원 공격력",
+  gold: "토벌 골드",
+  tavern: "영입 행운",
 };
 
 const BRANCH_DETAILS: Record<BranchFamily, { summary: string; impact: string }> = {
-  range: { summary: "직접 공격이 닿는 원형 범위를 넓힙니다.", impact: "한 번의 클릭으로 더 멀리 떨어진 몬스터까지 함께 맞힐 수 있어 밀집한 적을 정리하기 쉬워집니다." },
-  crit: { summary: "직접 공격이 두 배 피해를 주는 확률을 높입니다.", impact: "치명타가 발동하면 일반 피해보다 큰 숫자와 충격 연출이 나타나 강한 한 방을 쉽게 알아볼 수 있습니다." },
-  shockwave: { summary: "일정 횟수의 직접 공격마다 전장 전체에 광역 파동을 일으킵니다.", impact: "단계가 오르면 파동이 더 자주 발동하고 피해량도 증가해 다수의 적을 동시에 압박합니다." },
-  combo: { summary: "다섯 번째 직접 공격을 연격으로 강화합니다.", impact: "발동 시 시간차를 둔 추가 참격이 이어지며, 단계가 오를수록 연격의 추가 피해가 강해집니다." },
-  execute: { summary: "체력이 얼마 남지 않은 적을 즉시 처형합니다.", impact: "강한 적의 마지막 체력을 건너뛰어 전투 마무리를 앞당기며, 처형 대상에는 전용 마무리 연출이 표시됩니다." },
-  momentum: { summary: "빠르게 연속 클릭할수록 직접 공격 피해가 누적 증가합니다.", impact: "공격을 쉬면 중첩이 사라지므로 짧은 시간에 리듬 있게 공격할 때 가장 큰 효과를 냅니다." },
-  time: { summary: "원정에서 사용할 수 있는 전투 제한 시간을 늘립니다.", impact: "화력이 조금 부족한 구역에서도 길드원이 공격할 시간을 더 확보해 토벌 성공 가능성을 높입니다." },
-  scout: { summary: "전장에 남은 적에 대한 정찰 보고를 더 정확하게 만듭니다.", impact: "전투 진행 상황을 더 구체적으로 파악해 남은 시간과 공격 위치를 판단하기 쉬워집니다." },
-  loot: { summary: "토벌 완료 시 길드원 장비를 획득할 확률을 높입니다.", impact: "반복 원정에서 장비 성장 기회를 늘려 길드원의 장기 전투력을 강화합니다." },
-  guild: { summary: "출전한 길드원의 일반 공격과 기술 피해를 함께 높입니다.", impact: "플레이어가 직접 클릭하지 않는 동안에도 파티 전체의 자동 전투 화력이 꾸준히 증가합니다." },
-  gold: { summary: "토벌 성공으로 획득하는 골드 보상을 늘립니다.", impact: "연구, 무기 제작, 길드원 고용에 사용할 성장 자금을 더 빠르게 모을 수 있습니다." },
-  tavern: { summary: "여관 영입에서 상위 등급 길드원이 등장할 확률을 높입니다.", impact: "모든 등급은 처음부터 등장하며, 증축할수록 B·A·S 등급 계약을 만날 가능성이 커집니다." },
+  range: { summary: "플레이어 공격이 닿는 원형 범위를 넓힙니다.", impact: "밀집한 적을 한 번에 더 많이 타격하지만 공격력 자체는 대장간 무기가 결정합니다." },
+  crit: { summary: "플레이어 공격이 두 배 피해를 주는 확률을 높입니다.", impact: "단계마다 5%씩 상승해 최대 25%가 되며, 수동 공격의 강한 한 방을 분명하게 살립니다." },
+  shockwave: { summary: "일정 횟수의 플레이어 공격마다 넓은 충격파를 일으킵니다.", impact: "단계가 오르면 발동에 필요한 공격 횟수가 줄고 피해량이 올라 몬스터 무리를 정리하기 쉬워집니다." },
+  auto: { summary: "현재 플레이어 무기로 밀집 지역을 주기적으로 자동 공격합니다.", impact: "최대 단계에서도 수동 공격보다 느리게 발동해 방치 진행을 돕되 직접 조작의 화력 우위를 유지합니다." },
+  time: { summary: "원정의 전투 제한 시간을 늘립니다.", impact: "단계마다 4초씩, 최대 20초를 확보해 조금 부족한 화력을 보완합니다." },
+  guild: { summary: "출전한 길드원의 일반 공격과 기술 피해를 함께 높입니다.", impact: "단계마다 18%씩 증가하지만 플레이어 무기 성장보다 완만해 보조 화력 역할을 유지합니다." },
+  gold: { summary: "토벌 성공과 실패 회수로 얻는 골드를 늘립니다.", impact: "단계마다 12%씩 증가해 강화와 영입을 반복할 경제 기반을 마련합니다." },
+  tavern: { summary: "여관에서 좋은 등급 길드원이 등장할 확률을 높입니다.", impact: "모든 등급은 계속 등장하며, 단계가 오를수록 B·A·S 등급 계약의 비중이 점진적으로 커집니다." },
 };
 
 const DIRECTION_GROUPS: Array<{
@@ -63,10 +55,9 @@ const DIRECTION_GROUPS: Array<{
   glyph: string;
   families: BranchFamily[];
 }> = [
-  { key: "offense", title: "길드 공세", subtitle: "플레이어 직접 공격", glyph: "⚔", families: ["range", "crit", "shockwave"] },
-  { key: "tactics", title: "연계 전술", subtitle: "클릭 전투 리듬", glyph: "✦", families: ["combo", "execute", "momentum"] },
-  { key: "support", title: "원정 지원", subtitle: "시간 · 정찰 · 전리품", glyph: "◆", families: ["time", "scout", "loot"] },
-  { key: "management", title: "길드 경영", subtitle: "길드원 · 골드 · 여관", glyph: "♜", families: ["guild", "gold", "tavern"] },
+  { key: "player", title: "플레이어 공격", subtitle: "범위 · 치명타 · 광역 · 자동", glyph: "⚔", families: ["range", "crit", "shockwave", "auto"] },
+  { key: "expedition", title: "토벌 지원", subtitle: "제한 시간 · 골드", glyph: "◆", families: ["time", "gold"] },
+  { key: "guild", title: "길드 성장", subtitle: "길드원 · 영입", glyph: "♜", families: ["guild", "tavern"] },
 ];
 
 function familyForNode(nodeId: string) {
@@ -134,13 +125,13 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
   }
 
   return (
-    <div className={styles.viewport} aria-label="네 방향 계통으로 정리된 길드 발전 지도">
+    <div className={styles.viewport} aria-label="여덟 가지 핵심 계통으로 정리된 길드 강화 지도">
       <div className={styles.map}>
         {foundation && (
           <div className={styles.coreSection}>
             <span className={styles.coreLabel}>RESEARCH CORE</span>
             {renderNode(foundation, true)}
-            <p>중앙 기반에서 원하는 계통을 골라 순서대로 연구하세요.</p>
+            <p>전투와 경제에 직접 쓰이는 여덟 계통만 골라 순서대로 강화하세요.</p>
           </div>
         )}
 

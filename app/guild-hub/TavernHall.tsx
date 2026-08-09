@@ -14,7 +14,7 @@ import {
 } from "../tavern-gacha";
 import styles from "./TavernHall.module.css";
 
-type MemberProgress = { level: number; xp: number; gear: number };
+type MemberProgress = { level: number; xp: number };
 
 type TavernHallProps = {
   members: MemberDefinition[];
@@ -35,7 +35,7 @@ type TavernHallProps = {
   onConfirmSale: () => void;
 };
 
-const fallbackProgress: MemberProgress = { level: 1, xp: 0, gear: 0 };
+const fallbackProgress: MemberProgress = { level: 1, xp: 0 };
 
 function portraitSource(id: string) {
   return `/assets/guild-members/${id}/${id}-idle-preview.webp`;
