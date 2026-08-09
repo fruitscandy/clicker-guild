@@ -12,10 +12,11 @@ import {
   type BattleLootDrop,
 } from "./battle-loot";
 import { fieldAssetForRegion } from "./field-assets";
-import { compactNumber, getStage, MEMBERS, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "./game-data";
+import { compactNumber, getStage, MEMBERS, RANK_ORDER, type MemberDefinition } from "./game-data";
 import { ForgeWorkshop } from "./guild-hub/ForgeWorkshop";
 import { GuildBuildingHub } from "./guild-hub/GuildBuildingHub";
 import { ResearchMap, type ResearchNodeView } from "./guild-hub/ResearchMap";
+import { TavernHall } from "./guild-hub/TavernHall";
 import { GUILD_HALL_STAGES, guildHallStage, inferHallLevelFromNodes, requiredHallLevelForNode, type GuildFacility } from "./guild-hub/guild-progression";
 import { WeaponCursor } from "./guild-hub/WeaponArt";
 import { memberAnimationSource, type MemberMotion } from "./member-animations";
@@ -1076,43 +1077,30 @@ export default function Game() {
             </div>
           </>}
 
-          {activeFacility === "training" && <>
-          <div className="roster-section panel facility-first-panel">
-            <div className="panel-title"><div><span className="eyebrow">MEMBER ROSTER</span><h3>길드원 편성</h3></div><span className="level-chip">출전 {save.party.length}/4</span></div>
-            <p className="panel-description">카드를 눌러 토벌 파티에 넣거나 뺄 수 있습니다. 출전한 길드원만 경험치를 얻습니다.</p>
-            <div className="roster-grid">
-              {save.owned.map((id) => {
-                const member = memberById(id); const progress = progressFor(member); const selected = save.party.includes(id); const xpNeed = progress.level * 55;
-                return <button key={id} className={`member-card ${selected ? "selected" : ""}`} onClick={() => toggleParty(id)}>
-                  <span className="rank-badge" style={{ background: RANK_COLORS[member.rank] }}>{member.rank}</span>
-                  <span className="portrait" style={{ "--member-hue": member.hue } as React.CSSProperties}><i>{member.glyph}</i></span>
-                  <span className="member-copy"><strong>{member.name}</strong><small>{member.job} · Lv.{progress.level}/{member.maxLevel}</small><span className="xp-bar"><i style={{ width: `${Math.min(100, progress.xp / xpNeed * 100)}%` }} /></span><em>공격 {compactNumber(attackFor(member, progress))} · 장비 +{progress.gear}</em></span>
-                  <span className="party-check">{selected ? "출전 중" : "편성"}</span>
-                </button>;
-              })}
-              <button className="member-card recruit-card" onClick={() => setActiveFacility("tavern")}><span className="recruit-plus">＋</span><strong>새 길드원 고용</strong><small>여관에서 동료를 만나보세요</small></button>
-            </div>
-          </div>
-
+          {activeFacility === "tavern" && <>
+          <TavernHall
+            candidates={save.candidates.map(memberById)}
+            members={MEMBERS}
+            ownedIds={save.owned}
+            progress={save.progress}
+            partyIds={save.party}
+            tavernLevel={save.upgrades.tavern}
+            gold={save.gold}
+            refreshCost={Math.max(20, 60 - save.upgrades.tavern * 5)}
+            formatNumber={compactNumber}
+            getAttack={(member, progress) => attackFor(member, progress)}
+            onRefresh={refreshCandidates}
+            onRandomHire={randomHire}
+            onHire={hire}
+            onToggleParty={toggleParty}
+          />
           <div className="special-section panel">
-            <div className="panel-title"><div><span className="eyebrow">BOSS TACTICS</span><h3>특수 전술</h3></div><span className="level-chip token-level">증표 {save.bossTokens}</span></div>
+            <div className="panel-title"><div><span className="eyebrow">EXPEDITION TACTICS</span><h3>파티 특수 전술</h3></div><span className="level-chip token-level">증표 {save.bossTokens}</span></div>
             <div className="special-grid">{(Object.keys(specialInfo) as SpecialKey[]).map((key) => <button key={key} className={`special-card ${save.specials[key] ? "unlocked" : ""}`} onClick={() => unlockSpecial(key)}>
               <span>{save.specials[key] ? "✓" : "◆"}</span><strong>{specialInfo[key].title}</strong><small>{specialInfo[key].description}</small><b>{save.specials[key] ? "해금 완료" : "보스 증표 1"}</b>
             </button>)}</div>
           </div>
           </>}
-
-          {activeFacility === "tavern" && <div className="tavern-facility">
-            <div className="facility-heading"><div><span className="eyebrow">THE WANDERING MUG</span><h3>방랑자의 잔 여관</h3><p>새로운 길드원을 만나 토벌대를 완성하세요. 중복 길드원은 등장하지 않습니다.</p></div><div className="heading-actions"><button className="secondary-button" onClick={refreshCandidates}>후보 갱신 · {Math.max(20, 60 - save.upgrades.tavern * 5)} G</button><button className="primary-button" onClick={randomHire}>운명의 계약 · 260 G</button></div></div>
-            <div className="tavern-room"><div className="tavern-light one" /><div className="tavern-light two" /><div className="shelf"><i /><i /><i /><i /><i /></div><div className="counter" /><span className="innkeeper">오늘도 좋은 인연이 기다리고 있어요!</span></div>
-            <div className="candidate-grid">
-              {save.candidates.length ? save.candidates.map((id) => { const member = memberById(id); return <article className="candidate-card panel" key={id}>
-                <div className="candidate-portrait" style={{ "--member-hue": member.hue } as React.CSSProperties}><span>{member.glyph}</span><i /></div>
-                <span className="large-rank" style={{ background: RANK_COLORS[member.rank] }}>{member.rank} RANK</span><h3>{member.name}</h3><p>{member.description}</p><dl><div><dt>직업</dt><dd>{member.job}</dd></div><div><dt>공격력</dt><dd>{member.attack}</dd></div><div><dt>공격 주기</dt><dd>{member.interval}초</dd></div><div><dt>고유 스킬</dt><dd>{member.skill}</dd></div></dl><button className="hire-button" onClick={() => hire(id)} disabled={save.gold < member.cost}>{compactNumber(member.cost)} 골드로 고용</button>
-              </article>; }) : <div className="empty-tavern panel"><span>🏆</span><h3>현재 해금된 모든 길드원을 고용했습니다!</h3><p>여관 증축 업그레이드로 더 높은 등급을 해금하세요.</p></div>}
-            </div>
-            <div className="collection-strip panel"><div><span className="eyebrow">COLLECTION</span><h3>길드원 도감</h3></div><div className="rank-progress">{RANK_ORDER.map((rank) => { const total = MEMBERS.filter((m) => m.rank === rank).length; const owned = MEMBERS.filter((m) => m.rank === rank && save.owned.includes(m.id)).length; return <span key={rank}><b style={{ background: RANK_COLORS[rank] }}>{rank}</b><i><em style={{ width: `${owned / total * 100}%` }} /></i><small>{owned}/{total}</small></span>; })}</div></div>
-          </div>}
           </div>
         </section>
       )}

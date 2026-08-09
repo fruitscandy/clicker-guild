@@ -17,10 +17,9 @@ type GuildBuildingHubProps = {
 };
 
 const facilityStatus: Record<Exclude<GuildFacility, "hall">, (props: GuildBuildingHubProps) => string> = {
-  tavern: (props) => `후보 ${props.candidateCount}명`,
+  tavern: (props) => `후보 ${props.candidateCount}명 · 파티 ${props.partyCount}/4`,
   forge: (props) => props.weaponName,
   research: (props) => `연구 ${props.researchCount}/${props.researchTotal}`,
-  training: (props) => `출전 ${props.partyCount}/4`,
 };
 
 export function GuildBuildingHub(props: GuildBuildingHubProps) {
@@ -56,7 +55,9 @@ export function GuildBuildingHub(props: GuildBuildingHubProps) {
             onClick={() => props.onSelect(facility.id)}
             aria-pressed={props.activeFacility === facility.id}
           >
-            {facility.id === "forge"
+            {facility.id === "tavern"
+              ? <span className={`${styles.facilityBuilding} ${styles.tavernBuildingArt}`} aria-hidden="true" />
+              : facility.id === "forge"
               ? <span className={`${styles.facilityBuilding} ${styles.forgeBuildingArt}`} aria-hidden="true" />
               : <span className={styles.facilityBuilding} aria-hidden="true"><i>{facility.glyph}</i><b /></span>}
             <span className={styles.buildingLabel}><strong>{facility.title}</strong><small>{facilityStatus[facility.id](props)}</small></span>

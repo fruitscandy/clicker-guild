@@ -1,0 +1,128 @@
+.tavern {
+  overflow: hidden;
+  padding: 0;
+  color: #f7ead1;
+  background: #211a17;
+  border-color: #3d2c24;
+  box-shadow: 0 8px 0 #2d211c, 0 22px 50px rgba(35, 20, 16, .22);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  padding: 22px 24px;
+  background: linear-gradient(105deg, #30221d, #563528 58%, #2a201c);
+  border-bottom: 1px solid rgba(235, 189, 111, .25);
+}
+
+.header h3 { margin: 2px 0 5px; color: #fff0c9; font: 700 28px Georgia, "Noto Serif KR", serif; }
+.header p { max-width: 610px; margin: 0; color: #c9b9a4; font-size: 11px; }
+.headerStats { display: grid; grid-template-columns: repeat(4, minmax(82px, 1fr)); gap: 7px; }
+.headerStats span { display: grid; padding: 9px 10px; background: rgba(18, 13, 11, .38); border: 1px solid rgba(235, 183, 91, .2); border-radius: 7px; }
+.headerStats small { color: #aa9884; font-size: 7px; font-weight: 900; letter-spacing: .07em; }
+.headerStats strong { margin-top: 3px; color: #f0c97a; font-size: 10px; }
+
+.interior {
+  padding: 22px;
+  background:
+    linear-gradient(rgba(27, 20, 17, .92), rgba(22, 17, 15, .97)),
+    repeating-linear-gradient(90deg, #60402f 0 78px, #493225 79px 82px);
+  border-bottom: 1px solid #4b372d;
+}
+
+.innkeeperBar {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 11px 14px;
+  color: #443126;
+  background: linear-gradient(100deg, #f5e4bc, #d8bb82);
+  border: 1px solid #9b7446;
+  border-radius: 9px;
+  box-shadow: 0 4px 0 #39281f;
+}
+.innkeeperSeal { display: grid; place-items: center; width: 40px; height: 40px; color: #ffe7a9; background: #713d2e; border: 2px solid #9d6843; border-radius: 50%; font: 1000 16px Georgia, serif; }
+.innkeeperBar > span:nth-child(2) { display: grid; min-width: 0; }.innkeeperBar small { color: #90613a; font-size: 7px; font-weight: 1000; letter-spacing: .08em; }.innkeeperBar strong { margin-top: 2px; overflow: hidden; font: 700 12px Georgia, "Noto Serif KR", serif; text-overflow: ellipsis; white-space: nowrap; }
+.innkeeperBar em { color: #7c5c42; font-size: 8px; font-style: normal; font-weight: 900; }
+
+.recruitDesk {
+  display: grid;
+  grid-template-columns: minmax(240px, 310px) minmax(340px, 1fr);
+  gap: 22px;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 16px;
+  background: #191413;
+  border: 1px solid color-mix(in srgb, var(--rank-color), #dbc89e 38%);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(10, 7, 6, .4), inset 0 0 34px color-mix(in srgb, var(--rank-color), transparent 92%);
+}
+.heroPortrait { position: relative; min-height: 310px; overflow: hidden; background: linear-gradient(155deg, color-mix(in srgb, var(--member-color), #d8b977 28%), #211817 64%); border: 1px solid #8f693e; border-radius: 9px; }
+.portraitImage { object-fit: contain; object-position: center top; transform: translateY(var(--portrait-shift-y, 0%)) scale(var(--portrait-scale, 1)); transform-origin: center top; filter: drop-shadow(0 9px 7px rgba(0, 0, 0, .46)); }
+.rankRibbon { position: absolute; left: 10px; top: 10px; z-index: 3; padding: 5px 9px; color: #fff9e2; background: var(--rank-color); border: 1px solid rgba(255,255,255,.42); border-radius: 5px; box-shadow: 0 3px 0 rgba(24,14,12,.44); font-size: 8px; font-weight: 1000; letter-spacing: .1em; }
+
+.recruitProfile { align-self: center; min-width: 0; }
+.jobLabel { color: color-mix(in srgb, var(--rank-color), #fff 38%); font-size: 8px; font-weight: 1000; letter-spacing: .1em; }
+.recruitProfile h4 { margin: 5px 0; color: #fff0cd; font: 700 27px Georgia, "Noto Serif KR", serif; }
+.recruitProfile > p { margin: 0 0 12px; color: #c7b7a6; font-size: 11px; }
+.recruitProfile dl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 0; }
+.recruitProfile dl div { padding: 9px; background: #29211e; border: 1px solid #42332b; border-radius: 6px; }
+.recruitProfile dt { color: #998979; font-size: 7px; }.recruitProfile dd { margin: 3px 0 0; color: #f0d9ac; font-size: 11px; font-weight: 1000; }
+.skillCard { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 9px; margin-top: 8px; padding: 9px 11px; background: #2a211d; border-left: 3px solid var(--rank-color); border-radius: 5px; }
+.skillCard > span { display: grid; place-items: center; width: 36px; height: 36px; color: #ffe9b9; background: color-mix(in srgb, var(--rank-color), #211817 64%); border: 1px solid var(--rank-color); border-radius: 50%; font-size: 12px; font-weight: 1000; }
+.skillCard div { display: grid; }.skillCard small { color: #a99a89; font-size: 7px; }.skillCard strong { color: #fff0c7; font-size: 11px; }.skillCard em { margin-top: 2px; color: #bcae9e; font-size: 8px; font-style: normal; }
+.hireButton { display: grid; width: 100%; margin-top: 10px; padding: 11px 13px; color: #fff4ce; background: linear-gradient(145deg, color-mix(in srgb, var(--rank-color), #8b4730 58%), #54291f); border: 2px solid #241815; border-radius: 8px; box-shadow: 0 4px 0 #241815; cursor: pointer; text-align: left; }
+.hireButton:hover:not(:disabled), .hireButton:focus-visible:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }.hireButton:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #241815; }.hireButton:disabled { opacity: .48; cursor: not-allowed; }.hireButton span { color: #e9bf72; font-size: 7px; font-weight: 900; }.hireButton strong { margin-top: 2px; font-size: 13px; }
+.completeRoster { display: grid; justify-items: center; max-width: 620px; margin: 45px auto; padding: 28px; background: #191413; border: 1px solid #c59a48; border-radius: 10px; text-align: center; }.completeRoster span { color:#edc461; font-size:31px; }.completeRoster strong { color:#ffe9b8; font-size:16px; }.completeRoster small { margin-top:5px; color:#bcae9f; font-size:9px; }
+
+.candidateSection { max-width: 1000px; margin: 20px auto 0; padding-top: 18px; border-top: 1px solid #4a372e; }
+.sectionTitle, .partyHeading, .rosterHeading { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 11px; }
+.sectionTitle > div, .partyHeading > div { display: grid; }.sectionTitle span, .partyHeading span { color: #d5a45b; font-size: 7px; font-weight: 1000; letter-spacing: .12em; }.sectionTitle strong, .partyHeading strong { margin-top: 2px; color: #f5e4c4; font: 700 18px Georgia, "Noto Serif KR", serif; }.sectionTitle small, .partyHeading small { margin-top: 2px; color: #9f9185; font-size: 8px; }
+.actions { display: flex; gap: 7px; }.actions button { padding: 8px 11px; color: #eadbc5; background: #4a352d; border: 1px solid #785642; border-radius: 7px; cursor: pointer; font-size: 9px; font-weight: 900; }.actions button:last-child { color: #40261c; background: linear-gradient(#f2d28a,#c79246); border-color:#ffdf9a; }.actions button:hover,.actions button:focus-visible { filter:brightness(1.1); }.actions b { margin-left:5px; color:inherit; font-size:8px; }
+.candidateRail { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.candidateCard { position:relative; display:grid; grid-template-columns:88px 1fr; align-items:center; gap:10px; min-width:0; min-height:106px; padding:8px 10px; color:#dfcfba; background:#302521; border:1px solid #574138; border-radius:8px; cursor:pointer; overflow:hidden; text-align:left; transition:border-color .16s ease,transform .16s ease,background .16s ease; }
+.candidateCard:hover,.candidateCard:focus-visible { transform:translateY(-2px); border-color:color-mix(in srgb,var(--rank-color),#fff 25%); }.candidateCard.selected { background:color-mix(in srgb,var(--rank-color),#2d231f 87%); border-color:var(--rank-color); box-shadow:inset 3px 0 var(--rank-color); }
+.cardPortrait { position:relative; align-self:stretch; min-height:88px; overflow:hidden; background:linear-gradient(155deg,color-mix(in srgb,var(--member-color),#d8b977 28%),#211817 70%); border:1px solid #634a3c; border-radius:6px; }
+.cardCopy { display:grid; min-width:0; }.cardCopy small { color:color-mix(in srgb,var(--rank-color),#fff 34%); font-size:7px; font-weight:1000; }.cardCopy strong { margin-top:3px; overflow:hidden; color:#faebcf; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }.cardCopy em { margin-top:3px; color:#ad9c8e; font-size:8px; font-style:normal; }.cardCost { position:absolute; right:8px; bottom:7px; color:#dfb767; font-size:8px; }
+
+.partySection { padding: 22px; color:#3e3027; background:linear-gradient(#ead8b5,#d6bc88); border-top:5px solid #673e2d; border-bottom:1px solid #a98658; }
+.partyHeading span { color:#8e5c35; }.partyHeading strong { color:#3d2c23; }.partyHeading small { color:#79644f; }.partyHeading > b { padding:7px 10px; color:#fff0c2; background:#6f4330; border:1px solid #4c3025; border-radius:6px; font-size:9px; letter-spacing:.08em; }
+.partySlots { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.partySlot,.emptySlot { min-height:126px; border-radius:8px; }
+.partySlot { position:relative; display:grid; grid-template-columns:88px 1fr; align-items:center; gap:9px; min-width:0; padding:8px; color:#eadbc2; background:#2b231f; border:1px solid color-mix(in srgb,var(--rank-color),#80664d 55%); cursor:pointer; overflow:hidden; text-align:left; }.partySlot:hover,.partySlot:focus-visible { filter:brightness(1.08); transform:translateY(-1px); }.partyPortrait { position:relative; align-self:stretch; min-height:108px; overflow:hidden; background:linear-gradient(155deg,color-mix(in srgb,var(--member-color),#d8b977 25%),#191514 72%); border-radius:6px; }.partySlot > span:nth-child(2) { display:grid; min-width:0; }.partySlot small { color:color-mix(in srgb,var(--rank-color),#fff 36%); font-size:7px; font-weight:1000; }.partySlot strong { margin-top:3px; overflow:hidden; color:#fff0d0; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }.partySlot em { margin-top:3px; color:#a99b8e; font-size:7px; font-style:normal; }.partySlot > b { position:absolute; right:6px; bottom:6px; color:#d6aa64; font-size:7px; }
+.emptySlot { display:grid; place-items:center; align-content:center; color:#8a735b; background:rgba(255,255,255,.2); border:1px dashed #a78b65; text-align:center; }.emptySlot span { display:grid; place-items:center; width:28px; height:28px; margin-bottom:4px; color:#b08a52; border:1px solid #b69768; border-radius:50%; font-size:9px; }.emptySlot strong { font-size:9px; }.emptySlot small { margin-top:3px; font-size:7px; }
+.rosterHeading { margin-top:18px; color:#49372c; }.rosterHeading > span { display:grid; }.rosterHeading small { color:#96663c; font-size:7px; font-weight:1000; letter-spacing:.1em; }.rosterHeading strong { margin-top:2px; font:700 15px Georgia,"Noto Serif KR",serif; }.rosterHeading em { color:#76614d; font-size:8px; font-style:normal; }
+.ownedRoster { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.rosterCard { position:relative; display:grid; grid-template-columns:76px 1fr; align-items:center; gap:9px; min-width:0; min-height:92px; padding:7px 9px; color:#58473b; background:rgba(255,250,235,.42); border:1px solid #b3956d; border-radius:7px; cursor:pointer; overflow:hidden; text-align:left; }.rosterCard:hover,.rosterCard:focus-visible { background:rgba(255,250,235,.66); border-color:var(--rank-color); }.rosterCard.inParty { background:#fff1c9; border-color:var(--rank-color); box-shadow:inset 3px 0 var(--rank-color); }
+.rosterPortrait { position:relative; align-self:stretch; min-height:76px; overflow:hidden; background:linear-gradient(155deg,color-mix(in srgb,var(--member-color),#f2ddb1 28%),#403028 75%); border:1px solid #9d7b58; border-radius:5px; }.rosterCard > span:nth-child(2) { display:grid; min-width:0; }.rosterCard small { color:color-mix(in srgb,var(--rank-color),#5b4637 42%); font-size:7px; font-weight:1000; }.rosterCard strong { margin-top:3px; overflow:hidden; color:#3e2d24; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }.rosterCard em { margin-top:3px; color:#796550; font-size:7px; font-style:normal; }.rosterCard > b { position:absolute; right:7px; bottom:6px; color:#7b5531; font-size:7px; }
+
+.collection { display:flex; align-items:center; gap:28px; padding:18px 22px; color:#453228; background:#ead9b5; border-top:1px solid #f8e9c8; }.collection h4 { margin:1px 0 0; font:700 18px Georgia,"Noto Serif KR",serif; }.collection p { margin:3px 0 0; color:#7b624d; font-size:8px; }
+.rankProgress { display:grid; grid-template-columns:repeat(7,minmax(62px,1fr)); gap:7px; flex:1; }.rankProgress > span { display:grid; grid-template-columns:24px 1fr; align-items:center; gap:5px; }.rankProgress b { display:grid; place-items:center; width:24px; height:24px; color:#fff; background:var(--rank-color); border:1px solid rgba(48,31,24,.6); border-radius:5px; font-size:9px; }.rankProgress i { height:6px; overflow:hidden; background:rgba(86,62,44,.2); border-radius:8px; }.rankProgress em { display:block; height:100%; background:var(--rank-color); }.rankProgress small { grid-column:2; color:#705744; font-size:7px; }
+.tavern button:focus-visible { outline:3px solid #ffe09a; outline-offset:2px; }
+
+@media (max-width:1000px) {
+  .header { align-items:flex-start; flex-direction:column; }.headerStats { width:100%; }
+  .partySlots { grid-template-columns:1fr 1fr; }.ownedRoster { grid-template-columns:1fr 1fr; }
+}
+
+@media (max-width:760px) {
+  .interior,.partySection { padding:15px; }.innkeeperBar { grid-template-columns:40px 1fr; }.innkeeperBar > em { display:none; }
+  .recruitDesk { grid-template-columns:minmax(190px,.75fr) 1.25fr; }.candidateRail { grid-template-columns:1fr; }
+  .collection { align-items:stretch; flex-direction:column; }.rankProgress { width:100%; grid-template-columns:repeat(4,1fr); }
+}
+
+@media (max-width:560px) {
+  .header { padding:17px 14px; }.headerStats { grid-template-columns:repeat(2,1fr); }.header h3 { font-size:24px; }
+  .innkeeperBar strong { font-size:10px; }.recruitDesk { grid-template-columns:1fr; padding:10px; }.heroPortrait { min-height:285px; }.recruitProfile { padding:3px 4px 5px; }.recruitProfile h4 { font-size:22px; }.recruitProfile dl { grid-template-columns:1fr 1fr; }
+  .sectionTitle,.partyHeading,.rosterHeading { align-items:stretch; flex-direction:column; }.actions { display:grid; grid-template-columns:1fr 1fr; }.actions button { padding:9px 5px; }
+  .partySlots,.ownedRoster { grid-template-columns:1fr; }.partySlot { grid-template-columns:96px 1fr; }.emptySlot { min-height:88px; }
+  .rankProgress { grid-template-columns:repeat(4,1fr); }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .candidateCard,.hireButton,.partySlot { transition:none; }
+}
