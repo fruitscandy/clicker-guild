@@ -19,6 +19,7 @@ function tone(
   volume: number,
   type: OscillatorType = "sine",
   endFrequency = frequency,
+  attackDuration = Math.min(0.018, duration * 0.2),
 ) {
   const oscillator = context.createOscillator();
   const gain = context.createGain();
@@ -26,7 +27,7 @@ function tone(
   oscillator.frequency.setValueAtTime(frequency, start);
   oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + duration);
   gain.gain.setValueAtTime(0.0001, start);
-  gain.gain.exponentialRampToValueAtTime(volume, start + Math.min(0.018, duration * 0.2));
+  gain.gain.exponentialRampToValueAtTime(volume, start + attackDuration);
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
   oscillator.connect(gain);
   gain.connect(context.destination);
@@ -78,10 +79,17 @@ export function playLootDropSound(profile: LootSoundProfile, dropIndex = 0) {
   const variation = (dropIndex % 5 - 2) * 13;
 
   if (profile === "coin") {
-    tone(context, 1280 + variation * 2, start, 0.21, 0.032, "sine", 960 + variation);
-    tone(context, 2460 + variation * 4, start + 0.008, 0.12, 0.014, "triangle", 1840 + variation * 2);
-    tone(context, 560 + variation, start + 0.018, 0.1, 0.014, "triangle", 330 + variation);
-    noiseBurst(context, start, 0.045, 0.012, 3600, 2200);
+    // Two quick, inharmonic impacts read as a small handful of coins landing: "짤-랑".
+    tone(context, 1760 + variation * 3, start, 0.22, 0.028, "sine", 1260 + variation * 2, 0.002);
+    tone(context, 3160 + variation * 5, start + 0.002, 0.13, 0.014, "triangle", 2380 + variation * 3, 0.0015);
+    tone(context, 760 + variation, start + 0.004, 0.09, 0.009, "triangle", 520 + variation / 2, 0.002);
+    noiseBurst(context, start, 0.022, 0.009, 6200, 3500);
+
+    const rebound = start + 0.052;
+    tone(context, 2210 + variation * 4, rebound, 0.18, 0.024, "sine", 1580 + variation * 2, 0.002);
+    tone(context, 3890 + variation * 6, rebound + 0.002, 0.1, 0.011, "triangle", 2950 + variation * 3, 0.0015);
+    tone(context, 980 + variation, rebound + 0.004, 0.08, 0.007, "triangle", 680 + variation / 2, 0.002);
+    noiseBurst(context, rebound, 0.018, 0.007, 7000, 4100);
     return;
   }
   if (profile === "coin-pouch") {
