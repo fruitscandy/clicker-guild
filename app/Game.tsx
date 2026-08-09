@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  playCombatProcSound,
   playExpeditionFailSound,
   playExpeditionStartSound,
   playGuildMemberHireSound,
@@ -11,6 +12,8 @@ import {
   playLootDropSound,
   playMenuTabSound,
   playMonsterHitSound,
+  playProgressionSound,
+  playRareRewardSound,
   unlockBattleAudio,
 } from "./battle-audio";
 import {
@@ -24,6 +27,7 @@ import {
 import { fieldAssetForRegion } from "./field-assets";
 import { combatTraitFor, compactNumber, getStage, MEMBERS, RANK_ORDER, STAGE_COUNT, STAGES_PER_REGION, type CombatStyle, type MemberDefinition } from "./game-data";
 import { maximumUpgradeLevels, UPGRADE_CAPS, UPGRADE_KEYS, type UpgradeKey, type UpgradeLevels } from "./developer-upgrades";
+import { DeveloperResourcePanel } from "./guild-hub/DeveloperResourcePanel";
 import { DeveloperUpgradePanel } from "./guild-hub/DeveloperUpgradePanel";
 import { ForgeWorkshop } from "./guild-hub/ForgeWorkshop";
 import { GuildBuildingHub } from "./guild-hub/GuildBuildingHub";
@@ -181,6 +185,21 @@ const initialState: SaveState = {
   candidates: ["mia", "finn", "lulu"],
   autoAdvance: true,
 };
+
+function cloneSaveState(state: SaveState): SaveState {
+  return {
+    ...state,
+    materials: { ...state.materials },
+    cleared: [...state.cleared],
+    owned: [...state.owned],
+    party: [...state.party],
+    progress: Object.fromEntries(Object.entries(state.progress).map(([id, progress]) => [id, { ...progress }])),
+    upgrades: { ...state.upgrades },
+    nodes: [...state.nodes],
+    specials: { ...state.specials },
+    candidates: [...state.candidates],
+  };
+}
 
 const upgradeInfo: Record<UpgradeKey, { title: string; description: string; base: number; accent: string }> = {
   range: { title: "참격 범위", description: "플레이어 클릭 공격 반경 +2.75", base: 110, accent: "원" },
@@ -442,6 +461,7 @@ export default function Game() {
   const lootDropsRef = useRef<BattleLootDrop[]>([]);
   const revealedLootIds = useRef(new Set<string>());
   const lootTimers = useRef<number[]>([]);
+  const developerEntrySave = useRef<SaveState | null>(null);
 
   const stageNumber = developerMode && developerStage ? developerStage : save.selectedStage;
   const effectiveUpgrades = developerMode ? developerUpgrades : save.upgrades;
@@ -537,9 +557,9 @@ export default function Game() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || developerMode) return;
     localStorage.setItem(SAVE_KEY, JSON.stringify(save));
-  }, [save, hydrated]);
+  }, [save, hydrated, developerMode]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 100);
@@ -592,6 +612,14 @@ export default function Game() {
       };
     });
 
+    const rareReward = stage.boss && firstClear
+      ? "boss-token"
+      : gearTarget
+        ? "gear"
+        : firstClear
+          ? "first-clear"
+          : null;
+    if (rareReward) playRareRewardSound(rareReward);
     setToast(`토벌 성공! 골드 ${compactNumber(earnedGold)} · ${stageMaterial.name} ${earnedMaterial}개${gearTarget ? ` · ${memberById(gearTarget).name} 장비 획득` : ""}${stage.boss && firstClear ? " · 보스 증표 +1" : ""}`);
   }, [developerMode, save.cleared, save.party, effectiveUpgrades.loot, stage, stageMaterial, goldMultiplier]);
 
@@ -760,10 +788,12 @@ export default function Game() {
     const comboMultiplier = combo ? 1.35 + comboLevel * .1 : 1;
     const timestamp = Date.now();
     let nextMomentum = 0;
+    let momentumMaxed = false;
     if (!automatic && momentumLevel > 0) {
       const chained = timestamp - momentumState.current.lastAt <= 1250;
       const maxStacks = 3 + momentumLevel * 2;
       nextMomentum = Math.min(maxStacks, chained ? momentumState.current.stacks + 1 : 1);
+      momentumMaxed = nextMomentum === maxStacks && momentumState.current.stacks < maxStacks;
       momentumState.current = { lastAt: timestamp, stacks: nextMomentum };
       setMomentumStacks(nextMomentum);
     }
@@ -804,6 +834,9 @@ export default function Game() {
     });
     const feedbackDuration = shockwave ? 1750 : !automatic && (executionCount || critical || combo || nextMomentum) ? 1250 : activeClickPattern.duration;
     window.setTimeout(() => setHitFx((current) => current?.id === effectId ? null : current), Math.max(activeClickPattern.duration, feedbackDuration));
+    if (!automatic && targets.length) {
+      playCombatProcSound({ critical, combo, shockwave, execution: executionCount > 0, momentumMaxed });
+    }
     damageMonsters(targets.map((monster) => monster.id), damage, true, activeClickPattern.tier);
     if (!automatic) {
       clickCount.current = nextClicks;
@@ -906,10 +939,16 @@ export default function Game() {
 
   function toggleDeveloperMode() {
     const next = !developerMode;
+    if (next) {
+      developerEntrySave.current = cloneSaveState(save);
+    } else if (developerEntrySave.current) {
+      setSave(cloneSaveState(developerEntrySave.current));
+      developerEntrySave.current = null;
+    }
     setDeveloperMode(next);
     setDeveloperStage(next ? save.selectedStage : null);
     if (next) setDeveloperClickLevel(CLICK_ATTACK_PATTERNS.length - 1);
-    setToast(next ? "개발자 모드 ON · 업그레이드 시험값과 전체 웨이브가 임시 해금됩니다. 결과는 저장되지 않습니다." : "개발자 모드 OFF · 원래 저장 진행도로 돌아왔습니다.");
+    setToast(next ? "개발자 모드 ON · 자원·구매·업그레이드 시험값과 전체 웨이브가 임시 해금됩니다. 결과는 저장되지 않습니다." : "개발자 모드 OFF · 진입 전 저장 진행도로 돌아왔습니다.");
   }
 
   function previewClickPattern(level: number) {
@@ -932,6 +971,7 @@ export default function Game() {
       return { ...current, gold: current.gold - nextWeapon.cost, materials, weaponLevel: nextLevel };
     });
     setTerritoryPulse((current) => current + 1);
+    playProgressionSound("weapon-craft", nextLevel);
     setToast(`${nextWeapon.weaponName} 완성! 플레이어 클릭 공격력이 ${Math.round(nextWeapon.damageScale * 100)}%로 상승했습니다.`);
   }
 
@@ -950,6 +990,7 @@ export default function Game() {
     }
     setSave((current) => ({ ...current, gold: current.gold - hallStage.upgradeCost!, guildHallLevel: current.guildHallLevel + 1 }));
     setTerritoryPulse((current) => current + 1);
+    playProgressionSound("guild-hall", nextHallStage.level);
     setToast(`${nextHallStage.name} 완성! 길드 강화 연구가 ${nextHallStage.researchDepth}단계까지 확장되었습니다.`);
   }
 
@@ -969,6 +1010,7 @@ export default function Game() {
       upgrades: node.target ? { ...current.upgrades, [node.target]: current.upgrades[node.target] + 1 } : current.upgrades,
     }));
     setTerritoryPulse((current) => current + 1);
+    playProgressionSound("research-unlock", node.target ? save.upgrades[node.target] + 1 : save.nodes.length + 1);
     setToast(`${node.title} 노드를 해금했습니다. 새로운 성장 경로가 발견됩니다!`);
   }
 
@@ -1043,12 +1085,14 @@ export default function Game() {
     if (save.specials[key]) return;
     if (save.bossTokens < 1) return setToast("보스 증표가 필요합니다. 각 지역의 3번째 군주 웨이브를 처치하세요.");
     setSave((current) => ({ ...current, bossTokens: current.bossTokens - 1, specials: { ...current.specials, [key]: true } }));
+    playProgressionSound("special-tactic");
     setToast(`${specialInfo[key].title} 특수 전술을 해금했습니다!`);
   }
 
   function resetGame() {
     if (!window.confirm("모든 진행 상황을 지우고 새 게임을 시작할까요?")) return;
     localStorage.removeItem(SAVE_KEY);
+    developerEntrySave.current = null;
     setSave(initialState);
     clearLootTimers();
     victoryLock.current = true;
@@ -1121,7 +1165,7 @@ export default function Game() {
       </section>
 
       <div className="toast" role="status"><span aria-hidden="true">✦</span>{toast}</div>
-      {developerMode && <div className="developer-banner" role="status"><strong>개발자 모드</strong><span>30개 웨이브 임시 해금 · 업그레이드 단계 자유 조정 · 플레이어 무기 15종 비교 · 시험값 저장 안 됨</span></div>}
+      {developerMode && <div className="developer-banner" role="status"><strong>개발자 모드</strong><span>자원·구매 진행 임시 조정 · 30개 웨이브 해금 · 업그레이드·무기 비교 · DEV 종료 시 원상 복귀</span></div>}
 
       {!combatLocked && (
         <section className="screen guild-screen" aria-label="길드 영지">
@@ -1142,6 +1186,11 @@ export default function Game() {
               onSelect={selectGuildFacility}
             />
           </TerritoryHuntingGround>
+
+          {developerMode && <DeveloperResourcePanel
+            resources={{ gold: save.gold, bossTokens: save.bossTokens, materials: save.materials }}
+            onChange={(resources) => setSave((current) => ({ ...current, ...resources }))}
+          />}
 
           {huntingGroundOpen ? <HuntingGroundPanel
             regionName={stage.region.name}
@@ -1205,7 +1254,7 @@ export default function Game() {
             </div>
             <div className="upgrade-tree-panel panel">
               <div className="panel-title"><div><span className="eyebrow">GUILD DEVELOPMENT MAP</span><h3>플레이어·길드 발전 노드</h3><p className="panel-description">플레이어의 클릭 전투와 길드원 패시브 화력을 각각 성장시킵니다. 무기 공격력과 외형은 불꽃 대장간에서 강화됩니다.</p></div><span className="level-chip">보유 골드 {compactNumber(save.gold)}</span></div>
-              <ResearchMap nodes={UPGRADE_NODES} purchasedIds={save.nodes} hallLevel={save.guildHallLevel} formatCost={compactNumber} readOnly={developerMode} onPurchase={(node: ResearchNodeView) => { const fullNode = UPGRADE_NODES.find((item) => item.id === node.id); if (fullNode) purchaseNode(fullNode); }} />
+              <ResearchMap nodes={UPGRADE_NODES} purchasedIds={save.nodes} hallLevel={save.guildHallLevel} formatCost={compactNumber} onPurchase={(node: ResearchNodeView) => { const fullNode = UPGRADE_NODES.find((item) => item.id === node.id); if (fullNode) purchaseNode(fullNode); }} />
             </div>
           </>}
 
