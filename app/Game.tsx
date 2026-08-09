@@ -28,6 +28,7 @@ import { DeveloperResourcePanel } from "./guild-hub/DeveloperResourcePanel";
 import { DeveloperUpgradePanel } from "./guild-hub/DeveloperUpgradePanel";
 import { ForgeWorkshop } from "./guild-hub/ForgeWorkshop";
 import { GuildBuildingHub } from "./guild-hub/GuildBuildingHub";
+import { HuntingGroundPanel, TerritoryHuntingGround } from "./guild-hub/HuntingGround";
 import { ResearchMap, type ResearchNodeView } from "./guild-hub/ResearchMap";
 import { TavernHall } from "./guild-hub/TavernHall";
 import { GUILD_HALL_STAGES, guildHallStage, inferHallLevelFromNodes, requiredHallLevelForNode, type GuildFacility } from "./guild-hub/guild-progression";
@@ -417,6 +418,7 @@ function upgradeEffectText(key: UpgradeKey, level: number) {
 export default function Game() {
   const [save, setSave] = useState<SaveState>(initialState);
   const [activeFacility, setActiveFacility] = useState<GuildFacility>("hall");
+  const [huntingGroundOpen, setHuntingGroundOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [battleActive, setBattleActive] = useState(false);
   const [fieldMonsters, setFieldMonsters] = useState<FieldMonster[]>([]);
@@ -1034,7 +1036,13 @@ export default function Game() {
 
   function selectGuildFacility(facility: GuildFacility) {
     playMenuTabSound();
+    setHuntingGroundOpen(false);
     setActiveFacility(facility);
+  }
+
+  function openHuntingGround() {
+    playMenuTabSound();
+    setHuntingGroundOpen(true);
   }
 
   function toggleParty(id: string) {
@@ -1140,30 +1148,47 @@ export default function Game() {
       {developerMode && <div className="developer-banner" role="status"><strong>개발자 모드</strong><span>자원·구매 진행 임시 조정 · 30개 웨이브 해금 · 업그레이드·무기 비교 · DEV 종료 시 원상 복귀</span></div>}
 
       {!combatLocked && (
-        <section className="screen guild-screen" aria-label="길드 관리">
-          <div className="section-heading">
-            <div><span className="eyebrow">GUILD TERRITORY</span><h2>길드 관리</h2><p>파티를 편성하고 목표를 지정한 뒤 토벌대를 출정시키세요. 전투가 끝날 때까지 영지로 돌아올 수 없습니다.</p></div>
-            <div className="heading-actions expedition-actions"><button className="secondary-button" onClick={() => setStagePicker(true)}>목표 · {stage.region.name} {stage.localStage}웨이브</button><button className="primary-button" onClick={() => startStage()}>군세 토벌 출정 ⚔</button></div>
-          </div>
+        <section className="screen guild-screen" aria-label="길드 영지">
+          <TerritoryHuntingGround
+            active={huntingGroundOpen}
+            stageLabel={`${stage.region.name} ${stage.localStage}웨이브`}
+            onOpen={openHuntingGround}
+          >
+            <GuildBuildingHub
+              activeFacility={activeFacility}
+              hallLevel={save.guildHallLevel}
+              researchCount={save.nodes.length}
+              researchTotal={UPGRADE_NODES.length}
+              weaponName={clickAttackPattern(save.weaponLevel).weaponName}
+              partyCount={save.party.length}
+              candidateCount={save.candidates.length}
+              pulse={territoryPulse}
+              onSelect={selectGuildFacility}
+            />
+          </TerritoryHuntingGround>
 
           {developerMode && <DeveloperResourcePanel
             resources={{ gold: save.gold, bossTokens: save.bossTokens, materials: save.materials }}
             onChange={(resources) => setSave((current) => ({ ...current, ...resources }))}
           />}
 
-          <GuildBuildingHub
-            activeFacility={activeFacility}
-            hallLevel={save.guildHallLevel}
-            researchCount={save.nodes.length}
-            researchTotal={UPGRADE_NODES.length}
-            weaponName={clickAttackPattern(save.weaponLevel).weaponName}
+          {huntingGroundOpen ? <HuntingGroundPanel
+            regionName={stage.region.name}
+            localStage={stage.localStage}
+            stageNumber={stage.stage}
+            unlockedStage={developerMode ? STAGE_COUNT : save.unlockedStage}
+            boss={stage.boss}
+            rewardGold={compactNumber(Math.round(stage.gold * goldMultiplier))}
+            rewardXp={compactNumber(stage.xp)}
+            materialName={stageMaterial.name}
+            materialAmount={stageMaterial.rewardAmount}
             partyCount={save.party.length}
-            candidateCount={save.candidates.length}
-            pulse={territoryPulse}
-            onSelect={selectGuildFacility}
-          />
-
-          <div className={`guild-facility-content facility-${activeFacility}`}>
+            fieldImage={fieldAsset.source}
+            fieldImagePosition={fieldAsset.objectPosition}
+            onOpenMap={() => setStagePicker(true)}
+            onStart={() => startStage()}
+            onClose={() => setHuntingGroundOpen(false)}
+          /> : <div className={`guild-facility-content facility-${activeFacility}`}>
           {activeFacility === "hall" && <div className="guild-layout guild-hall-management">
             <div className="hall-upgrade-panel panel">
               <div className="panel-title"><div><span className="eyebrow">GUILD HALL DEVELOPMENT</span><h3>길드 본관 승급</h3></div><span className="level-chip">본관 Lv.{hallStage.level}/6</span></div>
@@ -1237,7 +1262,7 @@ export default function Game() {
             </button>)}</div>
           </div>
           </>}
-          </div>
+          </div>}
         </section>
       )}
 
@@ -1424,6 +1449,7 @@ export default function Game() {
           developerMode={developerMode}
           onSelectStage={selectStage}
           onClose={() => setStagePicker(false)}
+          title="사냥터 지도 · 토벌 목표 선택"
         />
       )}
       <footer className="game-footer"><span>GUILDMASTER CHRONICLE · LOCAL BUILD</span><span>작은 길드가 전설이 되는 곳</span></footer>

@@ -16,7 +16,7 @@ export const BGM_TRACKS: readonly BgmTrack[] = [
     id: "guild",
     title: "길드의 화롯불",
     subtitle: "Guild Hearth",
-    scene: "길드 관리",
+    scene: "길드 영지",
     bpm: 84,
     duration: "0:46",
     source: "/assets/audio/bgm/guild-hearth.wav",
