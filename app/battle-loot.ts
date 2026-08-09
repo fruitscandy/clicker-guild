@@ -78,9 +78,9 @@ export function goldLootSweepDuration(dropCount: number) {
 }
 
 export function goldDropFormForStage(stage: number): GoldDropForm {
-  const safeStage = clamp(Math.round(stage), 1, 100);
-  if (safeStage >= 70) return "cash-bundle";
-  if (safeStage >= 35) return "coin-pouch";
+  const safeStage = clamp(Math.round(stage), 1, 30);
+  if (safeStage >= 21) return "cash-bundle";
+  if (safeStage >= 11) return "coin-pouch";
   return "coins";
 }
 

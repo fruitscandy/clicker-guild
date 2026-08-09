@@ -51,30 +51,25 @@ const MATERIAL_FAMILIES = [
 
 const STAGE_GRADES = [
   "거친",
-  "이슬 맺힌",
-  "맥동하는",
-  "정제된",
-  "빛나는",
-  "공명하는",
-  "각인된",
-  "찬란한",
-  "왕실",
+  "폭주하는",
   "군주의",
 ] as const;
 
-const WEAPON_RECIPE_STAGES = [1, 3, 5, 10, 14, 20, 28, 38, 48, 58, 68, 78, 88, 98] as const;
-const WEAPON_RECIPE_AMOUNTS = [4, 6, 8, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32] as const;
+// The 15-step arsenal is compressed across the 30-wave hack-and-slash run.
+// Each recipe points at a material the player can reach before the next major power spike.
+const WEAPON_RECIPE_STAGES = [1, 2, 3, 4, 5, 7, 9, 11, 13, 15, 18, 21, 24, 27] as const;
+const WEAPON_RECIPE_AMOUNTS = [4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20] as const;
 
 function clampStage(stage: number) {
-  return Math.min(100, Math.max(1, Math.round(stage)));
+  return Math.min(30, Math.max(1, Math.round(stage)));
 }
 
 export function stageMaterialFor(stage: number): StageMaterial {
   const safeStage = clampStage(stage);
-  const region = Math.ceil(safeStage / 10);
-  const localStage = (safeStage - 1) % 10 + 1;
+  const region = Math.ceil(safeStage / 3);
+  const localStage = (safeStage - 1) % 3 + 1;
   const family = MATERIAL_FAMILIES[region - 1];
-  const boss = localStage === 10;
+  const boss = localStage === 3;
   return {
     id: `stage-material-${String(safeStage).padStart(3, "0")}`,
     stage: safeStage,
@@ -82,12 +77,12 @@ export function stageMaterialFor(stage: number): StageMaterial {
     localStage,
     name: `${STAGE_GRADES[localStage - 1]} ${family.familyName}`,
     familyName: family.familyName,
-    description: `${family.description}. ${region}지역 ${localStage}구역에서만 획득할 수 있습니다.`,
+    description: `${family.description}. ${region}지역 ${localStage}웨이브에서만 획득할 수 있습니다.`,
     iconIndex: region - 1,
     variant: localStage - 1,
     accent: family.accent,
     soundProfile: family.soundProfile,
-    rewardAmount: (boss ? 16 : 5) + region + Math.ceil(localStage / 2) + (boss ? region : 0),
+    rewardAmount: boss ? 18 + region * 2 : 7 + region + localStage * 2,
     boss,
   };
 }
@@ -96,7 +91,7 @@ export function stageMaterialById(id: string) {
   const match = /^stage-material-(\d{3})$/.exec(id);
   if (!match) return null;
   const stage = Number(match[1]);
-  if (stage < 1 || stage > 100) return null;
+  if (stage < 1 || stage > 30) return null;
   return stageMaterialFor(stage);
 }
 

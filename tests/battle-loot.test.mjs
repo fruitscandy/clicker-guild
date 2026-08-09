@@ -31,14 +31,14 @@ test("distributes the complete stage reward across monster drops", () => {
 
 test("upgrades gold visuals and sounds from coins to pouches and cash bundles", () => {
   assert.equal(goldDropFormForStage(1), "coins");
-  assert.equal(goldDropFormForStage(34), "coins");
-  assert.equal(goldDropFormForStage(35), "coin-pouch");
-  assert.equal(goldDropFormForStage(69), "coin-pouch");
-  assert.equal(goldDropFormForStage(70), "cash-bundle");
-  assert.equal(goldDropFormForStage(100), "cash-bundle");
+  assert.equal(goldDropFormForStage(10), "coins");
+  assert.equal(goldDropFormForStage(11), "coin-pouch");
+  assert.equal(goldDropFormForStage(20), "coin-pouch");
+  assert.equal(goldDropFormForStage(21), "cash-bundle");
+  assert.equal(goldDropFormForStage(30), "cash-bundle");
 
-  const pouchPlan = createGoldDropPlan(monsters, 500, 35);
-  const bundlePlan = createGoldDropPlan(monsters, 2_000, 70);
+  const pouchPlan = createGoldDropPlan(monsters, 500, 11);
+  const bundlePlan = createGoldDropPlan(monsters, 2_000, 21);
   assert.ok(pouchPlan.every((drop) => drop.soundProfile === "coin-pouch" && drop.variant >= 4 && drop.variant <= 7));
   assert.ok(bundlePlan.every((drop) => drop.soundProfile === "cash-bundle" && drop.variant >= 8 && drop.variant <= 11));
 });
@@ -56,12 +56,12 @@ test("reveals drops in kill order and keeps their defeat time", () => {
 
 test("keeps a brisk but bounded collection cadence for large packs", () => {
   assert.equal(goldLootStaggerMs(1), 0);
-  assert.equal(goldLootStaggerMs(24), 42);
-  assert.ok(goldLootSweepDuration(24) < 2_100);
+  assert.equal(goldLootStaggerMs(88), 42);
+  assert.ok(goldLootSweepDuration(88) < 5_000);
 });
 
 test("adds a stage material without changing the complete gold reward", () => {
-  const material = stageMaterialFor(37);
+  const material = stageMaterialFor(17);
   const materialPlan = createMaterialDropPlan(monsters, material);
   const fullPlan = createBattleLootPlan(monsters, 137, material);
   assert.equal(materialPlan.reduce((sum, drop) => sum + drop.amount, 0), material.rewardAmount);
