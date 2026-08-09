@@ -230,3 +230,16 @@ test("keeps developer upgrade experiments temporary and independent from gold", 
   assert.match(upgradeState, /maximumUpgradeLevels/);
   assert.match(upgradeState, /clampUpgradeLevel/);
 });
+
+test("uses expedition state instead of locked navigation tabs", async () => {
+  const [game, globalStyles] = await Promise.all([
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(game, /\{!combatLocked && \(/);
+  assert.match(game, /\{combatLocked && \(/);
+  assert.doesNotMatch(game, /type Tab|setTab|main-tabs|LOCKED/);
+  assert.doesNotMatch(game, /tab !== "field"|tab === "field"/);
+  assert.doesNotMatch(globalStyles, /main-tabs|live-dot|livePulse/);
+});

@@ -36,7 +36,6 @@ import { StageMap } from "./stage-map";
 import { canAffordWeaponRecipe, consumeWeaponRecipe, materialIconVars, stageMaterialById, stageMaterialFor, weaponMaterialRecipe } from "./stage-materials";
 import { UPGRADE_ICON_BY_KEY } from "./upgrade-icons";
 
-type Tab = "guild" | "field";
 type LootPhase = "idle" | "fighting" | "collecting" | "complete";
 type MemberProgress = { level: number; xp: number; gear: number };
 type CombatProcKey = "range" | "critical" | "combo" | "execution" | "shockwave" | "momentum";
@@ -401,7 +400,6 @@ function upgradeEffectText(key: UpgradeKey, level: number) {
 
 export default function Game() {
   const [save, setSave] = useState<SaveState>(initialState);
-  const [tab, setTab] = useState<Tab>("guild");
   const [activeFacility, setActiveFacility] = useState<GuildFacility>("hall");
   const [hydrated, setHydrated] = useState(false);
   const [battleActive, setBattleActive] = useState(false);
@@ -730,7 +728,7 @@ export default function Game() {
   }, []);
 
   useEffect(() => {
-    if (!battleActive || tab !== "field" || !aliveMonsters.length) return;
+    if (!battleActive || !aliveMonsters.length) return;
     partyMembers.forEach((member, index) => {
       const attackMs = member.interval * 1000 / (1 + traitCounts.support * .08);
       const skillMs = member.skillCooldown * 1000 / (1 + traitCounts.support * .06);
@@ -749,7 +747,7 @@ export default function Game() {
         emitMemberWeaponFx(member, bestAttackPoint(skillTargets, attackRange), true, index);
       }
     });
-  }, [now, battleActive, tab, aliveMonsters, partyMembers, progressFor, developerPower, guildMultiplier, effectiveUpgrades.guild, damageMonsters, traitCounts.support, assistMultiplier, emitMemberWeaponFx, attackRange]);
+  }, [now, battleActive, aliveMonsters, partyMembers, progressFor, developerPower, guildMultiplier, effectiveUpgrades.guild, damageMonsters, traitCounts.support, assistMultiplier, emitMemberWeaponFx, attackRange]);
 
   const directAttackAt = useCallback((x: number, y: number, automatic = false) => {
     if (!battleActive || !aliveMonsters.length) return;
@@ -817,17 +815,16 @@ export default function Game() {
   }, [battleActive, aliveMonsters, save.specials, comboLevel, clickDamage, activeClickPattern, criticalChance, executionThreshold, attackRange, momentumLevel, shockwaveLevel, damageMonsters, partyMembers, progressFor, guildMultiplier, developerPower]);
 
   useEffect(() => {
-    if (!save.specials.auto || !battleActive || tab !== "field") return;
+    if (!save.specials.auto || !battleActive) return;
     const timer = window.setInterval(() => directAttackAt(autoAttackPoint.x, autoAttackPoint.y, true), 2000);
     return () => window.clearInterval(timer);
-  }, [save.specials.auto, battleActive, tab, directAttackAt, autoAttackPoint]);
+  }, [save.specials.auto, battleActive, directAttackAt, autoAttackPoint]);
 
   function selectStage(stageNumber: number) {
     const nextStage = getStage(stageNumber);
     if (developerMode) setDeveloperStage(stageNumber);
     else setSave((current) => ({ ...current, selectedStage: stageNumber }));
     setStagePicker(false);
-    setTab("guild");
     setToast(`${nextStage.region.name} ${nextStage.localStage}구역을 다음 토벌 목표로 지정했습니다.`);
   }
 
@@ -835,7 +832,6 @@ export default function Game() {
     unlockBattleAudio();
     if (!save.party.length && !developerMode) {
       setToast("출전할 길드원이 없습니다. 여관에서 새 길드원을 고용하고 파티에 편성하세요.");
-      setTab("guild");
       return;
     }
     const nextStage = getStage(stageNumber);
@@ -873,7 +869,6 @@ export default function Game() {
     if (developerMode) setDeveloperStage(stageNumber);
     else setSave((current) => ({ ...current, selectedStage: stageNumber }));
     setStagePicker(false);
-    setTab("field");
     setToast(`${nextStage.region.name} ${nextStage.localStage}웨이브 진입 · 몬스터 ${monsters.length}마리가 몰려옵니다! 길드 조합으로 전장을 쓸어내세요.`);
   }
 
@@ -897,7 +892,6 @@ export default function Game() {
     lootPlan.current = [];
     lootDropsRef.current = [];
     revealedLootIds.current.clear();
-    setTab("guild");
     setToast(message);
   }
 
@@ -1015,11 +1009,6 @@ export default function Game() {
     setToast(`운명의 계약! ${roll.name} 합류 · ${combatTraitFor(roll).title} 효과가 즉시 적용됩니다.`);
   }
 
-  function switchMainTab(nextTab: Tab) {
-    playMenuTabSound();
-    setTab(nextTab);
-  }
-
   function selectGuildFacility(facility: GuildFacility) {
     playMenuTabSound();
     setActiveFacility(facility);
@@ -1074,7 +1063,6 @@ export default function Game() {
     lootDropsRef.current = [];
     revealedLootIds.current.clear();
     setLostMembers([]);
-    setTab("guild");
     setActiveFacility("hall");
     setToast("새로운 길드가 창설되었습니다. 파티를 편성하고 첫 토벌을 준비하세요.");
   }
@@ -1124,15 +1112,10 @@ export default function Game() {
         <div className="current-objective"><small>현재 목표</small><strong>{stage.boss ? `${stage.name} 군주전` : `${stage.region.name} ${stage.localStage}웨이브 돌파`}</strong></div>
       </section>
 
-      <nav className="main-tabs" aria-label="주요 화면">
-        <button className={tab === "guild" ? "active" : ""} onClick={() => switchMainTab("guild")}><span>🏰</span> 길드 관리</button>
-        <button className={tab === "field" ? "active" : ""} onClick={() => switchMainTab("field")} disabled={!battleActive} title="토벌 출정 후 전투 화면이 열립니다"><span>⚔️</span> 필드 상황 <b className="live-dot">LOCKED</b></button>
-      </nav>
-
       <div className="toast" role="status"><span aria-hidden="true">✦</span>{toast}</div>
       {developerMode && <div className="developer-banner" role="status"><strong>개발자 모드</strong><span>30개 웨이브 임시 해금 · 업그레이드 단계 자유 조정 · 플레이어 무기 15종 비교 · 시험값 저장 안 됨</span></div>}
 
-      {tab === "guild" && (
+      {!combatLocked && (
         <section className="screen guild-screen" aria-label="길드 관리">
           <div className="section-heading">
             <div><span className="eyebrow">GUILD TERRITORY</span><h2>길드 관리</h2><p>파티를 편성하고 목표를 지정한 뒤 토벌대를 출정시키세요. 전투가 끝날 때까지 영지로 돌아올 수 없습니다.</p></div>
@@ -1229,7 +1212,7 @@ export default function Game() {
         </section>
       )}
 
-      {tab === "field" && (
+      {combatLocked && (
         <section className={`screen field-screen biome-${stage.region.hue}`} aria-label="필드 전투">
           <div className="field-toolbar">
             <div><span className="eyebrow">CURRENT EXPEDITION · GUILD SURVIVOR</span><h2>{stage.region.name} <b>{stage.localStage}/{STAGES_PER_REGION}</b></h2><small className="permadeath-warning">시간 내에 군세를 쓸어내세요 · 실패해도 길드원은 보존됩니다</small></div>

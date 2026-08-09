@@ -65,13 +65,6 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
 .reset-button { color: var(--ink-soft); white-space: nowrap; }
 .reset-button:hover { background: var(--green-soft); }
 
-.main-tabs { display: flex; align-items: flex-end; gap: 8px; padding: 18px 6px 0; border-bottom: 3px solid var(--line); }
-.main-tabs button { position: relative; display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 12px 22px; border: 2px solid var(--line); border-bottom: 0; border-radius: 15px 15px 0 0; background: #dce9d7; cursor: pointer; font-weight: 900; font-size: 15px; transform: translateY(3px); transition: transform .16s ease, background .16s ease; }
-.main-tabs button:hover { transform: translateY(0); }
-.main-tabs button.active { min-height: 57px; background: var(--paper); color: var(--coral-dark); transform: translateY(3px); }
-.live-dot { padding: 3px 6px; color: white; background: var(--coral); border-radius: 999px; font-size: 8px; letter-spacing: .08em; animation: livePulse 1.8s ease-in-out infinite; }
-@keyframes livePulse { 50% { box-shadow: 0 0 0 5px rgba(240, 109, 94, .18); } }
-
 .toast { display: flex; align-items: center; gap: 9px; margin: 14px 5px 0; padding: 11px 15px; border: 2px dashed rgba(23, 63, 50, .42); border-radius: 13px; background: var(--yellow-soft); font-size: 13px; font-weight: 800; }
 .toast span { color: var(--coral); }
 .screen { padding: 24px 5px 6px; animation: screenIn .28s ease both; }
@@ -271,7 +264,6 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
 @media (max-width: 820px) {
   .game-shell { width: 100%; min-height: 100vh; margin: 0; border-radius: 0; border-left: 0; border-right: 0; padding: 12px; }
   .topbar { flex-wrap: wrap; gap: 12px; }.brand { min-width: 0; }.resources { order: 3; width: 100%; justify-content: stretch; }.resources > span { flex: 1; justify-content: center; }.reset-button { margin-left: auto; }
-  .main-tabs { justify-content: stretch; padding-left: 0; padding-right: 0; }.main-tabs button { flex: 1; justify-content: center; padding: 10px 6px; font-size: 12px; }.main-tabs button span { display: none; }
   .section-heading, .field-toolbar { align-items: stretch; flex-direction: column; }.section-heading .primary-button { width: 100%; }.field-actions, .heading-actions { justify-content: stretch; }.field-actions > *, .heading-actions > * { flex: 1; text-align: center; justify-content: center; }
   .territory { min-height: 390px; }.guild-hall { left: 31%; width: 190px; }.tavern-building { left: 4%; width: 120px; }.flag { left: calc(31% + 88px); }
   .upgrade-list, .roster-grid, .special-grid { grid-template-columns: 1fr; }.member-card { min-height: 95px; }
@@ -285,7 +277,7 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
 @media (max-width: 560px) {
   .game-shell { padding: 9px; }.topbar { padding: 3px 0 13px; }.brand-mark { width: 44px; height: 44px; }.brand h1 { font-size: 22px; }.eyebrow { font-size: 9px; }.reset-button { padding: 8px 9px; font-size: 10px; }
   .resources { gap: 5px; }.resources > span { min-height: 34px; padding: 5px; font-size: 8px; }.resources strong { font-size: 11px; }.resource-dot { width: 12px; height: 12px; }
-  .main-tabs { gap: 4px; }.main-tabs button { min-height: 45px; border-radius: 11px 11px 0 0; font-size: 10px; }.live-dot { display: none; }.toast { font-size: 10px; }
+  .toast { font-size: 10px; }
   .screen { padding-top: 17px; }.section-heading h2, .field-toolbar h2 { font-size: 28px; }.section-heading p { font-size: 11px; }
   .territory { min-height: 340px; }.guild-hall { left: 29%; width: 150px; height: 140px; }.tavern-building { width: 95px; height: 90px; }.flag { left: calc(29% + 69px); bottom: 218px; }.territory-caption { align-items: flex-start; flex-direction: column; }
   .roster-section, .special-section, .upgrade-panel { padding: 13px; }.member-card { grid-template-columns: 50px 1fr; }.portrait { width: 48px; height: 58px; }.party-check { position: absolute; right: 7px; top: 7px; }
@@ -387,7 +379,7 @@ body {
   color: #fff4df;
   background: linear-gradient(90deg, #8e3928, #a5472f 52%, #7e3124);
   border: 1px solid #d38848;
-  border-radius: 10px 10px 0 0;
+  border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0,0,0,.16), inset 0 1px rgba(255,255,255,.1);
 }
 .guild-seal {
@@ -413,32 +405,6 @@ body {
 .current-objective small { margin-bottom: 3px; color: #efc997; font-size: 9px; letter-spacing: .12em; }
 .current-objective strong { font-size: 13px; }
 
-.main-tabs {
-  align-items: stretch;
-  gap: 0;
-  padding: 0;
-  color: #e8d6b8;
-  background: #2e211b;
-  border: 1px solid #6c513f;
-  border-top: 0;
-  border-radius: 0 0 10px 10px;
-  overflow: hidden;
-}
-.main-tabs button {
-  justify-content: center;
-  min-height: 48px;
-  padding: 11px 24px;
-  color: #d9c09b;
-  background: transparent;
-  border: 0;
-  border-right: 1px solid #5a4133;
-  border-radius: 0;
-  transform: none;
-  font-size: 13px;
-}
-.main-tabs button:hover { color: #fff1d3; background: rgba(255,255,255,.035); transform: none; }
-.main-tabs button.active { min-height: 48px; color: #ffe5a4; background: #3c2921; box-shadow: inset 0 -4px #ce7b35; transform: none; }
-.live-dot { background: #a83d29; }
 .toast {
   justify-content: center;
   margin: 10px 0 0;
@@ -557,20 +523,16 @@ body {
   .game-shell { width: 100%; padding: 0 12px 14px; }
   .guild-rank-strip { grid-template-columns: 48px 1fr; }
   .current-objective { grid-column: 1 / -1; padding: 10px 0 0; border-left: 0; border-top: 1px solid rgba(255,238,203,.22); }
-  .main-tabs button { padding-inline: 8px; }
   .section-heading, .field-toolbar { padding: 13px; }
 }
 
 @media (max-width: 560px) {
   .topbar { padding-top: 8px; }.brand { min-width: 0; }.brand-mark { width: 40px; height: 49px; font-size: 26px; }.brand h1 { font-size: 23px; }
   .guild-rank-strip { margin-top: 10px; padding: 11px; }.guild-rank-copy > span { font-size: 10px; }
-  .main-tabs button { font-size: 10px; }
   .game-footer { flex-direction: column; gap: 5px; }
 }
 
 /* Expedition flow and battle lock */
-.main-tabs button:disabled { color: #746357; background: rgba(0,0,0,.12); cursor: not-allowed; }
-.main-tabs button:disabled .live-dot { color: #b9aa99; background: #4a4038; animation: none; }
 .expedition-actions { min-width: min(100%, 390px); }
 .expedition-actions .secondary-button { flex: 1 1 210px; }
 .expedition-actions .primary-button { flex: 1 1 150px; }
@@ -578,7 +540,6 @@ body {
 .battle-mode { width: min(1500px, calc(100% - 24px)); min-height: 100vh; padding-top: 0; }
 .battle-mode > .topbar,
 .battle-mode > .guild-rank-strip,
-.battle-mode > .main-tabs,
 .battle-mode > .toast,
 .battle-mode > .game-footer { display: none; }
 .battle-mode .field-screen { padding-top: 14px; }
