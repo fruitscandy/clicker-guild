@@ -9,12 +9,17 @@ import {
   type AudioSettings,
 } from "../audio-settings";
 import { playSoundSettingsPreview } from "../battle-audio";
-import { BGM_TRACK_BY_ID, type BgmTrackId } from "./tracks";
+import {
+  BGM_TRACK_BY_ID,
+  BGM_TRACKS_BY_SCENE,
+  type BgmSceneId,
+  type BgmTrackId,
+} from "./tracks";
 import styles from "./BgmController.module.css";
 
 const CROSSFADE_MS = 1_150;
 
-function sceneFromDocument(): BgmTrackId {
+function sceneFromDocument(): BgmSceneId {
   const dialog = document.querySelector<HTMLElement>("[role='dialog'][aria-modal='true']");
   if (dialog?.textContent?.includes("GUILD EXPEDITION ATLAS")) return "field-select";
 
@@ -27,7 +32,7 @@ function sceneFromDocument(): BgmTrackId {
 }
 
 export default function BgmController({ children }: { children: ReactNode }) {
-  const [trackId, setTrackId] = useState<BgmTrackId>("guild");
+  const [trackId, setTrackId] = useState<BgmTrackId>("guild-hearth");
   const [settings, setSettings] = useState<AudioSettings>(DEFAULT_AUDIO_SETTINGS);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [activated, setActivated] = useState(false);
@@ -36,7 +41,9 @@ export default function BgmController({ children }: { children: ReactNode }) {
   const players = useRef<[HTMLAudioElement | null, HTMLAudioElement | null]>([null, null]);
   const activePlayer = useRef(0);
   const fadeTimer = useRef<number | null>(null);
-  const desiredTrack = useRef<BgmTrackId>("guild");
+  const desiredScene = useRef<BgmSceneId>("guild");
+  const desiredTrack = useRef<BgmTrackId>("guild-hearth");
+  const sceneCursors = useRef<Record<BgmSceneId, number>>({ guild: 0, "field-select": 0, battle: 0, boss: 0 });
   const playingTrack = useRef<BgmTrackId | null>(null);
   const settingsRef = useRef(settings);
 
@@ -58,9 +65,16 @@ export default function BgmController({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const update = () => {
-      const next = sceneFromDocument();
-      desiredTrack.current = next;
-      setTrackId(next);
+      const nextScene = sceneFromDocument();
+      if (nextScene !== desiredScene.current) {
+        const pool = BGM_TRACKS_BY_SCENE[nextScene];
+        const cursor = sceneCursors.current[nextScene] % pool.length;
+        const nextTrack = pool[cursor];
+        sceneCursors.current[nextScene] = (cursor + 1) % pool.length;
+        desiredScene.current = nextScene;
+        desiredTrack.current = nextTrack.id;
+        setTrackId(nextTrack.id);
+      }
       setDeveloperMode(Boolean(document.querySelector(".game-shell.developer-mode")));
     };
     update();

@@ -1,7 +1,16 @@
-export type BgmTrackId = "guild" | "field-select" | "battle" | "boss";
+export type BgmSceneId = "guild" | "field-select" | "battle" | "boss";
+
+export type BgmTrackId =
+  | "guild-hearth"
+  | "frontier-map"
+  | "vanguards-charge"
+  | "iron-advance"
+  | "fantasy-boss-battle"
+  | "fantasy-boss-battle-take-2";
 
 export type BgmTrack = {
   id: BgmTrackId;
+  sceneId: BgmSceneId;
   title: string;
   subtitle: string;
   scene: string;
@@ -13,7 +22,8 @@ export type BgmTrack = {
 
 export const BGM_TRACKS: readonly BgmTrack[] = [
   {
-    id: "guild",
+    id: "guild-hearth",
+    sceneId: "guild",
     title: "길드의 화롯불",
     subtitle: "Guild Hearth",
     scene: "길드 영지",
@@ -23,7 +33,8 @@ export const BGM_TRACKS: readonly BgmTrack[] = [
     palette: "류트 · 따뜻한 패드 · 작은 종",
   },
   {
-    id: "field-select",
+    id: "frontier-map",
+    sceneId: "field-select",
     title: "미답의 경계",
     subtitle: "Frontier Map",
     scene: "필드 선택",
@@ -33,24 +44,48 @@ export const BGM_TRACKS: readonly BgmTrack[] = [
     palette: "플루트 · 탐험 아르페지오 · 행진 리듬",
   },
   {
-    id: "battle",
-    title: "강철의 질주",
-    subtitle: "Steel Rush",
+    id: "vanguards-charge",
+    sceneId: "battle",
+    title: "선봉대의 돌격",
+    subtitle: "Vanguard's Charge",
     scene: "일반 전투",
-    bpm: 136,
-    duration: "0:28",
-    source: "/assets/audio/bgm/steel-rush.wav",
-    palette: "현악 오스티나토 · 전투 북 · 브라스",
+    bpm: 110,
+    duration: "2:52",
+    source: "/assets/audio/bgm/flow-candidates/vanguards-charge.m4a",
+    palette: "절제된 전투 북 · 현악 오스티나토 · 영웅적 브라스",
   },
   {
-    id: "boss",
-    title: "파멸의 왕관",
-    subtitle: "Crown of Ruin",
+    id: "iron-advance",
+    sceneId: "battle",
+    title: "강철의 진군",
+    subtitle: "Iron Advance",
+    scene: "일반 전투",
+    bpm: 110,
+    duration: "2:57",
+    source: "/assets/audio/bgm/flow-candidates/iron-advance.m4a",
+    palette: "묵직한 행진 리듬 · 리듬 현악 · 모험적 선율",
+  },
+  {
+    id: "fantasy-boss-battle",
+    sceneId: "boss",
+    title: "환상 보스 전투",
+    subtitle: "Fantasy Boss Battle",
     scene: "보스 전투",
-    bpm: 150,
-    duration: "0:26",
-    source: "/assets/audio/bgm/crown-of-ruin.wav",
-    palette: "저음 합창 · 대형 북 · 불협 브라스",
+    bpm: 140,
+    duration: "3:00",
+    source: "/assets/audio/bgm/flow-candidates/fantasy-boss-battle.m4a",
+    palette: "긴박한 현악 · 시네마틱 전쟁 북 · 강렬한 브라스",
+  },
+  {
+    id: "fantasy-boss-battle-take-2",
+    sceneId: "boss",
+    title: "환상 보스 전투 II",
+    subtitle: "Fantasy Boss Battle (Take 2)",
+    scene: "보스 전투",
+    bpm: 140,
+    duration: "2:52",
+    source: "/assets/audio/bgm/flow-candidates/fantasy-boss-battle-take-2.m4a",
+    palette: "어두운 상승 긴장 · 대형 북 · 승리의 브라스",
   },
 ] as const;
 
@@ -58,12 +93,20 @@ export const BGM_TRACK_BY_ID = Object.fromEntries(
   BGM_TRACKS.map((track) => [track.id, track]),
 ) as Record<BgmTrackId, BgmTrack>;
 
+export const BGM_TRACKS_BY_SCENE = Object.fromEntries(
+  (["guild", "field-select", "battle", "boss"] as const).map((sceneId) => [
+    sceneId,
+    BGM_TRACKS.filter((track) => track.sceneId === sceneId),
+  ]),
+) as Record<BgmSceneId, readonly BgmTrack[]>;
+
 export type BattleBgmCandidate = {
   id: string;
   candidate: "A" | "B" | "C" | "D";
   current: boolean;
   title: string;
   subtitle: string;
+  scene: "일반 전투" | "보스 전투";
   bpm: number;
   duration: string;
   source: string;
@@ -72,57 +115,15 @@ export type BattleBgmCandidate = {
   tradeoff: string;
 };
 
-export const BATTLE_BGM_CANDIDATES: readonly BattleBgmCandidate[] = [
-  {
-    id: "steel-rush",
-    candidate: "A",
+export const BATTLE_BGM_CANDIDATES: readonly BattleBgmCandidate[] = BGM_TRACKS
+  .filter((track) => track.sceneId === "battle" || track.sceneId === "boss")
+  .map((track, index) => ({
+    ...track,
+    candidate: (["A", "B", "C", "D"] as const)[index],
     current: true,
-    title: "강철의 질주",
-    subtitle: "Steel Rush",
-    bpm: 136,
-    duration: "0:28",
-    source: "/assets/audio/bgm/steel-rush.wav",
-    palette: "현악 오스티나토 · 전투 북 · 브라스",
-    direction: "최종 선택 · 액션형",
-    tradeoff: "최초 선택안으로 최종 확정했습니다. 빠른 타격감과 속도감을 중심으로 반복 전투의 추진력을 살립니다.",
-  },
-  {
-    id: "banner-and-blade",
-    candidate: "B",
-    current: false,
-    title: "깃발과 검",
-    subtitle: "Banner & Blade",
-    bpm: 124,
-    duration: "0:31",
-    source: "/assets/audio/bgm/banner-and-blade.wav",
-    palette: "류트 · 허디거디 드론 · 프레임 드럼 · 뿔피리",
-    direction: "정통 중세 원정대",
-    tradeoff: "중세 정체성과 전투 속도의 균형이 좋아 지역별 변주나 테마 이벤트 후보로 보관합니다.",
-  },
-  {
-    id: "siege-at-dusk",
-    candidate: "C",
-    current: false,
-    title: "황혼의 공성",
-    subtitle: "Siege at Dusk",
-    bpm: 112,
-    duration: "0:34",
-    source: "/assets/audio/bgm/siege-at-dusk.wav",
-    palette: "저음 현악 · 뿔피리 · 전쟁 쇠북 · 대형 북",
-    direction: "무거운 공성전",
-    tradeoff: "긴장감과 무게는 강하지만 반복 전투에서는 다소 묵직하게 느껴질 수 있어 보관 후보로 남깁니다.",
-  },
-  {
-    id: "guild-melee",
-    candidate: "D",
-    current: false,
-    title: "길드의 회전",
-    subtitle: "Guild Melee",
-    bpm: 144,
-    duration: "0:27",
-    source: "/assets/audio/bgm/guild-melee.wav",
-    palette: "민속 춤 리듬 · 류트 · 리코더 · 빠른 손북",
-    direction: "경쾌한 중세 난전",
-    tradeoff: "클리커의 경쾌함은 살지만 진지한 보스 분위기와는 거리가 있어 축제형 이벤트 후보로 보관합니다.",
-  },
-] as const;
+    scene: track.sceneId === "boss" ? "보스 전투" as const : "일반 전투" as const,
+    direction: track.sceneId === "boss" ? "보스 전투 순환곡" : "일반 전투 순환곡",
+    tradeoff: track.sceneId === "boss"
+      ? "보스 전투에 진입할 때 두 보스 테마를 번갈아 재생합니다."
+      : "일반 전투에 진입할 때 두 일반 전투 테마를 번갈아 재생합니다.",
+  }));
