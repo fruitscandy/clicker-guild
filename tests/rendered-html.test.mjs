@@ -27,17 +27,28 @@ test("server-renders the Guildmaster game shell", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
 
-test("ships ten forest monsters with hit and death actions", async () => {
-  const [assets, monsterConfig, game, css] = await Promise.all([
+test("ships region-specific monsters with hit and death actions", async () => {
+  const [forestAssets, regionEntries, monsterConfig, game, css] = await Promise.all([
     readdir(new URL("../public/assets/monsters/stage-01/", import.meta.url)),
+    readdir(new URL("../public/assets/monsters/", import.meta.url), { withFileTypes: true }),
     readFile(new URL("../app/monster-assets.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
 
-  assert.equal(assets.filter((file) => file.endsWith(".png")).length, 10);
+  const regionDirectories = regionEntries.filter((entry) => entry.isDirectory() && /^region-\d{2}$/.test(entry.name));
+  const regionAssets = await Promise.all(
+    regionDirectories.map((entry) => readdir(new URL(`../public/assets/monsters/${entry.name}/`, import.meta.url))),
+  );
+
+  assert.equal(forestAssets.filter((file) => file.endsWith(".png")).length, 10);
+  assert.equal(regionDirectories.length, 9);
+  assert.equal(regionAssets.flat().filter((file) => file.endsWith(".png")).length, 18);
   assert.match(monsterConfig, /작은 초록 슬라임/);
   assert.match(monsterConfig, /고블린 족장 그루칸/);
+  assert.match(monsterConfig, /뿔 모래도마뱀/);
+  assert.match(monsterConfig, /태고의 천공룡/);
+  assert.match(monsterConfig, /stage > 100/);
   assert.match(game, /className="pack-monster-art"/);
   assert.match(game, /is-struck click-recoil-tier/);
   assert.match(game, /window\.setTimeout\(awardVictory, 900\)/);
