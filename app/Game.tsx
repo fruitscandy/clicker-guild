@@ -25,6 +25,7 @@ import {
   type BattleLootDrop,
 } from "./battle-loot";
 import { fieldAssetForRegion } from "./field-assets";
+import { BOSS_BATTLE_SECONDS, NORMAL_BATTLE_SECONDS } from "./economy-balance";
 import { combatTraitFor, compactNumber, getStage, MEMBERS, RANK_ORDER, STAGE_COUNT, STAGES_PER_REGION, type CombatStyle, type MemberDefinition } from "./game-data";
 import { maximumUpgradeLevels, UPGRADE_CAPS, UPGRADE_KEYS, type UpgradeKey, type UpgradeLevels } from "./developer-upgrades";
 import { DeveloperResourcePanel } from "./guild-hub/DeveloperResourcePanel";
@@ -37,8 +38,9 @@ import { TavernHall } from "./guild-hub/TavernHall";
 import { GUILD_HALL_STAGES, guildHallStage, inferHallLevelFromNodes, requiredHallLevelForNode, type GuildFacility } from "./guild-hub/guild-progression";
 import { WeaponCursor } from "./guild-hub/WeaponArt";
 import { monsterAssetForStage } from "./monster-assets";
+import { MaterialInventory } from "./MaterialInventory";
 import { StageMap } from "./stage-map";
-import { canAffordWeaponRecipe, consumeWeaponRecipe, materialIconVars, stageMaterialById, stageMaterialFor, weaponMaterialRecipe } from "./stage-materials";
+import { canAffordWeaponRecipe, consumeWeaponRecipe, materialIconVars, migrateMaterialInventory, stageMaterialById, stageMaterialFor, weaponMaterialRecipe } from "./stage-materials";
 import { UPGRADE_ICON_BY_KEY } from "./upgrade-icons";
 
 type LootPhase = "idle" | "fighting" | "collecting" | "complete";
@@ -123,8 +125,6 @@ type SaveState = {
 };
 
 const SAVE_KEY = "guildmaster-clicker-save-v1";
-const NORMAL_BATTLE_SECONDS = 30;
-const BOSS_BATTLE_SECONDS = 45;
 const DEV_BATTLE_SECONDS = 300;
 const DEV_GEAR_LEVEL = 99;
 const DEV_POWER_MULTIPLIER = 500;
@@ -523,12 +523,6 @@ export default function Game() {
   const hallStage = guildHallStage(save.guildHallLevel);
   const nextHallStage = GUILD_HALL_STAGES[save.guildHallLevel] ?? null;
 
-  const combatPower = useMemo(() => {
-    const partyPower = partyMembers.reduce((sum, member) => sum + attackFor(member, progressFor(member)) * developerPower, 0) * guildMultiplier;
-    const playerUtility = 1 + attackRange / 20 + shockwaveLevel * .08 + momentumLevel * .1;
-    return Math.round(clickDamage * playerUtility + partyPower * MEMBER_ASSIST_FACTOR * assistMultiplier);
-  }, [partyMembers, progressFor, developerPower, clickDamage, guildMultiplier, attackRange, shockwaveLevel, momentumLevel, assistMultiplier]);
-
   /* eslint-disable react-hooks/set-state-in-effect -- Saved progress is intentionally restored after the client mounts. */
   useEffect(() => {
     try {
@@ -542,7 +536,7 @@ export default function Game() {
         const migratedNodes = validNodes.length ? validNodes : initialState.nodes;
         const inferredHallLevel = inferHallLevelFromNodes(migratedNodes);
         const migratedHallLevel = Math.min(GUILD_HALL_STAGES.length, Math.max(inferredHallLevel, loaded.guildHallLevel ?? 1));
-        const migratedMaterials = Object.fromEntries(Object.entries(loaded.materials ?? {}).filter(([id, amount]) => stageMaterialById(id) && Number.isFinite(amount) && amount >= 0));
+        const migratedMaterials = migrateMaterialInventory(loaded.materials ?? {});
         const migratedSelectedStage = Math.min(STAGE_COUNT, Math.max(1, loaded.selectedStage ?? 1));
         const migratedUnlockedStage = Math.min(STAGE_COUNT, Math.max(1, loaded.unlockedStage ?? 1));
         const migratedCleared = (loaded.cleared ?? []).filter((stageNumber) => stageNumber >= 1 && stageNumber <= STAGE_COUNT);
@@ -964,7 +958,13 @@ export default function Game() {
     const nextWeapon = clickAttackPattern(nextLevel);
     const recipe = weaponMaterialRecipe(nextLevel);
     if (save.gold < nextWeapon.cost) return setToast(`${nextWeapon.weaponName}을(를) 제작할 골드가 부족합니다.`);
-    if (!canAffordWeaponRecipe(save.materials, recipe) && recipe) return setToast(`${nextWeapon.weaponName} 제작에는 ${recipe.material.name} ${recipe.amount}개가 필요합니다. ${recipe.material.stage}웨이브를 반복 토벌하세요.`);
+    if (!canAffordWeaponRecipe(save.materials, recipe) && recipe) {
+      const shortages = recipe.ingredients
+        .filter(({ material, amount }) => (save.materials[material.id] ?? 0) < amount)
+        .map(({ material, amount }) => `${material.name} ${amount - (save.materials[material.id] ?? 0)}개`)
+        .join(" · ");
+      return setToast(`${nextWeapon.weaponName} 제작 재료가 부족합니다: ${shortages}. 다음 지역 원정을 진행하세요.`);
+    }
     setSave((current) => {
       const materials = consumeWeaponRecipe(current.materials, recipe);
       if (!materials || current.gold < nextWeapon.cost) return current;
@@ -1147,9 +1147,8 @@ export default function Game() {
         </div>
         <div className="resources" aria-label="보유 자원">
           <span><i className="resource-dot gold-dot" />골드 <strong>{compactNumber(save.gold)}</strong></span>
-          <span className="current-material-resource" title={stageMaterial.description}><i className="stage-material-icon topbar-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} />{stageMaterial.familyName} <strong>{save.materials[stageMaterial.id] ?? 0}</strong></span>
+          <MaterialInventory materials={save.materials} unlockedStage={save.unlockedStage} weaponLevel={save.weaponLevel} />
           <span><i className="resource-dot token-dot" />보스 증표 <strong>{save.bossTokens}</strong></span>
-          <span><i className="resource-dot power-dot" />전투력 <strong>{compactNumber(combatPower)}</strong></span>
         </div>
         {developerToolsAvailable && <button className={`small-button developer-toggle ${developerMode ? "active" : ""}`} onClick={toggleDeveloperMode}>DEV {developerMode ? "ON" : "OFF"}</button>}
         <button className="small-button reset-button" onClick={resetGame}>새 게임</button>

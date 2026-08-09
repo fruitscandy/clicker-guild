@@ -8,8 +8,7 @@ import {
   type DeveloperResourcePreset,
   type DeveloperResourceValues,
 } from "../developer-resources";
-import { STAGE_COUNT } from "../game-data";
-import { stageMaterialFor } from "../stage-materials";
+import { allStageMaterials } from "../stage-materials";
 import styles from "./DeveloperResourcePanel.module.css";
 
 type DeveloperResourcePanelProps = {
@@ -17,9 +16,7 @@ type DeveloperResourcePanelProps = {
   onChange: (resources: DeveloperResourceValues) => void;
 };
 
-const MATERIAL_GROUPS = Array.from({ length: STAGE_COUNT / 3 }, (_, regionIndex) =>
-  Array.from({ length: 3 }, (_, localIndex) => stageMaterialFor(regionIndex * 3 + localIndex + 1)),
-);
+const MATERIAL_GROUPS = allStageMaterials().map((material) => [material]);
 const MATERIAL_IDS = MATERIAL_GROUPS.flat().map((material) => material.id);
 
 const PRESETS: Array<{ id: DeveloperResourcePreset; label: string; detail: string }> = [
@@ -77,7 +74,7 @@ export function DeveloperResourcePanel({ resources, onChange }: DeveloperResourc
         </div>
 
         <div className={styles.materialHeading}>
-          <div><strong>웨이브 제작 재료 30종</strong><small>무기 제작에 필요한 정확한 웨이브 재료를 개별 조정합니다.</small></div>
+          <div><strong>지역 강화 소재 10종</strong><small>각 지역의 3개 웨이브가 공유하는 무기 제작 소재를 조정합니다.</small></div>
           <div>
             <button type="button" onClick={() => onChange({ ...resources, materials: developerResourcePreset("empty", MATERIAL_IDS).materials })}>재료 0</button>
             <button type="button" onClick={() => onChange({ ...resources, materials: developerResourcePreset("ready", MATERIAL_IDS).materials })}>재료 99</button>
@@ -93,7 +90,7 @@ export function DeveloperResourcePanel({ resources, onChange }: DeveloperResourc
               </legend>
               {group.map((material) => (
                 <label key={material.id}>
-                  <span><b>{material.stage}W</b><small>{material.name}</small></span>
+                  <span><b>{material.firstStage}–{material.lastStage}W</b><small>{material.name}</small></span>
                   <input
                     type="number"
                     min="0"

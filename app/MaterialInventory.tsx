@@ -40,7 +40,7 @@ export function MaterialInventory({ materials, unlockedStage, weaponLevel }: Mat
       <strong>{totalOwned}</strong>
     </button>
 
-    {open && <div className={styles.backdrop} onMouseDown={(event) => event.target === event.currentTarget && setOpen(false)}>
+    {open && <div className={styles.backdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
       <section id="material-inventory-dialog" className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="material-inventory-title">
         <header>
           <div>
@@ -61,8 +61,9 @@ export function MaterialInventory({ materials, unlockedStage, weaponLevel }: Mat
           {catalog.map((material) => {
             const owned = materials[material.id] ?? 0;
             const available = unlockedStage >= material.firstStage || owned > 0;
-            const nextTier = weaponTiersUsingMaterial(material.id).find((tier) => tier > weaponLevel);
-            return <article key={material.id} className={`${styles.card} ${available ? styles.available : styles.locked}`} role="listitem">
+            const usedByTiers = weaponTiersUsingMaterial(material.id);
+            const nextTier = usedByTiers.find((tier) => tier > weaponLevel);
+            return <article key={material.id} className={`${styles.card} ${available ? styles.available : styles.locked}`} role="listitem" style={{ "--material-accent": material.accent } as CSSProperties}>
               <i className={`stage-material-icon ${styles.materialIcon}`} style={materialIconVars(material) as CSSProperties} />
               <div className={styles.cardCopy}>
                 <span>{available ? `${material.region}지역 획득 가능` : `${material.firstStage}웨이브에서 해금`}</span>
@@ -70,7 +71,7 @@ export function MaterialInventory({ materials, unlockedStage, weaponLevel }: Mat
                 <small>STAGE {material.firstStage}–{material.lastStage}</small>
               </div>
               <div className={styles.owned}><small>보유</small><strong>{owned}</strong></div>
-              <p>{nextTier ? `다음 사용처 · 무기 ${nextTier + 1}단계 제작` : weaponTiersUsingMaterial(material.id).length ? "해당 무기 제작 완료" : "사용처 확인 중"}</p>
+              <p>{nextTier ? `다음 사용처 · 무기 ${nextTier + 1}단계 제작` : usedByTiers.length ? "해당 무기 제작 완료" : "사용처 확인 중"}</p>
             </article>;
           })}
         </div>
