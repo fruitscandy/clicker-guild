@@ -56,3 +56,28 @@ test("ships region-specific monsters with hit and death actions", async () => {
   assert.match(css, /@keyframes packMonsterArtDefeat/);
   assert.match(css, /@keyframes packMonsterSoul/);
 });
+
+test("routes guild management through buildings and gates four-way research", async () => {
+  const [game, progression, hub, researchMap] = await Promise.all([
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/guild-progression.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/GuildBuildingHub.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/ResearchMap.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(game, /guildHallLevel/);
+  assert.match(game, /purchaseGuildHallUpgrade/);
+  assert.match(game, /requiredHallLevelForNode/);
+  assert.match(game, /activeFacility === "tavern"/);
+  assert.match(game, /activeFacility === "forge"/);
+  assert.match(game, /activeFacility === "research"/);
+  assert.match(game, /activeFacility === "training"/);
+  assert.match(progression, /researchDepth: 7/);
+  assert.match(progression, /inferHallLevelFromNodes/);
+  assert.match(hub, /길드 건물 선택/);
+  assert.match(researchMap, /직접 공격/);
+  assert.match(researchMap, /전투 리듬/);
+  assert.match(researchMap, /원정 지원/);
+  assert.match(researchMap, /길드 경영/);
+  assert.match(researchMap, /본관 Lv\.\$\{requiredHallLevel\} 필요/);
+});

@@ -39,7 +39,7 @@ const BRANCH_LAYOUT: Record<string, { direction: "north" | "east" | "south" | "w
 
 function nodePoint(nodeId: string): Point {
   if (nodeId === "foundation") return { x: 50, y: 50 };
-  if (nodeId === "citadel") return { x: 50, y: 93 };
+  if (nodeId === "citadel") return { x: 86, y: 93 };
 
   const [family, rawDepth] = nodeId.split("-");
   const depth = Math.max(1, Number(rawDepth) || 1);
@@ -126,4 +126,3 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
     </div>
   );
 }
-

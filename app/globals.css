@@ -1332,3 +1332,35 @@ body {
 
 @keyframes goldLootAppearReduced { from { opacity: 0; } to { opacity: 1; } }
 @keyframes goldLootCollectReduced { from { opacity: 1; } to { opacity: 0; } }
+
+/* Clickable guild facility hub content */
+.guild-facility-content { animation: facilityContentIn .24s ease-out both; }
+.facility-first-panel { margin-top: 0 !important; }
+.guild-hall-management { align-items: stretch; }
+.hall-upgrade-panel { padding: 20px; border-top: 6px solid #b67634; background: linear-gradient(145deg,#f8efd9,#ead5ad); }
+.hall-current-stage { display: grid; grid-template-columns: 66px 1fr; align-items: center; gap: 13px; margin-top: 16px; padding: 14px; background: rgba(255,255,255,.35); border: 2px solid #d1b887; border-radius: 14px; }
+.hall-stage-seal { display: grid; place-items: center; width: 62px; height: 62px; color: #ffe8a4; background: linear-gradient(145deg,#913b2b,#5b2e27); border: 3px solid #3a291f; border-radius: 50%; box-shadow: 0 5px 0 #3a291f, inset 0 0 0 4px rgba(255,232,164,.14); font-family: Georgia,serif; font-size: 27px; font-weight: 1000; }
+.hall-current-stage small,.hall-current-stage strong { display: block; }.hall-current-stage small { color: #8d6a42; font-size: 8px; font-weight: 1000; letter-spacing: .08em; }.hall-current-stage strong { margin-top: 2px; color: #39281f; font-size: 17px; }.hall-current-stage p { margin: 4px 0 0; color: #7b6654; font-size: 10px; }
+.hall-unlock-summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 12px 0; }.hall-unlock-summary span { display: grid; gap: 3px; padding: 10px; background: #efe3c9; border: 1px solid #cbb48a; border-radius: 10px; }.hall-unlock-summary b { color: #826848; font-size: 8px; }.hall-unlock-summary strong { color: #4c3528; font-size: 12px; }
+.hall-upgrade-button { display: grid; width: 100%; padding: 13px 15px; color: #fff4cf; background: linear-gradient(145deg,#9b492e,#6d3028); border: 3px solid #3c281f; border-radius: 12px; box-shadow: 0 5px 0 #3c281f; text-align: left; cursor: pointer; }.hall-upgrade-button:hover { filter: brightness(1.08); transform: translateY(-1px); }.hall-upgrade-button:active { transform: translateY(3px); box-shadow: 0 2px 0 #3c281f; }.hall-upgrade-button small { color: #efbd62; font-size: 8px; font-weight: 1000; letter-spacing: .06em; }.hall-upgrade-button strong { margin-top: 2px; font-size: 14px; }.hall-upgrade-button em { margin-top: 3px; color: #e1c7ae; font-size: 9px; font-style: normal; }
+.hall-max-stage { display: grid; justify-items: center; gap: 3px; padding: 15px; color: #3b2b20; background: linear-gradient(145deg,#ffe8a1,#d8a947); border: 2px solid #8c682b; border-radius: 12px; }.hall-max-stage span { font-size: 24px; }.hall-max-stage small { color: #715525; font-size: 9px; }
+.hall-level-path { display: grid; gap: 7px; margin-top: 14px; }.hall-level-path > span { position: relative; display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 8px; padding: 10px; color: #8b806e; background: #e4dccd; border: 2px solid #c8bca7; border-radius: 10px; }.hall-level-path > span::before { content:""; position:absolute; left:29px; top:-9px; width:3px; height:9px; background:#b7aa94; }.hall-level-path > span:first-child::before { display:none; }.hall-level-path b { font-size: 9px; }.hall-level-path strong { font-size: 10px; }.hall-level-path small { font-size: 8px; }.hall-level-path .unlocked { color: #315445; background: #e7eccf; border-color: #9fb275; }.hall-level-path .unlocked::before { background:#809e6e; }.hall-level-path .current { color:#4b321d; background:#ffe4a0; border-color:#c18d35; box-shadow:0 0 0 3px rgba(222,167,63,.12); }
+.research-overview { padding: 18px; }
+.facility-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 16px; padding: 17px 20px; background: #efe2c9; border: 3px solid var(--line); border-radius: 16px; box-shadow: 0 5px 0 var(--shadow); }.facility-heading h3 { margin: 0; font-size: 25px; }.facility-heading p { margin: 6px 0 0; color: var(--ink-soft); font-size: 11px; }
+@keyframes facilityContentIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+
+@media (max-width: 900px) {
+  .guild-hall-management { grid-template-columns:1fr; }
+  .facility-heading { align-items:flex-start; flex-direction:column; }
+}
+
+@media (max-width: 620px) {
+  .hall-current-stage { grid-template-columns:52px 1fr; }.hall-stage-seal { width:48px; height:48px; font-size:20px; }
+  .hall-unlock-summary { grid-template-columns:1fr; }.hall-unlock-summary span { grid-template-columns:1fr auto; align-items:center; }
+  .hall-level-path > span { grid-template-columns:40px 1fr; }.hall-level-path small { grid-column:2; }
+  .facility-heading .heading-actions { width:100%; }.facility-heading .heading-actions button { flex:1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guild-facility-content { animation:none; }
+}
