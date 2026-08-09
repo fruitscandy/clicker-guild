@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
+import { canAffordWeaponRecipe, materialIconVars, stageMaterialById, weaponMaterialRecipe } from "../stage-materials";
 import { WeaponArt, type WeaponView } from "./WeaponArt";
 import styles from "./ForgeWorkshop.module.css";
 
@@ -10,18 +11,27 @@ type ForgeWorkshopProps = {
   currentLevel: number;
   gold: number;
   bossTokens: number;
+  materials: Record<string, number>;
   formatNumber: (value: number) => string;
   onUpgrade: () => void;
 };
 
-export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, formatNumber, onUpgrade }: ForgeWorkshopProps) {
+export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materials, formatNumber, onUpgrade }: ForgeWorkshopProps) {
   const [previewTier, setPreviewTier] = useState(currentLevel);
   const current = weapons[currentLevel];
   const next = weapons[currentLevel + 1] ?? null;
   const preview = weapons[previewTier] ?? current;
   const previewUnlocked = preview.tier <= currentLevel;
   const previewCraftable = preview.tier === currentLevel + 1;
-  const canAffordNext = Boolean(next && gold >= next.cost);
+  const nextRecipe = next ? weaponMaterialRecipe(next.tier) : null;
+  const recipeOwned = nextRecipe ? materials[nextRecipe.material.id] ?? 0 : 0;
+  const canAffordNext = Boolean(next && gold >= next.cost && canAffordWeaponRecipe(materials, nextRecipe));
+  const vaultMaterials = Object.entries(materials)
+    .filter(([, amount]) => amount > 0)
+    .map(([id, amount]) => ({ material: stageMaterialById(id), amount }))
+    .filter((entry): entry is { material: NonNullable<ReturnType<typeof stageMaterialById>>; amount: number } => Boolean(entry.material))
+    .sort((a, b) => b.material.stage - a.material.stage)
+    .slice(0, 12);
 
   function movePreview(direction: -1 | 1) {
     setPreviewTier((tier) => Math.max(0, Math.min(weapons.length - 1, tier + direction)));
@@ -43,6 +53,7 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, formatN
       <div className={styles.resources} aria-label="대장간 보유 자원">
         <span><i className={styles.gold} />골드<strong>{formatNumber(gold)}</strong></span>
         <span><i className={styles.token} />보스 증표<strong>{bossTokens}</strong></span>
+        {nextRecipe && <span className={styles.recipeResource}><i className={`stage-material-icon ${styles.materialIcon}`} style={materialIconVars(nextRecipe.material) as CSSProperties} />다음 제작 재료<strong>{recipeOwned}/{nextRecipe.amount}</strong></span>}
       </div>
     </header>
 
@@ -76,7 +87,14 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, formatN
           <div><dt>공격 연출</dt><dd>{previewUnlocked || previewCraftable ? `${preview.visualHits} HIT` : "???"}</dd></div>
           <div><dt>강화 효과</dt><dd>공격력만 상승</dd></div>
         </dl>
-        {previewCraftable && <div className={styles.costPanel}><span>제작 비용</span><strong className={gold >= preview.cost ? "" : styles.shortage}>{formatNumber(preview.cost)} G</strong><small>{gold >= preview.cost ? "재료 준비 완료" : `${formatNumber(preview.cost - gold)} G 부족`}</small></div>}
+        {previewCraftable && nextRecipe && <div className={styles.costPanel}>
+          <span>제작 비용</span>
+          <div className={styles.recipeCosts}>
+            <strong className={gold >= preview.cost ? "" : styles.shortage}>{formatNumber(preview.cost)} G</strong>
+            <strong className={recipeOwned >= nextRecipe.amount ? "" : styles.shortage}><i className={`stage-material-icon ${styles.costMaterialIcon}`} style={materialIconVars(nextRecipe.material) as CSSProperties} />{nextRecipe.material.name} {recipeOwned}/{nextRecipe.amount}</strong>
+          </div>
+          <small>{canAffordNext ? "골드와 재료 준비 완료" : gold < preview.cost ? `${formatNumber(preview.cost - gold)} G 부족` : `${nextRecipe.material.name} ${nextRecipe.amount - recipeOwned}개 부족 · ${nextRecipe.material.stage}구역에서 획득`}</small>
+        </div>}
         {previewUnlocked && <div className={styles.ownedPanel}><span>{preview.tier === currentLevel ? "현재 장착 중" : "제작 완료"}</span><strong>{preview.title}</strong><small>전투에서 커서를 움직여 무기 외형을 확인하세요.</small></div>}
         {!previewUnlocked && !previewCraftable && <div className={styles.lockedPanel}><span>연속 제작 필요</span><strong>{current.weaponName} 이후 도면</strong><small>현재 무기 다음 단계부터 차례대로 제작할 수 있습니다.</small></div>}
       </aside>
@@ -90,8 +108,18 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, formatN
       {next ? <button className={styles.craftButton} onClick={craftNextWeapon} disabled={!canAffordNext}>
         <span>다음 무기 제작</span>
         <strong>{next.weaponName}</strong>
-        <small>{formatNumber(next.cost)} G · 공격력 {formatNumber(Math.round(12 * next.damageScale))}</small>
+        <small>{formatNumber(next.cost)} G · {nextRecipe?.material.name} {nextRecipe?.amount}개</small>
       </button> : <div className={styles.masterwork}><span>MASTERWORK COMPLETE</span><strong>길드마스터 신검 완성</strong><small>15종 무기와 모든 직접 공격 연출을 해금했습니다.</small></div>}
+    </div>
+
+    <div className={styles.materialVault}>
+      <div className={styles.vaultHeading}><span>STAGE MATERIAL VAULT</span><strong>원정 재료 보관함</strong><small>각 구역 전용 재료는 해당 단계 무기 도면을 완성할 때 소모됩니다.</small></div>
+      {vaultMaterials.length ? <div className={styles.vaultGrid}>
+        {vaultMaterials.map(({ material, amount }) => <div className={styles.vaultItem} key={material.id} title={material.description}>
+          <i className={`stage-material-icon ${styles.vaultIcon}`} style={materialIconVars(material) as CSSProperties} />
+          <span><strong>{material.name}</strong><small>STAGE {material.stage} · 보유 {amount}</small></span>
+        </div>)}
+      </div> : <div className={styles.emptyVault}><span>첫 원정을 마치면 스테이지 전용 재료가 이곳에 보관됩니다.</span><small>몬스터 처치 → 전장 드롭 → 토벌 완료 후 일괄 회수</small></div>}
     </div>
 
     <div className={styles.arsenalHeading}><span>무기 진열대</span><strong>{currentLevel + 1}/{weapons.length} 완성</strong><small>카드를 눌러 무기의 외형과 성능을 미리 확인하세요.</small></div>

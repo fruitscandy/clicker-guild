@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { playGoldCollectSound, playGoldCompleteSound, playGoldDropSound, unlockBattleAudio } from "./battle-audio";
+import { playLootCollectSound, playLootCompleteSound, playLootDropSound, unlockBattleAudio } from "./battle-audio";
 import {
-  createGoldDropPlan,
+  createBattleLootPlan,
   GOLD_LOOT_TRAVEL_MS,
   goldLootStaggerMs,
   goldLootSweepDuration,
-  revealedGoldDrops,
-  type BattleGoldDrop,
+  revealedLootDrops,
+  type BattleLootDrop,
 } from "./battle-loot";
 import { fieldAssetForRegion } from "./field-assets";
 import { compactNumber, getStage, MEMBERS, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "./game-data";
@@ -21,6 +21,7 @@ import { WeaponCursor } from "./guild-hub/WeaponArt";
 import { memberAnimationSource, type MemberMotion } from "./member-animations";
 import { monsterAssetForStage } from "./monster-assets";
 import { StageMap } from "./stage-map";
+import { canAffordWeaponRecipe, consumeWeaponRecipe, materialIconVars, stageMaterialById, stageMaterialFor, weaponMaterialRecipe } from "./stage-materials";
 
 type Tab = "guild" | "field";
 type LootPhase = "idle" | "fighting" | "collecting" | "complete";
@@ -74,6 +75,7 @@ type FieldMonster = {
 
 type SaveState = {
   gold: number;
+  materials: Record<string, number>;
   bossTokens: number;
   selectedStage: number;
   unlockedStage: number;
@@ -128,6 +130,7 @@ function clickAttackPattern(level: number) {
 
 const initialState: SaveState = {
   gold: 160,
+  materials: {},
   bossTokens: 0,
   selectedStage: 1,
   unlockedStage: 1,
@@ -371,10 +374,12 @@ export default function Game() {
   const [skillFx, setSkillFx] = useState<string | null>(null);
   const [lostMembers, setLostMembers] = useState<string[]>([]);
   const [territoryPulse, setTerritoryPulse] = useState(0);
-  const [goldDrops, setGoldDrops] = useState<BattleGoldDrop[]>([]);
+  const [lootDrops, setLootDrops] = useState<BattleLootDrop[]>([]);
   const [lootPhase, setLootPhase] = useState<LootPhase>("idle");
-  const [collectedLoot, setCollectedLoot] = useState(0);
+  const [collectedGold, setCollectedGold] = useState(0);
+  const [collectedMaterial, setCollectedMaterial] = useState(0);
   const [plannedGold, setPlannedGold] = useState(0);
+  const [plannedMaterial, setPlannedMaterial] = useState(0);
   const [weaponCursor, setWeaponCursor] = useState({ x: 50, y: 50, visible: false });
   const lastAttack = useRef<Record<string, number>>({});
   const lastSkill = useRef<Record<string, number>>({});
@@ -383,13 +388,14 @@ export default function Game() {
   const momentumState = useRef({ lastAt: 0, stacks: 0 });
   const victoryLock = useRef(false);
   const rewardLock = useRef(false);
-  const lootPlan = useRef<BattleGoldDrop[]>([]);
-  const goldDropsRef = useRef<BattleGoldDrop[]>([]);
+  const lootPlan = useRef<BattleLootDrop[]>([]);
+  const lootDropsRef = useRef<BattleLootDrop[]>([]);
   const revealedLootIds = useRef(new Set<string>());
   const lootTimers = useRef<number[]>([]);
 
   const stageNumber = developerMode && developerStage ? developerStage : save.selectedStage;
   const stage = useMemo(() => getStage(stageNumber), [stageNumber]);
+  const stageMaterial = useMemo(() => stageMaterialFor(stageNumber), [stageNumber]);
   const fieldAsset = useMemo(() => fieldAssetForRegion(stage.region.hue), [stage.region.hue]);
   const monsterAsset = useMemo(() => monsterAssetForStage(stageNumber), [stageNumber]);
   const partyMembers = useMemo(() => developerMode && !save.party.length ? [memberById("roan")] : save.party.map(memberById), [developerMode, save.party]);
@@ -411,7 +417,9 @@ export default function Game() {
   const lootCollecting = lootPhase === "collecting";
   const combatLocked = battleActive || lootCollecting || victory || defeat;
   const aliveMonsters = useMemo(() => fieldMonsters.filter((monster) => monster.hp > 0), [fieldMonsters]);
-  const droppedGold = useMemo(() => goldDrops.reduce((sum, drop) => sum + drop.amount, 0), [goldDrops]);
+  const droppedGold = useMemo(() => lootDrops.reduce((sum, drop) => sum + (drop.kind === "gold" ? drop.amount : 0), 0), [lootDrops]);
+  const droppedMaterial = useMemo(() => lootDrops.reduce((sum, drop) => sum + (drop.kind === "material" ? drop.amount : 0), 0), [lootDrops]);
+  const lootSweepProgress = ((plannedGold ? collectedGold / plannedGold : 1) + (plannedMaterial ? collectedMaterial / plannedMaterial : 1)) / 2 * 100;
   const autoAttackPoint = useMemo(() => bestAttackPoint(aliveMonsters, attackRange), [aliveMonsters, attackRange]);
   const intelReport = battlefieldIntel(aliveMonsters.length, fieldMonsters.length, developerMode ? 3 : save.upgrades.scout);
   const hallStage = guildHallStage(save.guildHallLevel);
@@ -436,7 +444,8 @@ export default function Game() {
         const migratedNodes = validNodes.length ? validNodes : initialState.nodes;
         const inferredHallLevel = inferHallLevelFromNodes(migratedNodes);
         const migratedHallLevel = Math.min(GUILD_HALL_STAGES.length, Math.max(inferredHallLevel, loaded.guildHallLevel ?? 1));
-        setSave({ ...initialState, ...loaded, guildHallLevel: migratedHallLevel, weaponLevel: migratedWeaponLevel, nodes: migratedNodes, upgrades: migratedUpgrades, specials: { ...initialState.specials, ...loaded.specials } });
+        const migratedMaterials = Object.fromEntries(Object.entries(loaded.materials ?? {}).filter(([id, amount]) => stageMaterialById(id) && Number.isFinite(amount) && amount >= 0));
+        setSave({ ...initialState, ...loaded, materials: migratedMaterials, guildHallLevel: migratedHallLevel, weaponLevel: migratedWeaponLevel, nodes: migratedNodes, upgrades: migratedUpgrades, specials: { ...initialState.specials, ...loaded.specials } });
       }
     } catch {
       setToast("저장 데이터를 불러오지 못해 새 게임으로 시작합니다.");
@@ -474,6 +483,7 @@ export default function Game() {
     }
     const firstClear = !save.cleared.includes(stage.stage);
     const earnedGold = Math.round(stage.gold * goldMultiplier);
+    const earnedMaterial = stageMaterial.rewardAmount;
     const gotGear = Math.random() < Math.min(0.45, 0.07 + save.upgrades.loot * 0.03);
     const gearTarget = gotGear && save.party.length ? save.party[Math.floor(Math.random() * save.party.length)] : null;
 
@@ -493,6 +503,7 @@ export default function Game() {
       return {
         ...current,
         gold: current.gold + earnedGold,
+        materials: { ...current.materials, [stageMaterial.id]: (current.materials[stageMaterial.id] ?? 0) + earnedMaterial },
         bossTokens: current.bossTokens + (stage.boss && firstClear ? 1 : 0),
         cleared: firstClear ? [...current.cleared, stage.stage] : current.cleared,
         unlockedStage: firstClear ? Math.min(100, Math.max(current.unlockedStage, stage.stage + 1)) : current.unlockedStage,
@@ -500,44 +511,48 @@ export default function Game() {
       };
     });
 
-    setToast(`토벌 성공! 골드 ${compactNumber(earnedGold)}${gearTarget ? ` · ${memberById(gearTarget).name} 장비 획득` : ""}${stage.boss && firstClear ? " · 보스 증표 +1" : ""}`);
-  }, [developerMode, save.cleared, save.party, save.upgrades.loot, stage, goldMultiplier]);
+    setToast(`토벌 성공! 골드 ${compactNumber(earnedGold)} · ${stageMaterial.name} ${earnedMaterial}개${gearTarget ? ` · ${memberById(gearTarget).name} 장비 획득` : ""}${stage.boss && firstClear ? " · 보스 증표 +1" : ""}`);
+  }, [developerMode, save.cleared, save.party, save.upgrades.loot, stage, stageMaterial, goldMultiplier]);
 
-  const beginLootSweep = useCallback((drops: BattleGoldDrop[]) => {
+  const beginLootSweep = useCallback((drops: BattleLootDrop[]) => {
     if (victoryLock.current) return;
     victoryLock.current = true;
     clearLootTimers();
     setBattleActive(false);
     setBattleDeadline(null);
     setDefeat(false);
-    setCollectedLoot(0);
+    setCollectedGold(0);
+    setCollectedMaterial(0);
     setLootPhase("collecting");
-    setToast(`토벌 완료! 전장에 떨어진 골드 ${compactNumber(drops.reduce((sum, drop) => sum + drop.amount, 0))}을(를) 회수합니다.`);
+    const sweepGold = drops.reduce((sum, drop) => sum + (drop.kind === "gold" ? drop.amount : 0), 0);
+    const sweepMaterial = drops.reduce((sum, drop) => sum + (drop.kind === "material" ? drop.amount : 0), 0);
+    setToast(`토벌 완료! 골드 ${compactNumber(sweepGold)}와 ${stageMaterial.name} ${sweepMaterial}개를 회수합니다.`);
 
     const stagger = goldLootStaggerMs(drops.length);
     drops.forEach((drop, index) => {
       const timer = window.setTimeout(() => {
-        setCollectedLoot((current) => current + drop.amount);
-        playGoldCollectSound(index, drops.length);
+        if (drop.kind === "gold") setCollectedGold((current) => current + drop.amount);
+        else setCollectedMaterial((current) => current + drop.amount);
+        playLootCollectSound(drop.soundProfile, index, drops.length);
       }, GOLD_LOOT_TRAVEL_MS + index * stagger);
       lootTimers.current.push(timer);
     });
 
     const completeTimer = window.setTimeout(() => {
-      playGoldCompleteSound();
+      playLootCompleteSound();
       finalizeVictory();
     }, goldLootSweepDuration(drops.length));
     lootTimers.current.push(completeTimer);
-  }, [clearLootTimers, finalizeVictory]);
+  }, [clearLootTimers, finalizeVictory, stageMaterial.name]);
 
   const awardVictory = useCallback(() => {
-    const revealedById = new Map(goldDropsRef.current.map((drop) => [drop.id, drop]));
+    const revealedById = new Map(lootDropsRef.current.map((drop) => [drop.id, drop]));
     const drops = [
-      ...goldDropsRef.current,
+      ...lootDropsRef.current,
       ...lootPlan.current.filter((drop) => !revealedById.has(drop.id)).map((drop) => ({ ...drop, droppedAt: Date.now() })),
     ];
-    goldDropsRef.current = drops;
-    setGoldDrops(drops);
+    lootDropsRef.current = drops;
+    setLootDrops(drops);
     beginLootSweep(drops);
   }, [beginLootSweep]);
 
@@ -548,18 +563,18 @@ export default function Game() {
         .filter((monster) => monster.defeatedAt !== null)
         .map((monster) => [monster.id, monster.defeatedAt!] as const),
     );
-    const revealed = revealedGoldDrops(lootPlan.current, defeatedAt);
+    const revealed = revealedLootDrops(lootPlan.current, defeatedAt);
     const newDrops = revealed.filter((drop) => !revealedLootIds.current.has(drop.id));
     if (!newDrops.length) return;
 
     const firstSoundIndex = revealedLootIds.current.size;
     newDrops.forEach((drop, index) => {
       revealedLootIds.current.add(drop.id);
-      const timer = window.setTimeout(() => playGoldDropSound(firstSoundIndex + index), index * 28);
+      const timer = window.setTimeout(() => playLootDropSound(drop.soundProfile, firstSoundIndex + index), index * 28);
       lootTimers.current.push(timer);
     });
-    goldDropsRef.current = revealed;
-    setGoldDrops(revealed);
+    lootDropsRef.current = revealed;
+    setLootDrops(revealed);
   }, [fieldMonsters]);
 
   const failBattle = useCallback(() => {
@@ -570,12 +585,14 @@ export default function Game() {
     setBattleDeadline(null);
     setVictory(false);
     setDefeat(true);
-    setGoldDrops([]);
+    setLootDrops([]);
     setLootPhase("idle");
-    setCollectedLoot(0);
+    setCollectedGold(0);
+    setCollectedMaterial(0);
     setPlannedGold(0);
+    setPlannedMaterial(0);
     lootPlan.current = [];
-    goldDropsRef.current = [];
+    lootDropsRef.current = [];
     revealedLootIds.current.clear();
     const casualties = [...save.party];
     setLostMembers(casualties);
@@ -722,14 +739,15 @@ export default function Game() {
       return;
     }
     const nextStage = getStage(stageNumber);
+    const nextMaterial = stageMaterialFor(stageNumber);
     const durationSeconds = developerMode ? DEV_BATTLE_SECONDS : (nextStage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + save.upgrades.time * 5;
     const monsters = spawnMonsterPack(nextStage);
     const rewardGold = Math.round(nextStage.gold * goldMultiplier);
     clearLootTimers();
     victoryLock.current = false;
     rewardLock.current = false;
-    lootPlan.current = createGoldDropPlan(monsters, rewardGold);
-    goldDropsRef.current = [];
+    lootPlan.current = createBattleLootPlan(monsters, rewardGold, nextMaterial);
+    lootDropsRef.current = [];
     revealedLootIds.current.clear();
     lastAttack.current = {};
     lastSkill.current = {};
@@ -741,10 +759,12 @@ export default function Game() {
     setClicks(0);
     setMomentumStacks(0);
     setLostMembers([]);
-    setGoldDrops([]);
+    setLootDrops([]);
     setLootPhase("fighting");
-    setCollectedLoot(0);
+    setCollectedGold(0);
+    setCollectedMaterial(0);
     setPlannedGold(rewardGold);
+    setPlannedMaterial(nextMaterial.rewardAmount);
     setVictory(false);
     setDefeat(false);
     setBattleActive(true);
@@ -766,12 +786,14 @@ export default function Game() {
     setVictory(false);
     setDefeat(false);
     setFieldMonsters([]);
-    setGoldDrops([]);
+    setLootDrops([]);
     setLootPhase("idle");
-    setCollectedLoot(0);
+    setCollectedGold(0);
+    setCollectedMaterial(0);
     setPlannedGold(0);
+    setPlannedMaterial(0);
     lootPlan.current = [];
-    goldDropsRef.current = [];
+    lootDropsRef.current = [];
     revealedLootIds.current.clear();
     setTab("guild");
     setToast(message);
@@ -803,9 +825,15 @@ export default function Game() {
     const nextLevel = save.weaponLevel + 1;
     if (nextLevel > WEAPON_MAX_LEVEL) return setToast("모든 무기를 완성했습니다. 길드마스터 신검이 최종 단계입니다!");
     const nextWeapon = clickAttackPattern(nextLevel);
+    const recipe = weaponMaterialRecipe(nextLevel);
     if (save.gold < nextWeapon.cost) return setToast(`${nextWeapon.weaponName}을(를) 제작할 골드가 부족합니다.`);
-    setSave((current) => ({ ...current, gold: current.gold - nextWeapon.cost, weaponLevel: nextLevel }));
-    setToast(`${nextWeapon.weaponName} 완성! 기본 공격력이 ${Math.round(nextWeapon.damageScale * 100)}%로 상승하고 ${nextWeapon.title} 연출이 해금되었습니다.`);
+    if (!canAffordWeaponRecipe(save.materials, recipe) && recipe) return setToast(`${nextWeapon.weaponName} 제작에는 ${recipe.material.name} ${recipe.amount}개가 필요합니다. ${recipe.material.stage}구역을 반복 토벌하세요.`);
+    setSave((current) => {
+      const materials = consumeWeaponRecipe(current.materials, recipe);
+      if (!materials || current.gold < nextWeapon.cost) return current;
+      return { ...current, gold: current.gold - nextWeapon.cost, materials, weaponLevel: nextLevel };
+    });
+    setToast(`${nextWeapon.weaponName} 완성! ${recipe?.material.name ?? "재료"}을(를) 제련해 기본 공격력이 ${Math.round(nextWeapon.damageScale * 100)}%로 상승했습니다.`);
   }
 
   function purchaseGuildHallUpgrade() {
@@ -918,12 +946,14 @@ export default function Game() {
     setDeveloperMode(false);
     setDeveloperStage(null);
     setFieldMonsters([]);
-    setGoldDrops([]);
+    setLootDrops([]);
     setLootPhase("idle");
-    setCollectedLoot(0);
+    setCollectedGold(0);
+    setCollectedMaterial(0);
     setPlannedGold(0);
+    setPlannedMaterial(0);
     lootPlan.current = [];
-    goldDropsRef.current = [];
+    lootDropsRef.current = [];
     revealedLootIds.current.clear();
     setLostMembers([]);
     setTab("guild");
@@ -959,6 +989,7 @@ export default function Game() {
         </div>
         <div className="resources" aria-label="보유 자원">
           <span><i className="resource-dot gold-dot" />골드 <strong>{compactNumber(save.gold)}</strong></span>
+          <span className="current-material-resource" title={stageMaterial.description}><i className="stage-material-icon topbar-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} />{stageMaterial.familyName} <strong>{save.materials[stageMaterial.id] ?? 0}</strong></span>
           <span><i className="resource-dot token-dot" />보스 증표 <strong>{save.bossTokens}</strong></span>
           <span><i className="resource-dot power-dot" />전투력 <strong>{compactNumber(combatPower)}</strong></span>
         </div>
@@ -1026,6 +1057,7 @@ export default function Game() {
             currentLevel={save.weaponLevel}
             gold={save.gold}
             bossTokens={save.bossTokens}
+            materials={save.materials}
             formatNumber={compactNumber}
             onUpgrade={purchaseWeaponUpgrade}
           />}
@@ -1091,7 +1123,7 @@ export default function Game() {
             <div><span className="eyebrow">CURRENT EXPEDITION · SWARM HUNT</span><h2>{stage.region.name} <b>{stage.localStage}/10</b></h2><small className="permadeath-warning">⚠ 제한 시간 종료 시 출전 길드원 영구 소실</small></div>
             <div className="field-actions battle-controls">
               {lootCollecting
-                ? <div className="battle-timer loot-sweep-timer"><span>전리품 회수</span><strong>{compactNumber(collectedLoot)} / {compactNumber(plannedGold)} G</strong><i><b style={{ width: `${plannedGold ? collectedLoot / plannedGold * 100 : 0}%` }} /></i></div>
+                ? <div className="battle-timer loot-sweep-timer"><span>전리품 회수</span><strong>{compactNumber(collectedGold)} G · {collectedMaterial}/{plannedMaterial} 재료</strong><i><b style={{ width: `${lootSweepProgress}%` }} /></i></div>
                 : <div className={`battle-timer ${battleTimeLeft <= 10 ? "urgent" : ""}`}><span>남은 시간</span><strong>{battleTimeLeft}초</strong><i><b style={{ width: `${battleTimeLeft / battleSeconds * 100}%` }} /></i></div>}
               <button className="retreat-button" onClick={retreatBattle} disabled={!battleActive}>안전 후퇴 · 길드원 보존</button>
             </div>
@@ -1103,8 +1135,8 @@ export default function Game() {
               <div className="environment-tag"><span>{BIOME_DETAILS[stage.region.hue].label}</span><small>{BIOME_DETAILS[stage.region.hue].description}</small></div>
               <div className="battle-banner"><span>{stage.boss ? "BOSS SWARM" : `STAGE ${stage.stage}`}</span><strong>{stage.name} 무리</strong></div>
               <div className={`loot-tally ${lootCollecting ? "is-collecting" : ""}`}>
-                <i className="loot-tally-coin">G</i>
-                <span><small>{lootCollecting ? "회수 중" : "전장 전리품"}</small><strong>+{compactNumber(lootCollecting ? collectedLoot : droppedGold)} G</strong></span>
+                <div className="loot-tally-icons"><i className="loot-tally-coin">G</i><i className="stage-material-icon loot-tally-material" style={materialIconVars(stageMaterial) as React.CSSProperties} /></div>
+                <span><small>{lootCollecting ? "촤라락 회수 중" : stageMaterial.name}</small><strong>+{compactNumber(lootCollecting ? collectedGold : droppedGold)} G</strong><em>+{lootCollecting ? collectedMaterial : droppedMaterial} 재료</em></span>
               </div>
               <div className="field-click-guide"><b>필드를 직접 누르세요</b><span>원 안의 모든 몬스터가 함께 베입니다</span></div>
               <WeaponCursor weapon={activeClickPattern} point={weaponCursor} />
@@ -1169,19 +1201,24 @@ export default function Game() {
               </div>
 
               <div className="gold-loot-layer" aria-hidden="true">
-                {goldDrops.map((drop, index) => <span
-                  className={`gold-drop gold-drop-${drop.variant}`}
-                  key={drop.id}
-                  style={{
-                    "--loot-x": `${drop.x}%`,
-                    "--loot-y": `${drop.y}%`,
-                    "--loot-delay": `${index * goldLootStaggerMs(goldDrops.length)}ms`,
-                  } as React.CSSProperties}
-                >
-                  <i /><b /><em>+{compactNumber(drop.amount)}</em>
-                </span>)}
+                {lootDrops.map((drop, index) => {
+                  const dropMaterial = drop.kind === "material" ? stageMaterialById(drop.resourceId) : null;
+                  return <span
+                    className={`loot-drop loot-drop-${drop.kind} loot-variant-${drop.variant}`}
+                    key={drop.id}
+                    style={{
+                      ...(dropMaterial ? materialIconVars(dropMaterial) : {}),
+                      "--loot-x": `${drop.x}%`,
+                      "--loot-y": `${drop.y}%`,
+                      "--loot-delay": `${index * goldLootStaggerMs(lootDrops.length)}ms`,
+                    } as React.CSSProperties}
+                  >
+                    {drop.kind === "gold" ? <><i /><b /></> : dropMaterial ? <i className="stage-material-icon loot-material-icon" /> : null}
+                    <em>+{compactNumber(drop.amount)}</em>
+                  </span>;
+                })}
               </div>
-              {lootCollecting && <span className="sr-only" role="status">토벌이 끝나 전장의 골드를 회수하고 있습니다. {compactNumber(collectedLoot)} / {compactNumber(plannedGold)} 골드</span>}
+              {lootCollecting && <span className="sr-only" role="status">토벌이 끝나 전장의 골드와 재료를 회수하고 있습니다. 골드 {compactNumber(collectedGold)} / {compactNumber(plannedGold)}, {stageMaterial.name} {collectedMaterial} / {plannedMaterial}</span>}
 
               {hitFx && <>
                 <span key={`range-${hitFx.id}`} className={`attack-range-impact click-tier-${hitFx.tier} ${hitFx.hitCount ? "has-targets" : "missed"} ${hitFx.shockwave ? "is-shockwave" : ""}`} style={{ left: `${hitFx.x}%`, top: `${hitFx.y}%`, width: `${hitFx.radius * 2}%` }} aria-hidden="true"><i /></span>
@@ -1225,7 +1262,7 @@ export default function Game() {
               <div className="monster-status intel-panel panel">
                 <div className="monster-title"><span className={`enemy-rank ${stage.boss ? "boss-rank" : ""}`}>{stage.boss ? "군주" : "무리"}</span><div><h3>전황 판단</h3><p>{stage.region.name} · 체력 정보 비공개</p></div></div>
                 <div className="intel-report"><span>정찰 보고</span><strong>{intelReport}</strong><small>적의 체력과 정확한 잔여 수는 알 수 없습니다. 화면의 움직임을 보고 후퇴를 결정하세요.</small></div>
-                <div className="reward-preview"><span>예상 보상</span><strong>골드 {compactNumber(stage.gold * goldMultiplier)}</strong><strong>경험치 {compactNumber(stage.xp)}</strong>{stage.boss && <strong>증표 1</strong>}</div>
+                <div className="reward-preview"><span>예상 보상</span><strong>골드 {compactNumber(stage.gold * goldMultiplier)}</strong><strong className="material-reward-preview"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} />{stageMaterial.name} {stageMaterial.rewardAmount}</strong><strong>경험치 {compactNumber(stage.xp)}</strong>{stage.boss && <strong>증표 1</strong>}</div>
               </div>
               <div className="party-status panel"><div className="panel-title"><h3>보조 전투원</h3><span className="level-chip">{partyMembers.length}/4</span></div>{partyMembers.map((member) => <div className="party-row" key={member.id}><span className="mini-portrait" style={{ "--member-hue": member.hue } as React.CSSProperties}>{member.glyph}</span><span><strong>{member.name}</strong><small>{member.job} · 보조 타격 {compactNumber(attackFor(member, progressFor(member)) * guildMultiplier * developerPower * MEMBER_ASSIST_FACTOR)}</small></span><b>{developerMode ? `신화 +${DEV_GEAR_LEVEL}` : member.skill}</b></div>)}</div>
               <div className={`click-power panel click-power-tier-${activeClickPattern.tier}`}>
@@ -1247,7 +1284,7 @@ export default function Game() {
             </aside>
           </div>
 
-          {victory && <div className="victory-overlay"><div className="victory-card"><span className="victory-star">★</span><p>STAGE CLEAR</p><h2>토벌 성공!</h2><div className="outcome-rewards"><span>{developerMode ? "개발자 결과 · 저장 안 됨" : <>골드 <b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span>경험치 <b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span>보스 토벌 완료</span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? 100 : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(100, stage.stage + 1))}>다음 구역 출정</button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}>반복 토벌</button><button className="text-button" onClick={() => returnToGuild("토벌을 마치고 영지로 복귀했습니다.")}>영지로 복귀</button></div></div></div>}
+          {victory && <div className="victory-overlay"><div className="victory-card"><span className="victory-star">★</span><p>STAGE CLEAR</p><h2>토벌 성공!</h2><div className="outcome-rewards"><span>{developerMode ? "개발자 결과 · 저장 안 됨" : <>골드 <b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span className="material-victory-reward"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} />{stageMaterial.name} <b>+{stageMaterial.rewardAmount}</b></span>}{!developerMode && <span>경험치 <b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span>보스 토벌 완료</span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? 100 : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(100, stage.stage + 1))}>다음 구역 출정</button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}>반복 토벌</button><button className="text-button" onClick={() => returnToGuild("토벌을 마치고 영지로 복귀했습니다.")}>영지로 복귀</button></div></div></div>}
           {defeat && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">☠</span><p>EXPEDITION FAILED</p><h2>원정대 전멸</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드에서는 손실이 저장되지 않습니다." : "출전 길드원이 명부에서 영구 삭제되었습니다."}</strong>{lostMembers.map((id) => <span key={id}>† {memberById(id).name}</span>)}<span>시간이 부족하다고 판단되면 전멸 전에 안전 후퇴해야 합니다.</span></div><button className="primary-button" onClick={() => returnToGuild(developerMode ? "개발자 전투에서 복귀했습니다." : "전사자 기록을 남기고 영지로 복귀했습니다. 여관에서 새 원정대를 모집하세요.")}>영지로 귀환</button></div></div>}
         </section>
       )}
