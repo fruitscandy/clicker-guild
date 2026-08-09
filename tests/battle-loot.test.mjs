@@ -5,6 +5,7 @@ import {
   createBattleLootPlan,
   createGoldDropPlan,
   createMaterialDropPlan,
+  goldDropFormForStage,
   goldLootStaggerMs,
   goldLootSweepDuration,
   revealedGoldDrops,
@@ -25,6 +26,21 @@ test("distributes the complete stage reward across monster drops", () => {
   assert.ok(plan[2].amount > plan[0].amount);
   assert.ok(plan.every((drop) => drop.x >= 7 && drop.x <= 93));
   assert.ok(plan.every((drop) => drop.y >= 14 && drop.y <= 90));
+  assert.ok(plan.every((drop) => drop.form === "coins" && drop.soundProfile === "coin"));
+});
+
+test("upgrades gold visuals and sounds from coins to pouches and cash bundles", () => {
+  assert.equal(goldDropFormForStage(1), "coins");
+  assert.equal(goldDropFormForStage(34), "coins");
+  assert.equal(goldDropFormForStage(35), "coin-pouch");
+  assert.equal(goldDropFormForStage(69), "coin-pouch");
+  assert.equal(goldDropFormForStage(70), "cash-bundle");
+  assert.equal(goldDropFormForStage(100), "cash-bundle");
+
+  const pouchPlan = createGoldDropPlan(monsters, 500, 35);
+  const bundlePlan = createGoldDropPlan(monsters, 2_000, 70);
+  assert.ok(pouchPlan.every((drop) => drop.soundProfile === "coin-pouch" && drop.variant >= 4 && drop.variant <= 7));
+  assert.ok(bundlePlan.every((drop) => drop.soundProfile === "cash-bundle" && drop.variant >= 8 && drop.variant <= 11));
 });
 
 test("reveals drops in kill order and keeps their defeat time", () => {
@@ -52,4 +68,5 @@ test("adds a stage material without changing the complete gold reward", () => {
   assert.equal(fullPlan.filter((drop) => drop.kind === "gold").reduce((sum, drop) => sum + drop.amount, 0), 137);
   assert.equal(fullPlan.filter((drop) => drop.kind === "material").reduce((sum, drop) => sum + drop.amount, 0), material.rewardAmount);
   assert.ok(materialPlan.every((drop) => drop.resourceId === material.id));
+  assert.ok(fullPlan.filter((drop) => drop.kind === "gold").every((drop) => drop.form === "coin-pouch"));
 });

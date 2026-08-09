@@ -1,4 +1,9 @@
-import type { LootSoundProfile, StageMaterial } from "./stage-materials";
+import type {
+  GoldLootSoundProfile,
+  LootSoundProfile,
+  MaterialLootSoundProfile,
+  StageMaterial,
+} from "./stage-materials";
 
 export type LootMonster = {
   id: string;
@@ -22,16 +27,19 @@ type BattleLootDropBase = {
 export type BattleGoldDrop = BattleLootDropBase & {
   kind: "gold";
   resourceId: "gold";
-  soundProfile: "coin";
+  form: GoldDropForm;
+  soundProfile: GoldLootSoundProfile;
 };
 
 export type BattleMaterialDrop = BattleLootDropBase & {
   kind: "material";
   resourceId: string;
-  soundProfile: Exclude<LootSoundProfile, "coin">;
+  soundProfile: MaterialLootSoundProfile;
 };
 
 export type BattleLootDrop = BattleGoldDrop | BattleMaterialDrop;
+
+export type GoldDropForm = "coins" | "coin-pouch" | "cash-bundle";
 
 export const GOLD_LOOT_SETTLE_MS = 760;
 export const GOLD_LOOT_TRAVEL_MS = 720;
@@ -42,6 +50,18 @@ const LOOT_WEIGHTS: Record<LootMonster["kind"], number> = {
   mystic: 1.3,
   brute: 1.8,
   leader: 4.6,
+};
+
+const GOLD_DROP_FORM_VARIANTS: Record<GoldDropForm, number> = {
+  coins: 0,
+  "coin-pouch": 4,
+  "cash-bundle": 8,
+};
+
+const GOLD_DROP_FORM_SOUNDS: Record<GoldDropForm, GoldLootSoundProfile> = {
+  coins: "coin",
+  "coin-pouch": "coin-pouch",
+  "cash-bundle": "cash-bundle",
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -57,10 +77,18 @@ export function goldLootSweepDuration(dropCount: number) {
   return GOLD_LOOT_TRAVEL_MS + Math.max(0, dropCount - 1) * goldLootStaggerMs(dropCount) + GOLD_LOOT_FINAL_PAUSE_MS;
 }
 
-export function createGoldDropPlan(monsters: readonly LootMonster[], totalGold: number): BattleGoldDrop[] {
+export function goldDropFormForStage(stage: number): GoldDropForm {
+  const safeStage = clamp(Math.round(stage), 1, 100);
+  if (safeStage >= 70) return "cash-bundle";
+  if (safeStage >= 35) return "coin-pouch";
+  return "coins";
+}
+
+export function createGoldDropPlan(monsters: readonly LootMonster[], totalGold: number, stage = 1): BattleGoldDrop[] {
   if (!monsters.length) return [];
 
   const reward = Math.max(0, Math.round(totalGold));
+  const form = goldDropFormForStage(stage);
   const totalWeight = monsters.reduce((sum, monster) => sum + LOOT_WEIGHTS[monster.kind], 0);
   const allocations = monsters.map((monster, index) => {
     const exact = reward * LOOT_WEIGHTS[monster.kind] / totalWeight;
@@ -80,12 +108,13 @@ export function createGoldDropPlan(monsters: readonly LootMonster[], totalGold: 
     id: `gold-${monster.id}`,
     kind: "gold",
     resourceId: "gold",
-    soundProfile: "coin",
+    form,
+    soundProfile: GOLD_DROP_FORM_SOUNDS[form],
     monsterId: monster.id,
     x: clamp(monster.x + (index * 7 % 9) - 4, 7, 93),
     y: clamp(monster.y + 5 + (index * 5 % 7), 14, 90),
     amount: allocations[index].amount,
-    variant: index % 4,
+    variant: GOLD_DROP_FORM_VARIANTS[form] + index % 4,
     droppedAt: 0,
   }));
 }
@@ -122,7 +151,7 @@ export function createMaterialDropPlan(monsters: readonly LootMonster[], materia
 }
 
 export function createBattleLootPlan(monsters: readonly LootMonster[], totalGold: number, material: StageMaterial): BattleLootDrop[] {
-  const gold = createGoldDropPlan(monsters, totalGold);
+  const gold = createGoldDropPlan(monsters, totalGold, material.stage);
   const materials = createMaterialDropPlan(monsters, material);
   const materialByMonster = new Map(materials.map((drop) => [drop.monsterId, drop]));
   return gold.flatMap((drop) => {
