@@ -1,0 +1,190 @@
+.layer {
+  position: absolute;
+  z-index: 35;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint;
+}
+
+.effect {
+  position: absolute;
+  left: var(--effect-x);
+  top: var(--effect-y);
+  width: 0;
+  height: 0;
+  filter: saturate(1.14);
+}
+
+.effectTitle {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  top: 0;
+  display: grid;
+  min-width: 124px;
+  translate: -50% -50%;
+  place-items: center;
+  color: white;
+  text-align: center;
+  text-shadow: 0 2px 4px #000, 0 0 13px var(--effect-accent);
+  animation: specialTitle 1.1s .08s ease-out both;
+}
+
+.effectTitle small { color: color-mix(in srgb, var(--effect-accent) 62%, white); font-size: 9px; font-weight: 900; letter-spacing: .12em; }
+.effectTitle strong { font-family: var(--font-title, serif); font-size: 19px; }
+
+.lightningStage,
+.tornadoStage,
+.meteorStage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  translate: -50% -50%;
+}
+
+.lightningStage { width: 360px; height: 440px; translate: -50% -78%; }
+.lightningSkyFlash { position: absolute; inset: -35% -90%; background: radial-gradient(ellipse at 50% 18%, rgba(226, 250, 255, .94), rgba(88, 190, 255, .34) 18%, transparent 60%); mix-blend-mode: screen; animation: lightningSky .95s steps(2) both; }
+.lightningTexture { position: absolute; left: 50%; bottom: 5%; width: 280px; height: 280px; translate: -50% 35%; background: url("/assets/vfx/special/lightning-arc.png") center / contain no-repeat; filter: sepia(1) saturate(3.4) hue-rotate(153deg) brightness(2.1) drop-shadow(0 0 15px #62dfff); opacity: 0; mix-blend-mode: screen; animation: lightningTexture .9s .18s ease-out both; }
+.lightningBolt { position: absolute; left: 50%; top: -4%; width: 170px; height: 360px; translate: -50% 0; overflow: visible; }
+.boltMain,
+.boltBranch { fill: none; stroke: #eafdff; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 180; stroke-dashoffset: 180; }
+.boltMain { stroke-width: 5.2; animation: boltDraw .42s .12s ease-out forwards, boltFlicker .65s .5s steps(2) both; }
+.boltBranch { stroke: #8ee9ff; stroke-width: 2.5; animation: boltDraw .32s .22s ease-out forwards, boltFlicker .55s .5s steps(2) both; }
+.lightningImpact { position: absolute; left: 50%; bottom: 5%; width: 120px; height: 70px; translate: -50% 40%; border-radius: 50%; background: radial-gradient(ellipse, #fff 0 6%, #7ce7ff 17%, rgba(62, 155, 255, .45) 38%, transparent 70%); filter: blur(2px); animation: lightningImpact .8s .34s ease-out both; }
+.lightningRing { position: absolute; left: 50%; bottom: 0; width: 190px; height: 52px; translate: -50% 50%; border: 3px solid #b9f5ff; border-radius: 50%; box-shadow: 0 0 13px #70dfff, inset 0 0 17px #4cbcff; animation: electricRing .72s .34s ease-out both; }
+.electricSparks { position: absolute; left: 50%; bottom: 5%; width: 1px; height: 1px; }
+.electricSparks i { position: absolute; width: 22px; height: 3px; transform-origin: left center; rotate: var(--spark-angle); background: linear-gradient(90deg, #fff, #78eaff 45%, transparent); clip-path: polygon(0 20%, 45% 0, 38% 50%, 100% 65%, 52% 78%, 18% 100%); filter: drop-shadow(0 0 3px #35d7ff); animation: electricSpark .72s calc(.32s + var(--spark-delay)) ease-out both; }
+
+.tornadoStage { width: 390px; height: 360px; translate: -50% -62%; }
+.tornadoAura { position: absolute; inset: 6% -12% -18%; border-radius: 50%; background: radial-gradient(ellipse at 50% 72%, rgba(129, 255, 216, .22), rgba(73, 180, 177, .1) 36%, transparent 68%); filter: blur(5px); animation: tornadoAura 2.45s ease-in-out both; }
+.tornadoTextureBack,
+.tornadoTextureFront { position: absolute; left: 50%; top: 50%; width: 330px; height: 330px; translate: -50% -50%; background: url("/assets/vfx/special/tornado-twirl.png") center / contain no-repeat; mix-blend-mode: screen; }
+.tornadoTextureBack { filter: sepia(1) saturate(2.8) hue-rotate(90deg) brightness(1.28) blur(2px); opacity: .5; animation: tornadoTexture 2.45s linear both; }
+.tornadoTextureFront { width: 260px; height: 260px; filter: sepia(1) saturate(2.5) hue-rotate(105deg) brightness(1.7); opacity: .7; animation: tornadoTexture 1.65s linear reverse both; }
+.tornadoFunnel { position: absolute; z-index: 3; inset: 0; }
+.tornadoFunnel > i { position: absolute; left: 50%; top: var(--vortex-top); width: var(--vortex-width); height: calc(15px + var(--vortex-index) * 1.8px); translate: -50% 0; border: 4px solid rgba(196, 255, 237, .8); border-right-color: rgba(74, 211, 189, .18); border-left-color: rgba(88, 216, 205, .34); border-radius: 50%; box-shadow: 0 0 10px rgba(74, 235, 211, .48), inset 0 0 8px rgba(179, 255, 242, .32); filter: blur(calc(var(--vortex-index) * .12px)); animation: vortexRing .62s var(--vortex-delay) linear infinite, funnelEnter 2.45s ease-in-out both; }
+.tornadoGroundRing { position: absolute; z-index: 2; left: 50%; bottom: 8%; width: 245px; height: 70px; translate: -50% 50%; border: 3px solid rgba(160, 255, 222, .74); border-radius: 50%; box-shadow: 0 0 22px rgba(83, 238, 201, .65), inset 0 0 30px rgba(47, 168, 151, .48); animation: tornadoGround 1.1s linear infinite, funnelEnter 2.45s ease-in-out both; }
+.tornadoDebris { position: absolute; z-index: 5; left: 50%; top: 54%; width: 1px; height: 1px; }
+.tornadoDebris i { position: absolute; width: var(--debris-size); height: var(--debris-size); border-radius: 35%; background: #d9c69b; box-shadow: 0 0 5px #69e9c6; animation: tornadoDebris 1.25s var(--debris-delay) linear infinite, funnelEnter 2.45s ease-in-out both; }
+
+.meteorStage { width: 520px; height: 480px; translate: -50% -54%; }
+.meteorTelegraph { position: absolute; left: 50%; bottom: 10%; width: 270px; height: 82px; translate: -50% 50%; border: 3px solid rgba(255, 152, 76, .9); border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgba(255, 96, 31, .18) 0 10deg, transparent 10deg 20deg); box-shadow: 0 0 18px #ff632c, inset 0 0 36px rgba(255, 73, 20, .34); animation: meteorTelegraph var(--effect-delay) linear both; }
+.meteorProjectile { position: absolute; z-index: 4; left: 50%; top: 68%; width: 1px; height: 1px; animation: meteorFall var(--effect-delay) cubic-bezier(.4, .02, .82, .46) both; }
+.meteorCore { position: absolute; left: 0; top: 0; width: 86px; height: 76px; translate: -50% -50%; border-radius: 46% 52% 43% 57%; background: radial-gradient(circle at 32% 26%, #ffd777 0 5%, #c7532d 7% 16%, #51291f 31%, #160f13 69%); box-shadow: inset -14px -12px 16px #08070a, inset 9px 7px 12px rgba(255, 142, 62, .44), 0 0 15px #ff6b28, 0 0 35px rgba(255, 83, 25, .72); rotate: -28deg; }
+.meteorCore b { position: absolute; width: 18px; height: 10px; border-radius: 50%; background: #0c0a0c; box-shadow: inset 2px 2px 3px rgba(255, 107, 45, .25); }
+.meteorCore b:nth-child(1) { left: 16px; top: 19px; }
+.meteorCore b:nth-child(2) { right: 14px; top: 35px; scale: .72; }
+.meteorCore b:nth-child(3) { left: 34px; bottom: 10px; scale: .55; }
+.meteorFlame { position: absolute; left: -73px; top: -105px; width: 165px; height: 190px; background: url("/assets/vfx/special/meteor-flame.png") center / contain no-repeat; filter: sepia(1) saturate(5) hue-rotate(330deg) brightness(1.8) drop-shadow(0 0 13px #ff4c15); rotate: -42deg; mix-blend-mode: screen; transform-origin: 70% 80%; animation: meteorFlame .16s ease-in-out infinite alternate; }
+.meteorSmoke { position: absolute; left: -178px; top: -178px; width: 260px; height: 260px; background: url("/assets/vfx/special/smoke-wisp.png") center / contain no-repeat; filter: sepia(1) saturate(1.6) hue-rotate(338deg) brightness(.62); opacity: .72; rotate: -38deg; animation: meteorSmoke .72s linear infinite; }
+.meteorImpact { position: absolute; z-index: 5; left: 50%; bottom: 10%; width: 1px; height: 1px; }
+.meteorFlash,
+.meteorExplosion,
+.meteorShockwave,
+.meteorScorch { position: absolute; left: 0; top: 0; translate: -50% -50%; }
+.meteorFlash { width: 300px; height: 300px; border-radius: 50%; background: url("/assets/vfx/special/impact-flash.png") center / contain no-repeat; filter: sepia(1) saturate(4) hue-rotate(325deg) brightness(2.2); mix-blend-mode: screen; animation: meteorFlash .82s var(--effect-delay) ease-out both; }
+.meteorExplosion { width: 350px; height: 350px; background: url("/assets/vfx/special/meteor-explosion.png") center / contain no-repeat; filter: sepia(1) saturate(4.8) hue-rotate(328deg) brightness(1.65) drop-shadow(0 0 22px #ff541c); mix-blend-mode: screen; animation: meteorExplosion 1.2s var(--effect-delay) cubic-bezier(.12, .6, .2, 1) both; }
+.meteorShockwave { width: 330px; height: 102px; border: 5px solid #ffd08d; border-radius: 50%; box-shadow: 0 0 22px #ff6629, inset 0 0 18px #ff4a1e; animation: meteorShockwave .92s var(--effect-delay) ease-out both; }
+.meteorScorch { z-index: -1; width: 210px; height: 150px; background: url("/assets/vfx/special/impact-scorch.png") center / contain no-repeat; filter: sepia(1) saturate(2) hue-rotate(330deg) brightness(.42); opacity: 0; animation: meteorScorch 1.45s var(--effect-delay) ease-out both; }
+.meteorFragments { position: absolute; left: 0; top: 0; }
+.meteorFragments i { position: absolute; width: 11px; height: 7px; border-radius: 50% 15%; background: linear-gradient(135deg, #ffbe66, #632619 55%, #171013); box-shadow: 0 0 7px #ff6b27; transform-origin: left center; rotate: var(--fragment-angle); animation: meteorFragment .9s calc(var(--effect-delay) + var(--fragment-delay)) cubic-bezier(.12, .7, .24, 1) both; }
+
+.hud {
+  position: absolute;
+  z-index: 41;
+  top: 76px;
+  right: 12px;
+  display: grid;
+  gap: 7px;
+  width: min(174px, 31%);
+  pointer-events: none;
+}
+
+.hudSpell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 35px 1fr;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  padding: 7px 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--effect-accent) 38%, rgba(255, 255, 255, .14));
+  border-radius: 10px;
+  background: linear-gradient(100deg, rgba(5, 11, 20, .86), color-mix(in srgb, var(--effect-accent) 10%, rgba(8, 13, 21, .82)));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .28), inset 0 1px rgba(255, 255, 255, .07);
+  backdrop-filter: blur(7px);
+}
+
+.hudGlyph { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid color-mix(in srgb, var(--effect-accent) 56%, white); border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--effect-accent) 34%, transparent), transparent 67%); color: white; font-family: serif; font-size: 17px; font-style: normal; font-weight: 900; text-shadow: 0 0 9px var(--effect-accent); }
+.hudSpell > span { display: grid; min-width: 0; }
+.hudSpell small { overflow: hidden; color: #a9b7c9; font-size: 9px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.hudSpell strong { color: #f4f8fb; font-size: 11px; }
+.hudSpell > b { position: absolute; right: 7px; bottom: 4px; left: 7px; height: 3px; overflow: hidden; border-radius: 99px; background: rgba(255, 255, 255, .08); }
+.hudSpell > b i { display: block; width: var(--cooldown-progress); height: 100%; border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--effect-accent) 45%, transparent), var(--effect-accent), white); box-shadow: 0 0 8px var(--effect-accent); transition: width .1s linear; }
+.casting { animation: hudCast .72s ease-out; }
+.casting .hudGlyph { box-shadow: 0 0 16px var(--effect-accent); }
+
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+:global(.pack-monster.special-lightning-target:not(.is-defeated)) { transition: left .22s ease, top .22s ease, filter .1s ease; filter: brightness(1.75) saturate(.7) hue-rotate(148deg); }
+:global(.pack-monster.special-lightning-target:not(.is-defeated))::before,
+:global(.pack-monster.special-lightning-target:not(.is-defeated))::after { position: absolute; z-index: 8; left: 50%; top: 43%; width: 72px; height: 92px; translate: -50% -50%; content: ""; pointer-events: none; background: url("/assets/vfx/special/lightning-spark.png") center / contain no-repeat; filter: sepia(1) saturate(5) hue-rotate(150deg) brightness(2.25) drop-shadow(0 0 6px #55dfff); mix-blend-mode: screen; animation: monsterElectrified .42s steps(2) infinite; }
+:global(.pack-monster.special-lightning-target:not(.is-defeated))::after { scale: .72; rotate: 88deg; animation-delay: -.17s; }
+
+:global(.pack-monster.special-tornado-target:not(.is-defeated)) { transition: left .34s cubic-bezier(.2, .85, .35, 1), top .34s cubic-bezier(.2, .85, .35, 1), filter .15s ease; filter: brightness(1.22) saturate(.76) hue-rotate(74deg); }
+:global(.pack-monster.special-tornado-target:not(.is-defeated) .pack-monster-art-frame) { animation: monsterTornado .7s ease-in-out infinite; }
+:global(.pack-monster.special-tornado-target:not(.is-defeated) .monster-sprite) { animation: monsterTornadoSprite .7s ease-in-out infinite; }
+
+:global(.pack-monster.special-meteor-target:not(.is-defeated)) { transition: left .46s cubic-bezier(.12, .82, .25, 1), top .46s cubic-bezier(.12, .82, .25, 1), filter .1s ease; filter: brightness(1.25) sepia(.3); }
+:global(.pack-monster.special-meteor-target:not(.is-defeated) .pack-monster-art-frame) { animation: monsterMeteorLaunch .72s cubic-bezier(.14, .76, .24, 1) both; }
+:global(.pack-monster.special-meteor-target:not(.is-defeated) .monster-sprite) { animation: monsterMeteorSpriteLaunch .72s cubic-bezier(.14, .76, .24, 1) both; }
+
+@keyframes specialTitle { 0% { opacity: 0; translate: -50% -10%; scale: .72; } 24% { opacity: 1; translate: -50% -145%; scale: 1.08; } 70% { opacity: 1; translate: -50% -170%; } 100% { opacity: 0; translate: -50% -205%; scale: .95; } }
+@keyframes lightningSky { 0%, 12%, 35%, 100% { opacity: 0; } 5%, 24% { opacity: .9; } }
+@keyframes lightningTexture { 0% { opacity: 0; scale: .2; } 34% { opacity: .88; scale: .95; } 100% { opacity: 0; scale: 1.35; } }
+@keyframes boltDraw { to { stroke-dashoffset: 0; } }
+@keyframes boltFlicker { 0%, 28%, 62% { opacity: 1; } 18%, 48%, 100% { opacity: 0; } }
+@keyframes lightningImpact { 0% { opacity: 0; scale: .15; } 24% { opacity: 1; scale: 1.2; } 100% { opacity: 0; scale: 2; } }
+@keyframes electricRing { 0% { opacity: 0; scale: .18; } 30% { opacity: 1; } 100% { opacity: 0; scale: 1.7; } }
+@keyframes electricSpark { 0% { opacity: 0; transform: translateX(0) scaleX(.15); } 22% { opacity: 1; } 100% { opacity: 0; transform: translateX(var(--spark-distance)) scaleX(1); } }
+@keyframes tornadoAura { 0%, 100% { opacity: 0; scale: .45; } 18%, 78% { opacity: 1; scale: 1; } }
+@keyframes tornadoTexture { 0% { rotate: 0; scale: .3; opacity: 0; } 18% { opacity: .62; } 82% { opacity: .52; } 100% { rotate: 720deg; scale: 1.16; opacity: 0; } }
+@keyframes vortexRing { to { rotate: 360deg; } }
+@keyframes funnelEnter { 0%, 100% { opacity: 0; scale: .25; } 16%, 82% { opacity: 1; scale: 1; } }
+@keyframes tornadoGround { to { rotate: 360deg; } }
+@keyframes tornadoDebris { 0% { transform: rotate(var(--debris-angle)) translateX(12px) scale(.2); opacity: 0; } 18% { opacity: 1; } 70% { opacity: .8; } 100% { transform: rotate(calc(var(--debris-angle) + 330deg)) translateX(var(--debris-radius)) translateY(-120px) scale(1); opacity: 0; } }
+@keyframes meteorTelegraph { 0% { opacity: 0; scale: .55; rotate: 0; } 15% { opacity: 1; } 90% { opacity: 1; scale: 1.08; rotate: 180deg; } 100% { opacity: 0; scale: .25; rotate: 220deg; } }
+@keyframes meteorFall { 0% { transform: translate(-330px, -300px) scale(.35); opacity: 0; } 16% { opacity: 1; } 100% { transform: translate(0, 0) scale(1); opacity: 1; } }
+@keyframes meteorFlame { to { scale: 1.15 .84; filter: sepia(1) saturate(6) hue-rotate(328deg) brightness(2.15) drop-shadow(0 0 18px #ff4c15); } }
+@keyframes meteorSmoke { to { rotate: 322deg; scale: 1.12; opacity: .3; } }
+@keyframes meteorFlash { 0% { opacity: 0; scale: .2; } 12% { opacity: 1; scale: 1.15; } 100% { opacity: 0; scale: 2.3; } }
+@keyframes meteorExplosion { 0% { opacity: 0; scale: .12; } 18% { opacity: 1; scale: .95; } 66% { opacity: .72; scale: 1.35; } 100% { opacity: 0; scale: 1.8; } }
+@keyframes meteorShockwave { 0% { opacity: 0; scale: .12; } 18% { opacity: 1; } 100% { opacity: 0; scale: 2.05; } }
+@keyframes meteorScorch { 0% { opacity: 0; scale: .4; } 22% { opacity: .75; scale: .9; } 100% { opacity: 0; scale: 1.15; } }
+@keyframes meteorFragment { 0% { opacity: 0; transform: translateX(0) translateY(0) scale(.3); } 18% { opacity: 1; } 68% { opacity: 1; } 100% { opacity: 0; transform: translateX(var(--fragment-distance)) translateY(52px) rotate(320deg) scale(.78); } }
+@keyframes hudCast { 0% { translate: 0; filter: brightness(1); } 28% { translate: -7px 0; filter: brightness(1.9); } 52% { translate: 3px 0; } 100% { translate: 0; filter: brightness(1); } }
+@keyframes monsterElectrified { 0%, 100% { opacity: .25; transform: scale(.78) rotate(-8deg); } 35% { opacity: 1; transform: scale(1.15) rotate(6deg); } 62% { opacity: .48; transform: scale(.9) rotate(-3deg); } }
+@keyframes monsterTornado { 0%, 100% { transform: translateX(-50%) rotate(-5deg) translateY(0); } 50% { transform: translateX(-50%) rotate(8deg) translateY(-12px) scale(.92); } }
+@keyframes monsterTornadoSprite { 0%, 100% { transform: translateX(-50%) scale(.28) rotate(-5deg); } 50% { transform: translateX(-50%) scale(.255) rotate(9deg) translateY(-34px); } }
+@keyframes monsterMeteorLaunch { 0% { transform: translateX(-50%) translateY(0) rotate(0); filter: brightness(1); } 23% { transform: translateX(-50%) translateY(-38px) rotate(-12deg) scale(.9); filter: brightness(2.2) sepia(.7); } 62% { transform: translateX(-50%) translateY(-18px) rotate(13deg) scale(.94); } 100% { transform: translateX(-50%) translateY(0) rotate(0); filter: brightness(1); } }
+@keyframes monsterMeteorSpriteLaunch { 0% { transform: translateX(-50%) scale(.28) translateY(0) rotate(0); } 23% { transform: translateX(-50%) scale(.25) translateY(-128px) rotate(-12deg); } 62% { transform: translateX(-50%) scale(.26) translateY(-60px) rotate(13deg); } 100% { transform: translateX(-50%) scale(.28) translateY(0) rotate(0); } }
+
+@media (max-width: 720px) {
+  .hud { top: 66px; right: 8px; width: 142px; }
+  .hudSpell { grid-template-columns: 29px 1fr; padding: 5px 6px 9px; }
+  .hudGlyph { width: 28px; height: 28px; font-size: 14px; }
+  .lightningStage { scale: .78; }
+  .tornadoStage { scale: .72; }
+  .meteorStage { scale: .67; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .effect *,
+  .hudSpell,
+  :global(.pack-monster.special-lightning-target),
+  :global(.pack-monster.special-tornado-target .pack-monster-art-frame),
+  :global(.pack-monster.special-tornado-target .monster-sprite),
+  :global(.pack-monster.special-meteor-target .pack-monster-art-frame),
+  :global(.pack-monster.special-meteor-target .monster-sprite) { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}
