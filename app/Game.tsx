@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  playCombatProcSound,
   playExpeditionFailSound,
   playExpeditionStartSound,
   playGuildMemberHireSound,
@@ -11,6 +12,8 @@ import {
   playLootDropSound,
   playMenuTabSound,
   playMonsterHitSound,
+  playProgressionSound,
+  playRareRewardSound,
   unlockBattleAudio,
 } from "./battle-audio";
 import {
@@ -590,6 +593,14 @@ export default function Game() {
       };
     });
 
+    const rareReward = stage.boss && firstClear
+      ? "boss-token"
+      : gearTarget
+        ? "gear"
+        : firstClear
+          ? "first-clear"
+          : null;
+    if (rareReward) playRareRewardSound(rareReward);
     setToast(`토벌 성공! 골드 ${compactNumber(earnedGold)} · ${stageMaterial.name} ${earnedMaterial}개${gearTarget ? ` · ${memberById(gearTarget).name} 장비 획득` : ""}${stage.boss && firstClear ? " · 보스 증표 +1" : ""}`);
   }, [developerMode, save.cleared, save.party, effectiveUpgrades.loot, stage, stageMaterial, goldMultiplier]);
 
@@ -758,10 +769,12 @@ export default function Game() {
     const comboMultiplier = combo ? 1.35 + comboLevel * .1 : 1;
     const timestamp = Date.now();
     let nextMomentum = 0;
+    let momentumMaxed = false;
     if (!automatic && momentumLevel > 0) {
       const chained = timestamp - momentumState.current.lastAt <= 1250;
       const maxStacks = 3 + momentumLevel * 2;
       nextMomentum = Math.min(maxStacks, chained ? momentumState.current.stacks + 1 : 1);
+      momentumMaxed = nextMomentum === maxStacks && momentumState.current.stacks < maxStacks;
       momentumState.current = { lastAt: timestamp, stacks: nextMomentum };
       setMomentumStacks(nextMomentum);
     }
@@ -802,6 +815,9 @@ export default function Game() {
     });
     const feedbackDuration = shockwave ? 1750 : !automatic && (executionCount || critical || combo || nextMomentum) ? 1250 : activeClickPattern.duration;
     window.setTimeout(() => setHitFx((current) => current?.id === effectId ? null : current), Math.max(activeClickPattern.duration, feedbackDuration));
+    if (!automatic && targets.length) {
+      playCombatProcSound({ critical, combo, shockwave, execution: executionCount > 0, momentumMaxed });
+    }
     damageMonsters(targets.map((monster) => monster.id), damage, true, activeClickPattern.tier);
     if (!automatic) {
       clickCount.current = nextClicks;
@@ -930,6 +946,7 @@ export default function Game() {
       return { ...current, gold: current.gold - nextWeapon.cost, materials, weaponLevel: nextLevel };
     });
     setTerritoryPulse((current) => current + 1);
+    playProgressionSound("weapon-craft", nextLevel);
     setToast(`${nextWeapon.weaponName} 완성! 플레이어 클릭 공격력이 ${Math.round(nextWeapon.damageScale * 100)}%로 상승했습니다.`);
   }
 
@@ -948,6 +965,7 @@ export default function Game() {
     }
     setSave((current) => ({ ...current, gold: current.gold - hallStage.upgradeCost!, guildHallLevel: current.guildHallLevel + 1 }));
     setTerritoryPulse((current) => current + 1);
+    playProgressionSound("guild-hall", nextHallStage.level);
     setToast(`${nextHallStage.name} 완성! 길드 강화 연구가 ${nextHallStage.researchDepth}단계까지 확장되었습니다.`);
   }
 
@@ -967,6 +985,7 @@ export default function Game() {
       upgrades: node.target ? { ...current.upgrades, [node.target]: current.upgrades[node.target] + 1 } : current.upgrades,
     }));
     setTerritoryPulse((current) => current + 1);
+    playProgressionSound("research-unlock", node.target ? save.upgrades[node.target] + 1 : save.nodes.length + 1);
     setToast(`${node.title} 노드를 해금했습니다. 새로운 성장 경로가 발견됩니다!`);
   }
 
@@ -1035,6 +1054,7 @@ export default function Game() {
     if (save.specials[key]) return;
     if (save.bossTokens < 1) return setToast("보스 증표가 필요합니다. 각 지역의 3번째 군주 웨이브를 처치하세요.");
     setSave((current) => ({ ...current, bossTokens: current.bossTokens - 1, specials: { ...current.specials, [key]: true } }));
+    playProgressionSound("special-tactic");
     setToast(`${specialInfo[key].title} 특수 전술을 해금했습니다!`);
   }
 
