@@ -17,6 +17,8 @@ export type LootSoundProfile = GoldLootSoundProfile | MaterialLootSoundProfile;
 export type StageMaterial = {
   id: string;
   stage: number;
+  firstStage: number;
+  lastStage: number;
   region: number;
   localStage: number;
   name: string;
@@ -30,8 +32,15 @@ export type StageMaterial = {
   boss: boolean;
 };
 
+export type WeaponMaterialIngredient = {
+  material: StageMaterial;
+  amount: number;
+};
+
 export type WeaponMaterialRecipe = {
   weaponTier: number;
+  ingredients: WeaponMaterialIngredient[];
+  // Kept as the primary ingredient for callers that render a compact preview.
   material: StageMaterial;
   amount: number;
 };
@@ -49,16 +58,26 @@ const MATERIAL_FAMILIES = [
   { familyName: "고룡 비늘", accent: "#69d9dd", soundProfile: "dragon-scale" as const, description: "고대 용의 마력이 무지갯빛으로 남은 비늘" },
 ] as const;
 
-const STAGE_GRADES = [
-  "거친",
-  "폭주하는",
-  "군주의",
-] as const;
+// Two regular waves feed an immediate upgrade, while the regional boss payout
+// leaves a satisfying surplus for the next forge visit.
+export const REGION_MATERIAL_REWARDS = [3, 4, 7] as const;
 
-// The 15-step arsenal is compressed across the 30-wave hack-and-slash run.
-// Each recipe points at a material the player can reach before the next major power spike.
-const WEAPON_RECIPE_STAGES = [1, 2, 3, 4, 5, 7, 9, 11, 13, 15, 18, 21, 24, 27] as const;
-const WEAPON_RECIPE_AMOUNTS = [4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20] as const;
+const WEAPON_RECIPES = [
+  [[1, 3]],
+  [[1, 4]],
+  [[1, 5]],
+  [[2, 4]],
+  [[2, 6]],
+  [[3, 5]],
+  [[3, 7]],
+  [[4, 8]],
+  [[5, 6]],
+  [[5, 8]],
+  [[6, 9]],
+  [[7, 10]],
+  [[8, 11]],
+  [[9, 8], [10, 6]],
+] as const;
 
 function clampStage(stage: number) {
   return Math.min(30, Math.max(1, Math.round(stage)));
@@ -69,60 +88,99 @@ export function stageMaterialFor(stage: number): StageMaterial {
   const region = Math.ceil(safeStage / 3);
   const localStage = (safeStage - 1) % 3 + 1;
   const family = MATERIAL_FAMILIES[region - 1];
+  const firstStage = (region - 1) * 3 + 1;
+  const lastStage = firstStage + 2;
   const boss = localStage === 3;
   return {
-    id: `stage-material-${String(safeStage).padStart(3, "0")}`,
+    id: `stage-material-family-${String(region).padStart(3, "0")}`,
     stage: safeStage,
+    firstStage,
+    lastStage,
     region,
     localStage,
-    name: `${STAGE_GRADES[localStage - 1]} ${family.familyName}`,
+    name: family.familyName,
     familyName: family.familyName,
-    description: `${family.description}. ${region}지역 ${localStage}웨이브에서만 획득할 수 있습니다.`,
+    description: `${family.description}. ${region}지역 ${firstStage}~${lastStage}웨이브에서 획득합니다.`,
     iconIndex: region - 1,
     variant: localStage - 1,
     accent: family.accent,
     soundProfile: family.soundProfile,
-    rewardAmount: boss ? 18 + region * 2 : 7 + region + localStage * 2,
+    rewardAmount: REGION_MATERIAL_REWARDS[localStage - 1],
     boss,
   };
 }
 
 export function stageMaterialById(id: string) {
-  const match = /^stage-material-(\d{3})$/.exec(id);
-  if (!match) return null;
-  const stage = Number(match[1]);
+  const familyMatch = /^stage-material-family-(\d{3})$/.exec(id);
+  if (familyMatch) {
+    const region = Number(familyMatch[1]);
+    if (region < 1 || region > MATERIAL_FAMILIES.length) return null;
+    return stageMaterialFor((region - 1) * 3 + 1);
+  }
+
+  // Legacy saves stored one id per wave. Keep accepting those ids so all three
+  // values can be folded into their regional family during hydration.
+  const legacyMatch = /^stage-material-(\d{3})$/.exec(id);
+  if (!legacyMatch) return null;
+  const stage = Number(legacyMatch[1]);
   if (stage < 1 || stage > 30) return null;
   return stageMaterialFor(stage);
 }
 
+export function allStageMaterials() {
+  return MATERIAL_FAMILIES.map((_, index) => stageMaterialFor(index * 3 + 1));
+}
+
+export function migrateMaterialInventory(source: Readonly<Record<string, number>>) {
+  return Object.entries(source).reduce<Record<string, number>>((migrated, [id, amount]) => {
+    const material = stageMaterialById(id);
+    if (!material || !Number.isFinite(amount) || amount < 0) return migrated;
+    migrated[material.id] = (migrated[material.id] ?? 0) + amount;
+    return migrated;
+  }, {});
+}
+
 export function weaponMaterialRecipe(weaponTier: number): WeaponMaterialRecipe | null {
-  if (weaponTier < 1 || weaponTier > WEAPON_RECIPE_STAGES.length) return null;
-  const index = weaponTier - 1;
+  if (weaponTier < 1 || weaponTier > WEAPON_RECIPES.length) return null;
+  const ingredients = WEAPON_RECIPES[weaponTier - 1].map(([region, amount]) => ({
+    material: stageMaterialFor((region - 1) * 3 + 1),
+    amount,
+  }));
   return {
     weaponTier,
-    material: stageMaterialFor(WEAPON_RECIPE_STAGES[index]),
-    amount: WEAPON_RECIPE_AMOUNTS[index],
+    ingredients,
+    material: ingredients[0].material,
+    amount: ingredients[0].amount,
   };
+}
+
+export function weaponTiersUsingMaterial(materialId: string) {
+  return WEAPON_RECIPES.flatMap((_, index) => {
+    const recipe = weaponMaterialRecipe(index + 1);
+    return recipe?.ingredients.some((ingredient) => ingredient.material.id === materialId) ? [index + 1] : [];
+  });
 }
 
 export function canAffordWeaponRecipe(inventory: Readonly<Record<string, number>>, recipe: WeaponMaterialRecipe | null) {
   if (!recipe) return true;
-  return (inventory[recipe.material.id] ?? 0) >= recipe.amount;
+  return recipe.ingredients.every(({ material, amount }) => (inventory[material.id] ?? 0) >= amount);
 }
 
 export function consumeWeaponRecipe(inventory: Readonly<Record<string, number>>, recipe: WeaponMaterialRecipe | null) {
   if (!recipe) return { ...inventory };
-  const owned = inventory[recipe.material.id] ?? 0;
-  if (owned < recipe.amount) return null;
-  return { ...inventory, [recipe.material.id]: owned - recipe.amount };
+  if (!canAffordWeaponRecipe(inventory, recipe)) return null;
+  return recipe.ingredients.reduce<Record<string, number>>((next, { material, amount }) => {
+    next[material.id] = (next[material.id] ?? 0) - amount;
+    return next;
+  }, { ...inventory });
 }
 
 export function materialIconVars(material: StageMaterial) {
   return {
     "--material-column": material.iconIndex % 5,
     "--material-row": Math.floor(material.iconIndex / 5),
-    "--material-rune": `"${material.localStage}"`,
+    "--material-rune": '""',
     "--material-accent": material.accent,
-    "--material-hue": `${(material.variant - 4.5) * 2.25}deg`,
+    "--material-hue": "0deg",
   };
 }
