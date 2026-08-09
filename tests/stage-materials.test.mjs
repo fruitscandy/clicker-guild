@@ -17,6 +17,7 @@ test("defines a unique material contract for all 100 stages", () => {
   assert.equal(materials[99].iconIndex, 9);
   assert.equal(materials[9].boss, true);
   assert.equal(materials[8].boss, false);
+  assert.equal(new Set(materials.map((material) => material.soundProfile)).size, 10);
 });
 
 test("round-trips material ids and rejects ids outside the stage range", () => {

@@ -40,6 +40,7 @@ function noiseBurst(
   duration: number,
   volume: number,
   frequency: number,
+  endFrequency = frequency,
 ) {
   const frameCount = Math.max(1, Math.floor(context.sampleRate * duration));
   const buffer = context.createBuffer(1, frameCount, context.sampleRate);
@@ -53,6 +54,7 @@ function noiseBurst(
   const gain = context.createGain();
   filter.type = "bandpass";
   filter.frequency.setValueAtTime(frequency, start);
+  filter.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + duration);
   filter.Q.setValueAtTime(1.2, start);
   gain.gain.setValueAtTime(volume, start);
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
@@ -76,55 +78,113 @@ export function playLootDropSound(profile: LootSoundProfile, dropIndex = 0) {
   const variation = (dropIndex % 5 - 2) * 13;
 
   if (profile === "coin") {
-    tone(context, 1180 + variation * 2, start, 0.19, 0.028, "sine", 940 + variation);
-    tone(context, 2310 + variation * 4, start + 0.008, 0.11, 0.012, "triangle", 1780 + variation * 2);
-    tone(context, 420 + variation, start + 0.018, 0.09, 0.013, "triangle", 310 + variation);
-    noiseBurst(context, start, 0.045, 0.012, 3100);
+    tone(context, 1280 + variation * 2, start, 0.21, 0.032, "sine", 960 + variation);
+    tone(context, 2460 + variation * 4, start + 0.008, 0.12, 0.014, "triangle", 1840 + variation * 2);
+    tone(context, 560 + variation, start + 0.018, 0.1, 0.014, "triangle", 330 + variation);
+    noiseBurst(context, start, 0.045, 0.012, 3600, 2200);
     return;
   }
-  if (profile === "organic") {
-    tone(context, 370 + variation, start, 0.16, 0.025, "triangle", 250 + variation);
-    tone(context, 680 + variation, start + 0.025, 0.13, 0.014, "sine", 520 + variation);
-    noiseBurst(context, start, 0.055, 0.009, 1100);
+  if (profile === "coin-pouch") {
+    tone(context, 170 + variation / 4, start, 0.16, 0.03, "triangle", 105 + variation / 5);
+    noiseBurst(context, start, 0.085, 0.015, 1050, 620);
+    [0.016, 0.046, 0.078].forEach((offset, index) => {
+      tone(context, 1120 + variation * 2 + index * 180, start + offset, 0.09, 0.012, "sine", 840 + variation + index * 120);
+    });
     return;
   }
-  if (profile === "stone") {
-    tone(context, 190 + variation / 2, start, 0.17, 0.032, "triangle", 104 + variation / 3);
-    tone(context, 510 + variation, start + 0.012, 0.09, 0.01, "square", 350 + variation);
-    noiseBurst(context, start, 0.07, 0.018, 620);
+  if (profile === "cash-bundle") {
+    tone(context, 128 + variation / 6, start + 0.01, 0.16, 0.026, "triangle", 78 + variation / 8);
+    tone(context, 520 + variation, start + 0.018, 0.1, 0.011, "triangle", 330 + variation / 2);
+    noiseBurst(context, start, 0.11, 0.022, 2800, 920);
+    noiseBurst(context, start + 0.035, 0.07, 0.012, 4100, 1700);
     return;
   }
-  if (profile === "molten") {
-    tone(context, 145 + variation / 3, start, 0.22, 0.029, "sawtooth", 82 + variation / 4);
-    tone(context, 760 + variation * 2, start + 0.035, 0.13, 0.012, "triangle", 430 + variation);
-    noiseBurst(context, start + 0.02, 0.11, 0.015, 1550);
+  if (profile === "seed-amber") {
+    tone(context, 350 + variation, start, 0.17, 0.025, "triangle", 220 + variation / 2);
+    tone(context, 690 + variation, start + 0.025, 0.14, 0.014, "sine", 510 + variation);
+    noiseBurst(context, start, 0.055, 0.009, 1120, 760);
     return;
   }
-  if (profile === "ethereal") {
-    tone(context, 520 + variation, start, 0.28, 0.022, "sine", 860 + variation * 2);
-    tone(context, 1040 + variation * 2, start + 0.035, 0.2, 0.009, "sine", 1370 + variation * 3);
+  if (profile === "sun-glass") {
+    tone(context, 980 + variation * 2, start, 0.24, 0.024, "sine", 790 + variation);
+    tone(context, 1660 + variation * 3, start + 0.014, 0.18, 0.016, "triangle", 1290 + variation * 2);
+    tone(context, 2640 + variation * 4, start + 0.025, 0.1, 0.008, "sine", 2040 + variation * 2);
+    noiseBurst(context, start, 0.035, 0.006, 3800, 2900);
     return;
   }
-  if (profile === "scale") {
-    tone(context, 330 + variation, start, 0.2, 0.026, "triangle", 245 + variation);
-    tone(context, 990 + variation * 2, start + 0.015, 0.17, 0.015, "sine", 720 + variation);
-    noiseBurst(context, start, 0.06, 0.01, 2400);
+  if (profile === "toxic-spore") {
+    tone(context, 250 + variation / 2, start, 0.2, 0.027, "sine", 118 + variation / 4);
+    tone(context, 470 + variation, start + 0.026, 0.15, 0.015, "triangle", 310 + variation / 2);
+    noiseBurst(context, start + 0.01, 0.08, 0.012, 760, 430);
     return;
   }
-  tone(context, 880 + variation * 2, start, 0.24, 0.024, "sine", 620 + variation);
-  tone(context, 1320 + variation * 3, start + 0.018, 0.16, 0.013, "triangle", 940 + variation * 2);
-  noiseBurst(context, start, 0.045, 0.008, 2800);
+  if (profile === "black-iron") {
+    tone(context, 190 + variation / 3, start, 0.19, 0.034, "triangle", 88 + variation / 5);
+    tone(context, 520 + variation, start + 0.012, 0.1, 0.012, "square", 290 + variation / 2);
+    noiseBurst(context, start, 0.075, 0.019, 650, 410);
+    return;
+  }
+  if (profile === "frost-heart") {
+    tone(context, 1280 + variation * 2, start, 0.24, 0.023, "sine", 900 + variation);
+    tone(context, 2180 + variation * 3, start + 0.012, 0.16, 0.013, "triangle", 1450 + variation * 2);
+    noiseBurst(context, start, 0.045, 0.009, 4600, 2900);
+    return;
+  }
+  if (profile === "magma-core") {
+    tone(context, 132 + variation / 4, start, 0.24, 0.031, "sawtooth", 64 + variation / 6);
+    tone(context, 650 + variation * 2, start + 0.034, 0.14, 0.013, "triangle", 290 + variation);
+    noiseBurst(context, start + 0.018, 0.13, 0.017, 1950, 780);
+    return;
+  }
+  if (profile === "soul-pearl") {
+    tone(context, 480 + variation, start, 0.29, 0.022, "sine", 850 + variation * 2);
+    tone(context, 960 + variation * 2, start + 0.035, 0.22, 0.01, "sine", 1390 + variation * 3);
+    noiseBurst(context, start + 0.02, 0.12, 0.006, 2200, 4100);
+    return;
+  }
+  if (profile === "storm-prism") {
+    tone(context, 320 + variation, start, 0.11, 0.02, "square", 170 + variation / 2);
+    tone(context, 1820 + variation * 3, start + 0.008, 0.12, 0.015, "sawtooth", 920 + variation * 2);
+    noiseBurst(context, start, 0.052, 0.018, 5400, 1700);
+    return;
+  }
+  if (profile === "blood-obsidian") {
+    tone(context, 165 + variation / 3, start, 0.22, 0.032, "triangle", 82 + variation / 5);
+    tone(context, 740 + variation, start + 0.024, 0.15, 0.013, "triangle", 410 + variation);
+    noiseBurst(context, start, 0.09, 0.014, 920, 560);
+    return;
+  }
+  tone(context, 340 + variation, start, 0.2, 0.027, "triangle", 230 + variation / 2);
+  tone(context, 1060 + variation * 2, start + 0.015, 0.17, 0.015, "sine", 690 + variation);
+  noiseBurst(context, start, 0.065, 0.012, 2800, 1200);
 }
 
 export function playLootCollectSound(profile: LootSoundProfile, index: number, total: number) {
   const context = getAudioContext();
   if (!context || context.state !== "running") return;
   const progress = total <= 1 ? 1 : index / (total - 1);
-  const base = profile === "coin" ? 650 : profile === "stone" || profile === "molten" ? 430 : profile === "organic" ? 520 : 710;
+  const bases: Record<LootSoundProfile, number> = {
+    coin: 690,
+    "coin-pouch": 570,
+    "cash-bundle": 470,
+    "seed-amber": 520,
+    "sun-glass": 780,
+    "toxic-spore": 410,
+    "black-iron": 360,
+    "frost-heart": 860,
+    "magma-core": 390,
+    "soul-pearl": 690,
+    "storm-prism": 800,
+    "blood-obsidian": 440,
+    "dragon-scale": 590,
+  };
+  const base = bases[profile];
   const frequency = base * Math.pow(2, progress * 0.76);
   const start = context.currentTime;
-  tone(context, frequency, start, 0.13, 0.027, profile === "molten" ? "triangle" : "sine", frequency * 1.09);
+  const voice: OscillatorType = profile === "magma-core" || profile === "black-iron" || profile === "blood-obsidian" || profile === "cash-bundle" ? "triangle" : "sine";
+  tone(context, frequency, start, 0.13, 0.027, voice, frequency * 1.09);
   tone(context, frequency * 2.01, start + 0.016, 0.075, 0.01, "triangle", frequency * 2.08);
+  if (profile === "cash-bundle") noiseBurst(context, start, 0.045, 0.005, 2600, 1300);
 }
 
 export function playLootCompleteSound() {
