@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import { upgradeIconForNode } from "../upgrade-icons";
 import { requiredHallLevelForNode } from "./guild-progression";
 import styles from "./ResearchMap.module.css";
 
@@ -96,6 +98,7 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
           const available = !isPurchased && prerequisitesMet && !hallLocked;
           const isFoundation = node.id === "foundation";
           const isCitadel = node.id === "citadel";
+          const icon = upgradeIconForNode(node.id);
           const status = isPurchased
             ? "연구 완료"
             : hallLocked
@@ -113,7 +116,9 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
               disabled={isPurchased || !prerequisitesMet || hallLocked}
               aria-label={`${node.title}: ${node.description}. ${status}`}
             >
-              <span className={styles.glyph}>{hallLocked ? "🔒" : node.glyph}</span>
+              <span className={`${styles.glyph} ${icon && !hallLocked ? styles.glyphArt : ""}`}>
+                {hallLocked ? "🔒" : icon ? <Image src={icon} alt="" width={54} height={54} aria-hidden="true" /> : node.glyph}
+              </span>
               <strong>{node.title}</strong>
               <span className={styles.effect}>{node.description}</span>
               <small>{status}</small>

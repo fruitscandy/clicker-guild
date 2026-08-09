@@ -57,12 +57,49 @@ test("ships region-specific monsters with hit and death actions", async () => {
   assert.match(css, /@keyframes packMonsterSoul/);
 });
 
+test("distinguishes direct attacks from triggered guild upgrade effects", async () => {
+  const [game, css] = await Promise.all([
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(game, /activeCombatProcs/);
+  assert.match(game, /attackUpgradeStatuses/);
+  assert.match(game, /executionCount/);
+  assert.match(game, /executionTargets/);
+  assert.match(game, /shockwaveClicksRemaining/);
+  assert.match(game, /comboClicksRemaining/);
+  assert.match(game, /shockwave-activation-emblem/);
+  assert.match(game, /critical-impact-burst/);
+  assert.match(game, /combo-follow-through/);
+  assert.match(game, /execution-impact-cut/);
+  assert.match(game, /execution-finisher/);
+  assert.match(game, /combo-damage-first/);
+  assert.match(game, /combo-damage-second/);
+  assert.doesNotMatch(game, /fx-pattern-label/);
+  assert.doesNotMatch(game, /combat-proc-popover/);
+  assert.match(game, /UPGRADE_ICON_BY_KEY\[upgrade\.key\]/);
+  for (const key of ["range", "critical", "shockwave", "combo", "execution", "momentum"]) {
+    assert.match(game, new RegExp(`key: "${key}"`));
+  }
+  assert.match(game, /일반 직접 공격/);
+  assert.match(css, /\.shockwave-screen-impact/);
+  assert.match(css, /\.shockwave-activation-emblem/);
+  assert.match(css, /\.field-click-fx\.is-critical \.fx-damage/);
+  assert.match(css, /@keyframes criticalDamageSlam/);
+  assert.match(css, /@keyframes comboSlashSecond/);
+  assert.match(css, /@keyframes executionTargetFall/);
+  assert.match(css, /\.attack-upgrade-monitor > span\.triggered/);
+});
+
 test("routes guild management through buildings and gates four-way research", async () => {
-  const [game, progression, hub, researchMap] = await Promise.all([
+  const [game, progression, hub, researchMap, iconConfig, iconAssets] = await Promise.all([
     readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/guild-hub/guild-progression.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/guild-hub/GuildBuildingHub.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/guild-hub/ResearchMap.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/upgrade-icons.ts", import.meta.url), "utf8"),
+    readdir(new URL("../public/assets/upgrades/", import.meta.url)),
   ]);
 
   assert.match(game, /guildHallLevel/);
@@ -81,6 +118,12 @@ test("routes guild management through buildings and gates four-way research", as
   assert.match(researchMap, /원정 지원/);
   assert.match(researchMap, /길드 경영/);
   assert.match(researchMap, /본관 Lv\.\$\{requiredHallLevel\} 필요/);
+  assert.match(researchMap, /upgradeIconForNode/);
+  assert.match(game, /UPGRADE_ICON_BY_KEY/);
+  assert.equal(iconAssets.filter((file) => file.endsWith(".webp")).length, 12);
+  for (const key of ["range", "critical", "combo", "execution", "shockwave", "momentum", "time", "scout", "guild", "gold", "tavern", "loot"]) {
+    assert.match(iconConfig, new RegExp(`${key}: "/assets/upgrades/${key}\\.webp"`));
+  }
 });
 
 test("upgrades the flame forge and carries the equipped weapon into the combat cursor", async () => {
