@@ -2,6 +2,14 @@ import type { LootSoundProfile } from "./stage-materials";
 
 let battleAudioContext: AudioContext | null = null;
 
+const GOLD_COIN_SAMPLE_URLS = [
+  "/assets/audio/loot/gold-coin-clink-01.mp3",
+  "/assets/audio/loot/gold-coin-jingle-02.mp3",
+] as const;
+
+let goldCoinSampleBuffers: AudioBuffer[] = [];
+let goldCoinSamplePromise: Promise<void> | null = null;
+
 function getAudioContext() {
   if (typeof window === "undefined") return null;
   const AudioContextClass = window.AudioContext
@@ -9,6 +17,48 @@ function getAudioContext() {
   if (!AudioContextClass) return null;
   battleAudioContext ??= new AudioContextClass();
   return battleAudioContext;
+}
+
+function prepareGoldCoinSamples(context: AudioContext) {
+  if (goldCoinSampleBuffers.length === GOLD_COIN_SAMPLE_URLS.length) return Promise.resolve();
+  if (goldCoinSamplePromise) return goldCoinSamplePromise;
+
+  goldCoinSamplePromise = Promise.allSettled(
+    GOLD_COIN_SAMPLE_URLS.map(async (url) => {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Failed to load coin sound: ${response.status}`);
+      return context.decodeAudioData(await response.arrayBuffer());
+    }),
+  ).then((results) => {
+    goldCoinSampleBuffers = results.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+  }).finally(() => {
+    goldCoinSamplePromise = null;
+  });
+
+  return goldCoinSamplePromise;
+}
+
+function playGoldCoinSample(context: AudioContext, start: number, dropIndex: number) {
+  if (!goldCoinSampleBuffers.length) {
+    void prepareGoldCoinSamples(context);
+    return false;
+  }
+
+  // The shorter jingle is favored so every drop reads as game gold, while the
+  // harder real-coin impact keeps repeated monster kills from sounding cloned.
+  const requestedIndex = dropIndex % 3 === 0 ? 0 : 1;
+  const sampleIndex = requestedIndex % goldCoinSampleBuffers.length;
+  const source = context.createBufferSource();
+  const gain = context.createGain();
+  const pitchVariation = [0.97, 1.015, 0.99, 1.035, 0.955][dropIndex % 5];
+
+  source.buffer = goldCoinSampleBuffers[sampleIndex];
+  source.playbackRate.setValueAtTime(pitchVariation, start);
+  gain.gain.setValueAtTime(sampleIndex === 0 ? 0.2 : 0.27, start);
+  source.connect(gain);
+  gain.connect(context.destination);
+  source.start(start);
+  return true;
 }
 
 function tone(
@@ -68,8 +118,9 @@ function noiseBurst(
 
 export function unlockBattleAudio() {
   const context = getAudioContext();
-  if (!context || context.state === "running") return;
-  void context.resume().catch(() => undefined);
+  if (!context) return;
+  void prepareGoldCoinSamples(context);
+  if (context.state !== "running") void context.resume().catch(() => undefined);
 }
 
 export function playLootDropSound(profile: LootSoundProfile, dropIndex = 0) {
@@ -79,17 +130,12 @@ export function playLootDropSound(profile: LootSoundProfile, dropIndex = 0) {
   const variation = (dropIndex % 5 - 2) * 13;
 
   if (profile === "coin") {
-    // Two quick, inharmonic impacts read as a small handful of coins landing: "짤-랑".
-    tone(context, 1760 + variation * 3, start, 0.22, 0.028, "sine", 1260 + variation * 2, 0.002);
-    tone(context, 3160 + variation * 5, start + 0.002, 0.13, 0.014, "triangle", 2380 + variation * 3, 0.0015);
-    tone(context, 760 + variation, start + 0.004, 0.09, 0.009, "triangle", 520 + variation / 2, 0.002);
-    noiseBurst(context, start, 0.022, 0.009, 6200, 3500);
-
-    const rebound = start + 0.052;
-    tone(context, 2210 + variation * 4, rebound, 0.18, 0.024, "sine", 1580 + variation * 2, 0.002);
-    tone(context, 3890 + variation * 6, rebound + 0.002, 0.1, 0.011, "triangle", 2950 + variation * 3, 0.0015);
-    tone(context, 980 + variation, rebound + 0.004, 0.08, 0.007, "triangle", 680 + variation / 2, 0.002);
-    noiseBurst(context, rebound, 0.018, 0.007, 7000, 4100);
+    if (playGoldCoinSample(context, start, dropIndex)) return;
+    // The recorded CC0 samples are normally preloaded at battle start. This
+    // compact fallback only covers a first-frame cache miss or network failure.
+    tone(context, 2380 + variation * 3, start, 0.12, 0.022, "triangle", 1510 + variation * 2, 0.002);
+    tone(context, 3650 + variation * 4, start + 0.035, 0.09, 0.012, "sine", 2460 + variation * 2, 0.0015);
+    noiseBurst(context, start, 0.024, 0.007, 7200, 3900);
     return;
   }
   if (profile === "coin-pouch") {
