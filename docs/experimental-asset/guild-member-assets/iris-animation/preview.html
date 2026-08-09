@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>빙결술사 아이리스 애니메이션</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; padding: 32px; background: #161819; color: #f7f0dc; }
+    main { max-width: 1120px; margin: auto; }
+    h1 { margin-bottom: 8px; } p { color: #b9b7ae; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+    figure { margin: 0; padding: 18px; border: 1px solid #3b3c38; border-radius: 14px; background: #242623; }
+    figure.connected { grid-column: 1 / -1; }
+    img { display: block; width: min(100%, 384px); margin: auto; image-rendering: auto; }
+    figcaption { padding-top: 10px; text-align: center; }
+  </style>
+</head>
+<body><main>
+  <h1>빙결술사 아이리스</h1><p>대기 → 이동 → 기본 공격 → 대기 → 얼음 파편 → 대기</p>
+  <div class="grid">
+    <figure class="connected"><img src="previews/iris-connected-animation.webp" alt="전체 연결 애니메이션" /><figcaption>전체 연결 애니메이션</figcaption></figure>
+    <figure><img src="previews/iris-idle-preview.webp" alt="대기" /><figcaption>대기 · 6프레임</figcaption></figure>
+    <figure><img src="previews/iris-run-preview.webp" alt="이동" /><figcaption>이동 · 8프레임</figcaption></figure>
+    <figure><img src="previews/iris-attack-preview.webp" alt="기본 공격" /><figcaption>기본 공격 · 8프레임</figcaption></figure>
+    <figure><img src="previews/iris-ice-shard-preview.webp" alt="얼음 파편" /><figcaption>얼음 파편 · 10프레임</figcaption></figure>
+  </div>
+</main></body></html>

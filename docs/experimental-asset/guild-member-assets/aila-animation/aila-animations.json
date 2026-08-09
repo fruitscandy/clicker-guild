@@ -1,0 +1,358 @@
+{
+  "character": "마검사 에일라",
+  "characterId": "aila",
+  "rank": "A",
+  "class": "마검사",
+  "renderFrameSize": [
+    256,
+    256
+  ],
+  "recommendedCssSize": "128px–192px",
+  "facing": "right",
+  "anchor": {
+    "x": 0.5,
+    "y": 0.96
+  },
+  "motions": {
+    "idle": {
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frameCount": 6,
+      "sheet": "sheets/aila-idle-256.png",
+      "sheetWebP": "sheets/aila-idle-256.webp",
+      "preview": "previews/aila-idle-preview.webp",
+      "loop": true,
+      "durationsMs": [
+        140,
+        140,
+        140,
+        140,
+        140,
+        140
+      ],
+      "frames": [
+        {
+          "filename": "frames/idle/idle-00.png",
+          "x": 0,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 140
+        },
+        {
+          "filename": "frames/idle/idle-01.png",
+          "x": 256,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 140
+        },
+        {
+          "filename": "frames/idle/idle-02.png",
+          "x": 512,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 140
+        },
+        {
+          "filename": "frames/idle/idle-03.png",
+          "x": 768,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 140
+        },
+        {
+          "filename": "frames/idle/idle-04.png",
+          "x": 1024,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 140
+        },
+        {
+          "filename": "frames/idle/idle-05.png",
+          "x": 1280,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 140
+        }
+      ]
+    },
+    "run": {
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frameCount": 8,
+      "sheet": "sheets/aila-run-256.png",
+      "sheetWebP": "sheets/aila-run-256.webp",
+      "preview": "previews/aila-run-preview.webp",
+      "loop": true,
+      "durationsMs": [
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90
+      ],
+      "frames": [
+        {
+          "filename": "frames/run/run-00.png",
+          "x": 0,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 90
+        },
+        {
+          "filename": "frames/run/run-01.png",
+          "x": 256,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 90
+        },
+        {
+          "filename": "frames/run/run-02.png",
+          "x": 512,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 90
+        },
+        {
+          "filename": "frames/run/run-03.png",
+          "x": 768,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 90
+        },
+        {
+          "filename": "frames/run/run-04.png",
+          "x": 1024,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 90
+        },
+        {
+          "filename": "frames/run/run-05.png",
+          "x": 1280,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 90
+        },
+        {
+          "filename": "frames/run/run-06.png",
+          "x": 1536,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 90
+        },
+        {
+          "filename": "frames/run/run-07.png",
+          "x": 1792,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 90
+        }
+      ]
+    },
+    "attack": {
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frameCount": 8,
+      "sheet": "sheets/aila-attack-256.png",
+      "sheetWebP": "sheets/aila-attack-256.webp",
+      "preview": "previews/aila-attack-preview.webp",
+      "loop": false,
+      "durationsMs": [
+        110,
+        90,
+        70,
+        55,
+        55,
+        80,
+        100,
+        120
+      ],
+      "frames": [
+        {
+          "filename": "frames/attack/attack-00.png",
+          "x": 0,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 110
+        },
+        {
+          "filename": "frames/attack/attack-01.png",
+          "x": 256,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 90
+        },
+        {
+          "filename": "frames/attack/attack-02.png",
+          "x": 512,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 70
+        },
+        {
+          "filename": "frames/attack/attack-03.png",
+          "x": 768,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 55
+        },
+        {
+          "filename": "frames/attack/attack-04.png",
+          "x": 1024,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 55
+        },
+        {
+          "filename": "frames/attack/attack-05.png",
+          "x": 1280,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 80
+        },
+        {
+          "filename": "frames/attack/attack-06.png",
+          "x": 1536,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 100
+        },
+        {
+          "filename": "frames/attack/attack-07.png",
+          "x": 1792,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 120
+        }
+      ]
+    },
+    "magic-slash": {
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "frameCount": 10,
+      "sheet": "sheets/aila-magic-slash-256.png",
+      "sheetWebP": "sheets/aila-magic-slash-256.webp",
+      "preview": "previews/aila-magic-slash-preview.webp",
+      "loop": false,
+      "durationsMs": [
+        110,
+        85,
+        65,
+        70,
+        60,
+        70,
+        95,
+        80,
+        120,
+        145
+      ],
+      "frames": [
+        {
+          "filename": "frames/magic-slash/magic-slash-00.png",
+          "x": 0,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 110
+        },
+        {
+          "filename": "frames/magic-slash/magic-slash-01.png",
+          "x": 256,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 85
+        },
+        {
+          "filename": "frames/magic-slash/magic-slash-02.png",
+          "x": 512,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 65
+        },
+        {
+          "filename": "frames/magic-slash/magic-slash-03.png",
+          "x": 768,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 70
+        },
+        {
+          "filename": "frames/magic-slash/magic-slash-04.png",
+          "x": 1024,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 60
+        },
+        {
+          "filename": "frames/magic-slash/magic-slash-05.png",
+          "x": 1280,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 70
+        },
+        {
+          "filename": "frames/magic-slash/magic-slash-06.png",
+          "x": 1536,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 95
+        },
+        {
+          "filename": "frames/magic-slash/magic-slash-07.png",
+          "x": 1792,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 80
+        },
+        {
+          "filename": "frames/magic-slash/magic-slash-08.png",
+          "x": 2048,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 120
+        },
+        {
+          "filename": "frames/magic-slash/magic-slash-09.png",
+          "x": 2304,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 145
+        }
+      ]
+    }
+  }
+}

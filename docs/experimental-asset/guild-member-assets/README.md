@@ -5,20 +5,38 @@
 ## 포함 범위
 
 - F~S 등급 길드원 25명의 전신 캐릭터 시안
-- 첫 캐릭터 `견습 전사 로안`의 웹게임용 애니메이션
+- 길드원 25명 전원의 웹게임용 애니메이션
   - 대기 6프레임
   - 이동 8프레임
   - 기본 공격 8프레임
-  - 고유 스킬 `강타` 10프레임
+  - 캐릭터별 고유 스킬 10프레임
+- 각 캐릭터의 네 동작을 한 번에 확인하는 49프레임 연결 애니메이션
 - 투명 PNG 개별 프레임과 스프라이트 시트
 - 무손실 WebP 시트와 재생 미리보기
-- 프레임 타이밍 및 기준점 JSON
+- 프레임 타이밍, 기준점, 연결 순서 JSON
+- 실제 전투 화면에서 대기·공격·스킬 애니메이션 자동 전환
 
 ## 폴더 구조
 
 - [planning-source.md](planning-source.md): 기획서에서 추출한 직업·캐릭터 데이터와 작업 기준
 - [character-concepts](character-concepts/README.md): 길드원 25명 캐릭터 시안
-- [roan-animation](roan-animation/README.md): 로안 애니메이션 및 웹 적용 자료
+- `{id}-animation/README.md`: 캐릭터별 애니메이션 구성과 적용 자료
+- `{id}-animation/preview.html`: 대기·이동·공격·스킬 개별 미리보기
+- `{id}-animation/previews/{id}-connected-animation.webp`: 전체 연결 미리보기
+
+## 게임 적용 경로
+
+- 런타임 WebP: `public/assets/guild-members/{id}/`
+- 캐릭터별 파일 경로 매핑: `app/member-animations.ts`
+- 전투 상태에 따른 동작 전환: `app/Game.tsx`
+
+전투 화면에서는 평상시 `idle`, 자동 공격 발생 시 `attack`, 고유 스킬 발동 시 캐릭터별 `skill` WebP가 재생됩니다. 공격과 스킬 파일은 이벤트 시점마다 다시 마운트되어 첫 프레임부터 시작합니다.
+
+## 연결 애니메이션 순서
+
+`대기 6 → 이동 8 × 2 → 공격 8 → 대기 3 → 고유 스킬 10 → 대기 6`
+
+총 49프레임이며 캐릭터별 `*-connected-animation.json`에서 정확한 파일 순서와 프레임 지속 시간을 확인할 수 있습니다.
 
 ## 아트 방향
 

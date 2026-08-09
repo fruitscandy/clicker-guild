@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { compactNumber, getStage, MEMBERS, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "./game-data";
+import { memberAnimationSource, type MemberMotion } from "./member-animations";
 
 type Tab = "guild" | "field" | "tavern";
 type MemberProgress = { level: number; xp: number; gear: number };
@@ -131,7 +133,7 @@ export default function Game() {
   const [hydrated, setHydrated] = useState(false);
   const [battleActive, setBattleActive] = useState(false);
   const [monsterHp, setMonsterHp] = useState(getStage(1).hp);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(0);
   const [stagePicker, setStagePicker] = useState(false);
   const [toast, setToast] = useState("첫 몬스터를 눌러 길드의 모험을 시작하세요!");
   const [victory, setVictory] = useState(false);
@@ -143,6 +145,7 @@ export default function Game() {
   const [clicks, setClicks] = useState(0);
   const [hitFx, setHitFx] = useState(0);
   const [memberFx, setMemberFx] = useState<Record<string, number>>({});
+  const [memberSkillFx, setMemberSkillFx] = useState<Record<string, number>>({});
   const [skillFx, setSkillFx] = useState<string | null>(null);
   const lastAttack = useRef<Record<string, number>>({});
   const lastSkill = useRef<Record<string, number>>({});
@@ -165,6 +168,7 @@ export default function Game() {
     return Math.round(clickDamage * 2.2 + partyPower);
   }, [partyMembers, progressFor, developerPower, clickDamage, guildMultiplier]);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Saved progress is intentionally restored after the client mounts. */
   useEffect(() => {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
@@ -179,6 +183,7 @@ export default function Game() {
     setHydrated(true);
     setDeveloperToolsAvailable(["localhost", "127.0.0.1"].includes(window.location.hostname));
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!hydrated) return;
@@ -265,13 +270,14 @@ export default function Game() {
       if (now - lastAttack.current[member.id] >= attackMs) {
         lastAttack.current[member.id] = now;
         damageMonster(attackFor(member, progressFor(member)) * guildMultiplier * developerPower);
-        setMemberFx((current) => ({ ...current, [member.id]: (current[member.id] || 0) + 1 }));
+        setMemberFx((current) => ({ ...current, [member.id]: now }));
       }
       if (now - lastSkill.current[member.id] >= skillMs) {
         lastSkill.current[member.id] = now;
         damageMonster(attackFor(member, progressFor(member)) * guildMultiplier * member.skillMultiplier * developerPower);
+        setMemberSkillFx((current) => ({ ...current, [member.id]: now }));
         setSkillFx(member.id);
-        window.setTimeout(() => setSkillFx((current) => current === member.id ? null : current), 650);
+        window.setTimeout(() => setSkillFx((current) => current === member.id ? null : current), 1100);
       }
     });
   }, [now, battleActive, tab, monsterHp, partyMembers, progressFor, developerPower, guildMultiplier, damageMonster]);
@@ -311,6 +317,8 @@ export default function Game() {
     victoryLock.current = false;
     lastAttack.current = {};
     lastSkill.current = {};
+    setMemberFx({});
+    setMemberSkillFx({});
     setVictory(false);
     setDefeat(false);
     setBattleActive(true);
@@ -573,12 +581,34 @@ export default function Game() {
               <div className="fighters" aria-label="출전 길드원">
                 {partyMembers.map((member, index) => {
                   const progress = save.progress[member.id];
-                  const attackElapsed = now - (lastAttack.current[member.id] || now);
-                  const skillElapsed = now - (lastSkill.current[member.id] || now);
+                  const battleStartedAt = battleDeadline ? battleDeadline - battleSeconds * 1000 : now;
+                  const attackElapsed = now - (memberFx[member.id] || now);
+                  const skillElapsed = now - (memberSkillFx[member.id] || battleStartedAt);
                   const skillReady = Math.min(1, skillElapsed / (member.skillCooldown * 1000));
+                  const motion: MemberMotion = skillFx === member.id
+                    ? "skill"
+                    : memberFx[member.id] && attackElapsed < 850
+                      ? "attack"
+                      : "idle";
+                  const motionEvent = motion === "skill"
+                    ? memberSkillFx[member.id]
+                    : motion === "attack"
+                      ? memberFx[member.id]
+                      : "idle";
                   return <div className={`fighter fighter-${index + 1} ${skillFx === member.id ? "casting" : ""}`} key={member.id} style={{ "--member-hue": member.hue } as React.CSSProperties}>
                     <div className="fighter-name"><strong>{member.name.split(" ").at(-1)}</strong><span>Lv.{progress.level}</span></div>
-                    <div className="sprite"><i className="sprite-head" /><i className="sprite-body">{member.glyph}</i><i className="sprite-weapon" /></div>
+                    <div className="sprite">
+                      <Image
+                        key={`${member.id}-${motion}-${motionEvent}`}
+                        className="fighter-animation"
+                        src={memberAnimationSource(member.id, motion)}
+                        alt=""
+                        fill
+                        sizes="152px"
+                        unoptimized
+                        draggable={false}
+                      />
+                    </div>
                     <div className="fighter-shadow" />
                     <div className="skill-meter" title={`${member.skill} 쿨타임`}><i style={{ width: `${skillReady * 100}%` }} /><span>{skillReady >= 1 ? member.skill : `${Math.max(0, member.skillCooldown - skillElapsed / 1000).toFixed(1)}초`}</span></div>
                     {memberFx[member.id] ? <i key={memberFx[member.id]} className="attack-trail" /> : null}
