@@ -1,0 +1,88 @@
+.trigger {
+  display: grid;
+  grid-template-columns: 52px auto auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 7px 13px 7px 9px;
+  color: #f7e8c7;
+  background: linear-gradient(145deg, #392d24, #201a16);
+  border: 2px solid #7c6042;
+  border-radius: 12px;
+  box-shadow: 0 4px 0 rgba(20, 14, 10, .32), inset 0 1px rgba(255, 255, 255, .08);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.trigger:hover { border-color: #e2aa54; filter: brightness(1.08); transform: translateY(-1px); }
+.trigger > span:not(.iconStack) { display: grid; gap: 1px; font-size: 11px; font-weight: 900; white-space: nowrap; }
+.trigger small { color: #bda78c; font-size: 7px; }
+.trigger > strong { min-width: 28px; color: #ffd265; font-size: 17px; text-align: right; }
+
+.iconStack { position: relative; width: 52px; height: 28px; }
+.iconStack i { position: absolute; top: 1px; width: 27px; height: 27px; border-width: 1px; border-radius: 6px; }
+.iconStack i:nth-child(1) { left: 0; z-index: 3; }
+.iconStack i:nth-child(2) { left: 13px; z-index: 2; }
+.iconStack i:nth-child(3) { left: 26px; z-index: 1; }
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(10, 8, 7, .78);
+  backdrop-filter: blur(5px);
+}
+
+.dialog {
+  width: min(960px, 100%);
+  max-height: min(820px, calc(100vh - 48px));
+  overflow: auto;
+  color: #efe2c9;
+  background: radial-gradient(circle at 50% 0, rgba(159, 101, 43, .18), transparent 35%), #211a16;
+  border: 2px solid #9d7448;
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .58), inset 0 1px rgba(255, 255, 255, .08);
+}
+
+.dialog header { display: flex; justify-content: space-between; gap: 20px; padding: 22px 24px 16px; border-bottom: 1px solid #5d4634; }
+.dialog h2 { margin: 4px 0; color: #fff0cf; font: 900 28px Georgia, "Noto Serif KR", serif; }
+.dialog header p { margin: 0; color: #bda98e; font-size: 11px; }
+.eyebrow { color: #dda350; font-size: 8px; font-weight: 1000; letter-spacing: .14em; }
+.close { align-self: start; width: 38px; height: 38px; color: #f8dfb5; background: #352820; border: 1px solid #876444; border-radius: 9px; cursor: pointer; font: 700 25px/1 sans-serif; }
+
+.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 13px 24px; background: rgba(10, 8, 7, .22); border-bottom: 1px solid #4c392c; }
+.summary span { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; color: #aa9781; background: #171310; border: 1px solid #4f3b2e; border-radius: 7px; font-size: 8px; font-weight: 900; }
+.summary strong { color: #f5d890; font-size: 12px; }
+
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; padding: 18px 24px 24px; }
+.card { position: relative; display: grid; grid-template-columns: 58px 1fr auto; align-items: center; gap: 10px; min-width: 0; padding: 11px; background: linear-gradient(145deg, #30251e, #191512); border: 1px solid #674d38; border-radius: 9px; }
+.card.available { border-left: 4px solid var(--material-accent, #d8a95b); }
+.card.locked { filter: grayscale(.82); opacity: .58; }
+.materialIcon { width: 56px; height: 56px; border-radius: 10px; }
+.cardCopy { display: grid; gap: 2px; min-width: 0; }
+.cardCopy > span { color: #d89c51; font-size: 7px; font-weight: 1000; }
+.cardCopy > strong { overflow: hidden; color: #f8e6c7; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.cardCopy > small { color: #a38f7a; font-size: 7px; }
+.owned { display: grid; justify-items: end; gap: 1px; min-width: 40px; }
+.owned small { color: #97836e; font-size: 7px; }
+.owned strong { color: #ffd068; font-size: 20px; }
+.card > p { grid-column: 2 / 4; margin: 1px 0 0; padding-top: 6px; color: #b9a58d; border-top: 1px solid #4b382b; font-size: 8px; }
+
+@media (max-width: 720px) {
+  .backdrop { padding: 8px; }
+  .dialog { max-height: calc(100vh - 16px); border-radius: 11px; }
+  .dialog header { padding: 16px; }
+  .dialog h2 { font-size: 22px; }
+  .summary { grid-template-columns: 1fr; padding: 10px 16px; }
+  .grid { grid-template-columns: 1fr; padding: 12px 16px 18px; }
+  .trigger { grid-template-columns: 44px auto auto; flex: 1; justify-content: center; padding: 5px 8px; }
+  .iconStack { width: 44px; transform: scale(.86); transform-origin: left center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger:hover { transform: none; }
+}

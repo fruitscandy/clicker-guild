@@ -257,6 +257,26 @@ test("keeps developer resource purchases isolated from the saved game", async ()
   assert.match(resourceStyles, /\.materialGrid/);
   assert.match(resourceStyles, /@media \(max-width: 760px\)/);
   assert.doesNotMatch(resourcePanel, /localStorage|SAVE_KEY/);
+  assert.match(resourcePanel, /지역 강화 소재 10종/);
+  assert.match(resourcePanel, /allStageMaterials/);
+});
+
+test("shows one complete material inventory and removes the combat power chip", async () => {
+  const [game, inventory, economy] = await Promise.all([
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/MaterialInventory.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/economy-balance.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(game, /<MaterialInventory materials=\{save\.materials\}/);
+  assert.match(game, /migrateMaterialInventory\(loaded\.materials \?\? \{\}\)/);
+  assert.doesNotMatch(game, /전투력|combatPower/);
+  assert.doesNotMatch(game, /current-material-resource/);
+  assert.match(inventory, /강화 소재 보관함/);
+  assert.match(inventory, /획득 가능한 강화 소재 10종/);
+  assert.match(inventory, /STAGE \{material\.firstStage\}–\{material\.lastStage\}/);
+  assert.match(economy, /NORMAL_BATTLE_SECONDS = 26/);
+  assert.match(economy, /BOSS_BATTLE_SECONDS = 36/);
 });
 
 test("uses expedition state instead of locked navigation tabs", async () => {
