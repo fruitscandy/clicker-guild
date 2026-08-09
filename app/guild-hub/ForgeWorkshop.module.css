@@ -24,7 +24,6 @@
 
 .header h3 { margin: 3px 0 4px; color: #fff0cf; font: 900 27px Georgia, "Noto Serif KR", serif; }
 .header p { max-width: 680px; margin: 0; color: #c9b498; font-size: 10px; line-height: 1.6; }
-
 .forgeFloor {
   position: relative;
   display: grid;

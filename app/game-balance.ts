@@ -1,7 +1,6 @@
 export const BASE_CLICK_DAMAGE = 18;
 export const BASE_ATTACK_RANGE = 14;
 export const MEMBER_ASSIST_FACTOR = 0.68;
-export const AUTO_ATTACK_FACTOR = 0.42;
 
 export const TARGET_RUN_MINUTES = { min: 10, max: 20 } as const;
 export const TARGET_CLEAR_SECONDS = {

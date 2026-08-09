@@ -57,7 +57,6 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
 .resources strong { font-size: 17px; }
 .resource-dot { width: 17px; height: 17px; border: 2px solid var(--line); display: inline-block; }
 .gold-dot { border-radius: 50%; background: var(--yellow); }
-.token-dot { border-radius: 4px; background: var(--coral); transform: rotate(12deg); }
 .power-dot { border-radius: 50%; background: #8ed6c3; box-shadow: inset 0 0 0 3px var(--paper); }
 
 .small-button, .secondary-button, .primary-button, .text-button, .hire-button, .attack-button { border: 0; cursor: pointer; font-weight: 900; }
@@ -110,7 +109,7 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
 .upgrade-row:disabled { cursor: not-allowed; opacity: .55; }
 .upgrade-icon { display: grid; place-items: center; width: 40px; height: 40px; border: 2px solid var(--line); border-radius: 12px; background: var(--yellow); font-weight: 1000; }
 .upgrade-row strong, .upgrade-row small { display: block; }.upgrade-row strong { font-size: 14px; }.upgrade-row strong em { color: var(--coral-dark); font-style: normal; }.upgrade-row small { margin-top: 3px; color: var(--ink-soft); font-size: 10px; }.upgrade-row > b { color: var(--coral-dark); font-size: 12px; white-space: nowrap; }
-.roster-section, .special-section { margin-top: 18px; padding: 20px; }
+.roster-section { margin-top: 18px; padding: 20px; }
 .panel-description { margin: 6px 0 16px; color: var(--ink-soft); font-size: 12px; }
 .roster-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .member-card { position: relative; display: grid; grid-template-columns: 58px 1fr auto; align-items: center; gap: 11px; min-width: 0; min-height: 106px; padding: 12px; border: 2px solid var(--line); border-radius: 17px; background: #f5f1df; text-align: left; cursor: pointer; box-shadow: 0 4px 0 rgba(23, 63, 50, .18); transition: transform .12s ease, background .12s ease; }
@@ -124,8 +123,6 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
 .xp-bar { display: block; height: 6px; margin: 7px 0 0; background: #d9d3bf; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }.xp-bar i { display: block; height: 100%; background: var(--yellow); }
 .party-check { align-self: start; padding: 4px 6px; background: var(--paper); border: 1px solid var(--line); border-radius: 7px; font-size: 9px; font-weight: 900; }
 .recruit-card { display: flex; flex-direction: column; justify-content: center; text-align: center; border-style: dashed; }.recruit-card .recruit-plus { display: grid; place-items: center; width: 38px; height: 38px; color: var(--paper); background: var(--coral); border: 2px solid var(--line); border-radius: 50%; font-size: 24px; }.recruit-card small { color: var(--ink-soft); }
-.special-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 15px; }
-.special-card { display: grid; grid-template-columns: 42px 1fr auto; align-items: center; gap: 10px; padding: 13px; border: 2px solid var(--line); border-radius: 15px; background: #eee9db; text-align: left; cursor: pointer; }.special-card > span { grid-row: 1 / span 2; display: grid; place-items: center; width: 40px; height: 40px; color: var(--paper); background: var(--ink-soft); border-radius: 50%; }.special-card strong { font-size: 13px; }.special-card small { grid-column: 2 / 4; color: var(--ink-soft); font-size: 10px; }.special-card b { font-size: 10px; }.special-card.unlocked { background: var(--yellow-soft); }.special-card.unlocked > span { background: var(--green); }
 
 /* Field */
 .field-actions, .heading-actions { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
@@ -266,7 +263,7 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
   .topbar { flex-wrap: wrap; gap: 12px; }.brand { min-width: 0; }.resources { order: 3; width: 100%; justify-content: stretch; }.resources > span { flex: 1; justify-content: center; }.reset-button { margin-left: auto; }
   .section-heading, .field-toolbar { align-items: stretch; flex-direction: column; }.section-heading .primary-button { width: 100%; }.field-actions, .heading-actions { justify-content: stretch; }.field-actions > *, .heading-actions > * { flex: 1; text-align: center; justify-content: center; }
   .territory { min-height: 390px; }.guild-hall { left: 31%; width: 190px; }.tavern-building { left: 4%; width: 120px; }.flag { left: calc(31% + 88px); }
-  .upgrade-list, .roster-grid, .special-grid { grid-template-columns: 1fr; }.member-card { min-height: 95px; }
+  .upgrade-list, .roster-grid { grid-template-columns: 1fr; }.member-card { min-height: 95px; }
   .arena { min-height: 600px; }.fighters { inset: 88px 0 66px; }.fighter { --fighter-scale: .62; }.fighter-1 { left: 9%; top: 37%; }.fighter-2 { left: 27%; top: 20%; --fighter-scale: .58; }.fighter-3 { left: 23%; top: 60%; --fighter-scale: .59; }.fighter-4 { left: 41%; top: 42%; --fighter-scale: .55; }.monster-target { right: 2%; top: 20%; bottom: auto; transform: scale(.66); transform-origin: center; }
   .battle-sidebar { grid-template-columns: 1fr; }.click-power { grid-column: auto; }
   .candidate-grid { grid-template-columns: 1fr; padding: 0 8px; }.candidate-card { display: grid; grid-template-columns: 110px 1fr; gap: 5px 14px; text-align: left; }.candidate-portrait { grid-row: 1 / span 5; margin: 0; }.candidate-card dl { grid-column: 2; }.candidate-card .hire-button { grid-column: 1 / -1; }.candidate-card > p { min-height: 0; }
@@ -280,7 +277,7 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
   .toast { font-size: 10px; }
   .screen { padding-top: 17px; }.section-heading h2, .field-toolbar h2 { font-size: 28px; }.section-heading p { font-size: 11px; }
   .territory { min-height: 340px; }.guild-hall { left: 29%; width: 150px; height: 140px; }.tavern-building { width: 95px; height: 90px; }.flag { left: calc(29% + 69px); bottom: 218px; }.territory-caption { align-items: flex-start; flex-direction: column; }
-  .roster-section, .special-section, .upgrade-panel { padding: 13px; }.member-card { grid-template-columns: 50px 1fr; }.portrait { width: 48px; height: 58px; }.party-check { position: absolute; right: 7px; top: 7px; }
+  .roster-section, .upgrade-panel { padding: 13px; }.member-card { grid-template-columns: 50px 1fr; }.portrait { width: 48px; height: 58px; }.party-check { position: absolute; right: 7px; top: 7px; }
   .arena { min-height: 530px; }.battle-banner { max-width: 90%; }.board-ground { left: 2%; right: 2%; top: 70px; bottom: 55px; }.terrain-layer { left: 4%; right: 4%; top: 98px; bottom: 85px; }.terrain-object { width: 31px; height: 31px; }.environment-tag { left: 10px; bottom: 10px; max-width: 210px; }.fighters { inset: 74px 0 55px; }.fighter { --fighter-scale: .45; }.fighter-1 { left: 2%; top: 38%; }.fighter-2 { left: 22%; top: 18%; --fighter-scale: .42; }.fighter-3 { left: 17%; top: 62%; --fighter-scale: .43; }.fighter-4 { left: 38%; top: 41%; --fighter-scale: .4; }.monster-target { right: -13%; top: 17%; bottom: auto; transform: scale(.52); }.click-callout { display: none; }
   .candidate-card { grid-template-columns: 86px 1fr; }.candidate-portrait { width: 86px; height: 102px; }.candidate-card dl { grid-template-columns: 1fr 1fr; }.rank-progress { grid-template-columns: repeat(2, 1fr); }
   .stage-modal { padding: 12px; }.stage-grid { grid-template-columns: repeat(5, 1fr); gap: 4px; }.stage-grid button { min-height: 48px; }
@@ -477,12 +474,12 @@ body {
 .building span { background: #f4dfb1; border-color: #38241b; }
 .territory-caption { background: rgba(247,235,207,.94); border: 1px solid #8f6d50; border-radius: 7px; }
 .upgrade-panel { background: #f8f0df; }
-.growth-stats > div, .upgrade-row, .member-card, .special-card, .party-row { background: #f3e8d3; border-color: #bda780; border-width: 1px; border-radius: 8px; box-shadow: 0 2px 0 rgba(74,49,34,.15); }
+.growth-stats > div, .upgrade-row, .member-card, .party-row { background: #f3e8d3; border-color: #bda780; border-width: 1px; border-radius: 8px; box-shadow: 0 2px 0 rgba(74,49,34,.15); }
 .growth-stats > div:hover, .upgrade-row:hover:not(:disabled), .member-card:hover { background: #f8edce; }
 .member-card.selected { background: #e5e8c8; box-shadow: inset 4px 0 #8a954f, 0 2px 0 rgba(74,49,34,.15); }
 .portrait, .candidate-portrait { border-color: #654534; border-radius: 16px 16px 8px 8px; }
 .rank-badge, .party-check { border-width: 1px; border-color: #4a3328; border-radius: 4px; }
-.roster-section, .special-section, .collection-strip { background: #efe2c9; }
+.roster-section, .collection-strip { background: #efe2c9; }
 
 .upgrade-tree-panel { background: #eee0c4; }
 .tech-tree-scroll { border: 1px solid #836347; border-radius: 8px; background: radial-gradient(circle at 50% 20%,#34312d,#1d211d 62%,#121713); }
@@ -657,8 +654,6 @@ body {
 .arena-click-impact.click-tier-2 { --impact-peak: .5; background: radial-gradient(circle at 76% 48%, rgba(159,235,255,.42), transparent 29%); }
 .arena-click-impact.click-tier-3 { --impact-peak: .62; background: radial-gradient(circle at 76% 48%, rgba(208,180,255,.5), transparent 35%); animation-duration: .72s; }
 .arena-click-impact.click-tier-4 { opacity: .82; background: radial-gradient(circle at 76% 48%, rgba(255,244,176,.72), rgba(145,224,255,.23) 24%, transparent 48%); animation: mythicArenaImpact 1s ease-out both; }
-.arena-click-impact.is-automatic { --impact-peak: .2; filter: saturate(.7); }
-.arena-click-impact.click-tier-4.is-automatic { animation-name: arenaImpact; }
 @keyframes arenaImpact { 0% { opacity: 0; } 18% { opacity: var(--impact-peak); } 100% { opacity: 0; } }
 @keyframes mythicArenaImpact { 0% { opacity: 0; filter: brightness(1); } 12% { opacity: 1; filter: brightness(1.5); } 38% { opacity: .55; } 100% { opacity: 0; filter: brightness(1); } }
 @keyframes arenaImpactRing { from { opacity: .9; transform: translate(-50%,-50%) scale(.25); } to { opacity: 0; transform: translate(-50%,-50%) scale(5); } }
@@ -668,7 +663,6 @@ body {
 .click-attack-fx.variant-1 { --fx-mirror: -1; }
 .click-attack-fx.variant-2 { --fx-tilt: 13deg; }
 .click-attack-fx.variant-3 { --fx-mirror: -1; --fx-tilt: -13deg; }
-.click-attack-fx.is-automatic { --fx-scale: .82; filter: saturate(.72); }
 .fx-motion-layer { position: absolute; inset: 0; display: block; transform: scaleX(var(--fx-mirror)) rotate(var(--fx-tilt)) scale(var(--fx-scale)); transform-origin: center; }
 
 .fx-slash { --slash-angle: -24deg; position: absolute; left: 50%; top: 48%; display: none; width: 250px; height: 108px; margin: -54px 0 0 -125px; border-top: 12px solid currentColor; border-radius: 50%; opacity: 0; filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 12px var(--click-glow)); transform-origin: center; animation: guildmasterSlash .62s cubic-bezier(.18,.8,.22,1) both; }
@@ -704,9 +698,6 @@ body {
 .click-tier-4 .fx-master-blade { display: block; }
 @keyframes masterBladeDrop { 0% { opacity: 0; transform: translateY(-150px) scaleY(1.6); } 22% { opacity: 1; } 53% { opacity: 1; transform: translateY(35px) scaleY(1); } 72% { opacity: .9; transform: translateY(40px) scale(1.25,.85); } 100% { opacity: 0; transform: translateY(70px) scale(2,.2); } }
 
-.fx-double-echo { position: absolute; left: 50%; top: 48%; display: none; width: 260px; height: 110px; margin: -55px 0 0 -130px; border: 7px solid #ff8d73; border-left-color: transparent; border-right-color: transparent; border-radius: 50%; opacity: 0; filter: drop-shadow(0 0 12px #ff6f58); animation: doubleStrikeEcho .72s .16s ease-out both; }
-.click-attack-fx.is-double .fx-double-echo { display: block; }
-@keyframes doubleStrikeEcho { 0% { opacity: 0; transform: rotate(-18deg) scale(.3); } 35% { opacity: .9; } 100% { opacity: 0; transform: rotate(28deg) scale(1.45); } }
 
 .fx-sparks { position: absolute; left: 50%; top: 48%; display: block; width: 0; height: 0; }
 .fx-spark { position: absolute; left: -4px; top: -4px; display: block; width: 9px; height: 9px; background: var(--click-secondary); border-radius: 50% 0 50% 50%; box-shadow: 0 0 8px #fff, 0 0 13px var(--click-glow); opacity: 0; transform: rotate(var(--spark-angle)) translateX(0) rotate(45deg); animation: clickSpark .7s var(--spark-delay) ease-out both; }
@@ -718,7 +709,6 @@ body {
 .fx-damage { position: absolute; left: 50%; top: 34%; z-index: 4; display: flex; align-items: center; gap: 7px; color: #fff8d4; text-shadow: 0 2px 0 #4d1c18, 0 0 5px #fff, 0 0 17px var(--click-glow); transform: translateX(-50%); opacity: 0; white-space: nowrap; font-family: Georgia,"Times New Roman",serif; font-size: 33px; font-weight: 900; animation: evolvedDamagePop .78s .08s cubic-bezier(.16,.8,.24,1) both; }
 .fx-damage small { padding: 3px 5px; color: #fff4d8; background: #9b3829; border: 1px solid #ffd498; border-radius: 3px; text-shadow: none; font-family: inherit; font-size: 8px; letter-spacing: .08em; }
 .click-tier-3 .fx-damage { font-size: 39px; }.click-tier-4 .fx-damage { top: 31%; font-size: 46px; animation-delay: .32s; }
-.click-attack-fx.is-automatic .fx-damage { font-size: 26px; }
 @keyframes evolvedDamagePop { 0% { opacity: 0; transform: translate(-50%,12px) scale(.45) rotate(-5deg); } 28% { opacity: 1; transform: translate(-50%,-8px) scale(1.22) rotate(2deg); } 62% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%,-92px) scale(.9) rotate(-7deg); } }
 
 .monster-sprite.click-recoil-tier-0, .monster-sprite.click-recoil-tier-1 { animation: monsterHitSoft .42s ease-out both; }
