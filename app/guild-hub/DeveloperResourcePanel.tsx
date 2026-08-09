@@ -26,8 +26,8 @@ const PRESETS: Array<{ id: DeveloperResourcePreset; label: string; detail: strin
 ];
 
 export function DeveloperResourcePanel({ resources, onChange }: DeveloperResourcePanelProps) {
-  function setAmount(key: "gold" | "bossTokens", value: string) {
-    onChange({ ...resources, [key]: clampDeveloperResourceAmount(value) });
+  function setGold(value: string) {
+    onChange({ ...resources, gold: clampDeveloperResourceAmount(value) });
   }
 
   function applyPreset(preset: DeveloperResourcePreset) {
@@ -41,7 +41,7 @@ export function DeveloperResourcePanel({ resources, onChange }: DeveloperResourc
           <small>DEV RESOURCE LAB</small>
           <strong>시험용 자원 설정</strong>
         </span>
-        <span className={styles.snapshot}>골드 {resources.gold.toLocaleString()} · 증표 {resources.bossTokens}</span>
+        <span className={styles.snapshot}>골드 {resources.gold.toLocaleString()}</span>
       </summary>
 
       <div className={styles.body}>
@@ -65,11 +65,7 @@ export function DeveloperResourcePanel({ resources, onChange }: DeveloperResourc
         <div className={styles.primaryResources}>
           <label>
             <span><b>골드</b><small>연구·본관·무기·고용</small></span>
-            <input type="number" min="0" max="999999999" step="1" value={resources.gold} onChange={(event) => setAmount("gold", event.target.value)} />
-          </label>
-          <label>
-            <span><b>보스 증표</b><small>특수 전술 해금</small></span>
-            <input type="number" min="0" max="999999999" step="1" value={resources.bossTokens} onChange={(event) => setAmount("bossTokens", event.target.value)} />
+            <input type="number" min="0" max="999999999" step="1" value={resources.gold} onChange={(event) => setGold(event.target.value)} />
           </label>
         </div>
 

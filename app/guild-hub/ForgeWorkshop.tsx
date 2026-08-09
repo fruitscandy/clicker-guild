@@ -11,13 +11,12 @@ type ForgeWorkshopProps = {
   weapons: WeaponView[];
   currentLevel: number;
   gold: number;
-  bossTokens: number;
   materials: Record<string, number>;
   formatNumber: (value: number) => string;
   onUpgrade: () => void;
 };
 
-export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materials, formatNumber, onUpgrade }: ForgeWorkshopProps) {
+export function ForgeWorkshop({ weapons, currentLevel, gold, materials, formatNumber, onUpgrade }: ForgeWorkshopProps) {
   const [previewTier, setPreviewTier] = useState(currentLevel);
   const current = weapons[currentLevel];
   const next = weapons[currentLevel + 1] ?? null;
@@ -54,7 +53,6 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materia
       </div>
       <div className={styles.resources} aria-label="대장간 보유 자원">
         <span><i className={styles.gold} />골드<strong>{formatNumber(gold)}</strong></span>
-        <span><i className={styles.token} />보스 증표<strong>{bossTokens}</strong></span>
         {nextRecipe && <span className={styles.recipeResource}><i className={`stage-material-icon ${styles.materialIcon}`} style={materialIconVars(nextRecipe.ingredients[0].material) as CSSProperties} />다음 제작 재료<strong>{recipeProgress.map(({ owned, amount }) => `${owned}/${amount}`).join(" + ")}</strong></span>}
       </div>
     </header>
