@@ -1,0 +1,478 @@
+.range {
+  position: absolute;
+  z-index: 13;
+  aspect-ratio: 1;
+  border: 2px dashed color-mix(in srgb, var(--effect-shadow), transparent 26%);
+  border-radius: 46% 54% 49% 51%;
+  background: radial-gradient(circle, transparent 0 58%, color-mix(in srgb, var(--effect-secondary), transparent 88%) 70%, transparent 73%);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.35) rotate(var(--effect-counter-rotation));
+  pointer-events: none;
+  animation: rangeSettle .62s ease-out both;
+}
+
+.range::before,
+.range::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+}
+
+.range::before {
+  inset: 7%;
+  border-top: 3px solid color-mix(in srgb, var(--effect-primary), transparent 46%);
+  border-right: 1px solid transparent;
+  border-radius: 48% 52% 45% 55%;
+  transform: rotate(17deg);
+}
+
+.range::after {
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  background: var(--effect-shadow);
+  border: 2px solid color-mix(in srgb, var(--effect-primary), #dfc792 48%);
+  border-radius: 38% 62% 42% 58%;
+  transform: translate(-50%, -50%) rotate(23deg);
+}
+
+.rangeMiss { filter: grayscale(.85); opacity: .2; }
+.rangeShockwave { border-width: 3px; animation-duration: .82s; }
+.rangeShockwave > i {
+  position: absolute;
+  inset: 18%;
+  border: 2px solid color-mix(in srgb, var(--effect-secondary), transparent 46%);
+  border-radius: 52% 48% 55% 45%;
+}
+
+.effect {
+  --effect-scale: .76;
+  --slash-alpha: .76;
+  --impact-scale: .72;
+  position: absolute;
+  z-index: 16;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.groundScar,
+.slash,
+.secondarySlash,
+.momentumEcho,
+.impact,
+.criticalNotch,
+.executionCut,
+.masterworkCrest,
+.legendaryArc,
+.forgeStamp,
+.shockwavePulse,
+.fragments,
+.dust {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  pointer-events: none;
+}
+
+.groundScar {
+  z-index: 1;
+  width: 330px;
+  height: 165px;
+  margin: -54px 0 0 -165px;
+  background: url("/assets/vfx/weapon/ground-scar.webp") center / contain no-repeat;
+  filter: saturate(.7) brightness(.68);
+  opacity: 0;
+  transform: rotate(var(--effect-counter-rotation)) scale(.42);
+  transform-origin: center;
+  mix-blend-mode: multiply;
+  animation: scarSettle .88s ease-out both;
+}
+
+.slash,
+.secondarySlash,
+.momentumEcho {
+  z-index: 5;
+  width: 350px;
+  height: 350px;
+  margin: -175px;
+  background: url("/assets/vfx/weapon/steel-slash.webp") center / contain no-repeat;
+  filter: sepia(.12) saturate(.66) brightness(.78) drop-shadow(0 4px 2px color-mix(in srgb, var(--effect-shadow), transparent 24%));
+  opacity: 0;
+  transform: rotate(var(--effect-rotation)) scale(.18, .58);
+  transform-origin: center;
+  animation: bladeSweep .56s cubic-bezier(.14, .72, .18, 1) both;
+}
+
+.slash::after,
+.secondarySlash::after,
+.momentumEcho::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: var(--effect-primary);
+  opacity: .16;
+  -webkit-mask: url("/assets/vfx/weapon/steel-slash.webp") center / contain no-repeat;
+  mask: url("/assets/vfx/weapon/steel-slash.webp") center / contain no-repeat;
+}
+
+.secondarySlash {
+  z-index: 4;
+  filter: sepia(.18) saturate(.58) brightness(.66) drop-shadow(0 3px 2px color-mix(in srgb, var(--effect-shadow), transparent 28%));
+  transform: rotate(calc(var(--effect-rotation) + 67deg)) scale(.15, .48);
+  animation: secondBladeSweep .62s .1s cubic-bezier(.14, .72, .18, 1) both;
+}
+
+.secondarySlash::after { background: var(--effect-secondary); opacity: .18; }
+
+.momentumEcho {
+  z-index: 3;
+  filter: sepia(.3) saturate(.45) brightness(.54);
+  transform: translate(-24px, 17px) rotate(var(--effect-rotation)) scale(.42, .72);
+  animation: momentumTrail .68s .04s ease-out both;
+}
+
+.momentumEcho::after { background: var(--effect-secondary); opacity: .12; }
+
+.impact {
+  z-index: 7;
+  width: 180px;
+  height: 180px;
+  margin: -90px;
+  background: url("/assets/vfx/weapon/impact-chips.webp") center / contain no-repeat;
+  filter: saturate(.68) brightness(.7) drop-shadow(0 5px 3px rgba(30, 22, 16, .52));
+  opacity: 0;
+  transform: scale(.18) rotate(12deg);
+  animation: impactBreak .62s .08s cubic-bezier(.12, .68, .2, 1) both;
+}
+
+.impact::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: var(--effect-secondary);
+  opacity: .12;
+  -webkit-mask: url("/assets/vfx/weapon/impact-chips.webp") center / contain no-repeat;
+  mask: url("/assets/vfx/weapon/impact-chips.webp") center / contain no-repeat;
+}
+
+.impact > i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--effect-primary), #efe2c5 48%) 0 12%, var(--effect-shadow) 14% 46%, transparent 50%);
+  border: 1px solid color-mix(in srgb, var(--effect-primary), transparent 35%);
+  border-radius: 43% 57% 38% 62%;
+  transform: translate(-50%, -50%) rotate(18deg);
+}
+
+.fragments,
+.dust { z-index: 8; width: 1px; height: 1px; }
+
+.fragments > i {
+  position: absolute;
+  left: -4px;
+  top: -10px;
+  width: 8px;
+  height: 20px;
+  background: linear-gradient(var(--effect-primary), var(--effect-shadow));
+  border: 1px solid color-mix(in srgb, var(--effect-shadow), #000 22%);
+  clip-path: polygon(50% 0, 100% 31%, 72% 100%, 15% 82%, 0 24%);
+  opacity: 0;
+  transform: rotate(var(--fragment-angle)) translateY(0) scale(.35);
+  animation: fragmentFly .58s var(--fragment-delay) ease-out both;
+}
+
+.dust { z-index: 2; }
+.dust > i {
+  position: absolute;
+  left: -24px;
+  top: -9px;
+  width: 48px;
+  height: 18px;
+  background: #9a7a54;
+  border-radius: 48%;
+  filter: blur(4px);
+  opacity: 0;
+  transform: translateX(var(--dust-x)) scale(.35);
+  animation: dustLift .72s var(--dust-delay) ease-out both;
+}
+
+.forgeStamp {
+  z-index: 9;
+  width: 58px;
+  height: 58px;
+  margin: -29px;
+  display: grid;
+  place-items: center;
+  color: color-mix(in srgb, var(--effect-primary), #ead8af 32%);
+  background: color-mix(in srgb, var(--effect-shadow), transparent 30%);
+  border: 2px solid color-mix(in srgb, var(--effect-secondary), transparent 24%);
+  border-radius: 32% 68% 41% 59%;
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--effect-shadow), transparent 24%);
+  font-family: Georgia, "Noto Serif KR", serif;
+  font-size: 22px;
+  font-weight: 900;
+  opacity: 0;
+  transform: rotate(var(--effect-counter-rotation)) scale(1.4);
+  animation: stampStrike .52s .12s ease-out both;
+}
+
+.masterworkCrest {
+  z-index: 4;
+  width: 126px;
+  height: 126px;
+  margin: -63px;
+  border: 3px solid color-mix(in srgb, var(--effect-primary), transparent 34%);
+  border-radius: 22% 78% 29% 71%;
+  box-shadow: inset 0 0 0 5px color-mix(in srgb, var(--effect-shadow), transparent 52%);
+  opacity: 0;
+  transform: rotate(calc(var(--effect-counter-rotation) + 45deg)) scale(.38);
+  animation: crestTemper .66s .06s ease-out both;
+}
+
+.masterworkCrest::before,
+.masterworkCrest::after {
+  position: absolute;
+  content: "";
+  background: color-mix(in srgb, var(--effect-secondary), #d3b778 22%);
+  box-shadow: 0 2px 0 var(--effect-shadow);
+}
+
+.masterworkCrest::before { left: 14%; right: 14%; top: 50%; height: 4px; }
+.masterworkCrest::after { top: 14%; bottom: 14%; left: 50%; width: 4px; }
+
+.legendaryArc {
+  z-index: 3;
+  width: 430px;
+  height: 430px;
+  margin: -215px;
+  background: color-mix(in srgb, var(--effect-primary), #d9bd75 24%);
+  opacity: 0;
+  -webkit-mask: url("/assets/vfx/weapon/steel-slash.webp") center / contain no-repeat;
+  mask: url("/assets/vfx/weapon/steel-slash.webp") center / contain no-repeat;
+  filter: drop-shadow(0 5px 1px color-mix(in srgb, var(--effect-shadow), transparent 32%));
+  transform: rotate(calc(var(--effect-rotation) - 27deg)) scale(.28, .64);
+  animation: legendaryTemper .78s .14s cubic-bezier(.14, .72, .18, 1) both;
+}
+
+.criticalNotch {
+  z-index: 10;
+  width: 220px;
+  height: 8px;
+  margin: -4px 0 0 -110px;
+  background: linear-gradient(90deg, transparent, #efe4c8 24%, var(--effect-primary) 48% 56%, transparent 86%);
+  box-shadow: 0 3px 0 var(--effect-shadow);
+  opacity: 0;
+  transform: rotate(calc(var(--effect-rotation) + 83deg)) scaleX(.15);
+  animation: criticalNotch .48s .08s ease-out both;
+}
+
+.criticalNotch::after {
+  position: absolute;
+  left: 48%;
+  top: -16px;
+  width: 6px;
+  height: 40px;
+  content: "";
+  background: var(--effect-shadow);
+  transform: rotate(17deg);
+}
+
+.executionCut {
+  z-index: 11;
+  width: 14px;
+  height: 270px;
+  margin: -135px 0 0 -7px;
+  background: linear-gradient(transparent, #2c1014 16%, #8d3035 44% 56%, #231016 82%, transparent);
+  clip-path: polygon(42% 0, 67% 0, 100% 48%, 61% 100%, 31% 100%, 0 51%);
+  filter: drop-shadow(5px 3px 0 rgba(20, 12, 10, .65));
+  opacity: 0;
+  transform: rotate(calc(var(--effect-rotation) + 8deg)) scaleY(.18);
+  animation: executionDrop .66s ease-out both;
+}
+
+.shockwavePulse {
+  z-index: 3;
+  width: 190px;
+  height: 190px;
+  margin: -95px;
+  border: 5px double color-mix(in srgb, var(--effect-secondary), transparent 30%);
+  border-radius: 47% 53% 45% 55%;
+  opacity: 0;
+  transform: scale(.28) rotate(11deg);
+  animation: shockwaveDust .78s ease-out both;
+}
+
+.shockwavePulse > i {
+  position: absolute;
+  inset: 17%;
+  border: 2px dashed color-mix(in srgb, var(--effect-shadow), transparent 16%);
+  border-radius: 55% 45% 52% 48%;
+}
+.shockwavePulse > i:last-child { inset: -12%; border-style: solid; opacity: .38; }
+
+.damage,
+.comboDamage strong {
+  position: absolute;
+  z-index: 18;
+  left: 0;
+  top: -52px;
+  color: #eee1c9;
+  font-family: Georgia, "Noto Serif KR", serif;
+  font-size: 29px;
+  font-weight: 900;
+  letter-spacing: -.04em;
+  white-space: nowrap;
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--effect-shadow), #000 28%);
+  text-shadow: 0 3px 0 var(--effect-shadow), 0 5px 7px rgba(22, 14, 10, .54);
+  opacity: 0;
+  transform: translateX(-50%);
+  animation: damageRise .76s .08s ease-out both;
+}
+
+.comboDamage { position: absolute; z-index: 18; left: 0; top: 0; width: 1px; height: 1px; }
+.comboDamage strong:first-child { left: -42px; top: -43px; font-size: 24px; }
+.comboDamage strong:last-child { left: 48px; top: -68px; color: color-mix(in srgb, var(--effect-primary), #efe3c9 48%); font-size: 27px; animation-delay: .17s; }
+.critical .damage,
+.critical .comboDamage strong { color: #f0d891; font-size: 38px; }
+.execution .damage { color: #d9897d; font-size: 42px; }
+
+.tier0 { --effect-scale: .68; --slash-alpha: .7; --impact-scale: .65; }
+.tier1 { --effect-scale: .72; --slash-alpha: .72; --impact-scale: .68; }
+.tier2 { --effect-scale: .76; --slash-alpha: .74; --impact-scale: .7; }
+.tier3 { --effect-scale: .8; --slash-alpha: .76; --impact-scale: .8; }
+.tier4 { --effect-scale: .84; --slash-alpha: .77; --impact-scale: .76; }
+.tier5 { --effect-scale: .87; --slash-alpha: .78; --impact-scale: .78; }
+.tier6 { --effect-scale: .9; --slash-alpha: .79; --impact-scale: .88; }
+.tier7 { --effect-scale: .93; --slash-alpha: .8; --impact-scale: .82; }
+.tier8 { --effect-scale: .96; --slash-alpha: .81; --impact-scale: .84; }
+.tier9 { --effect-scale: .99; --slash-alpha: .82; --impact-scale: .82; }
+.tier10 { --effect-scale: 1.02; --slash-alpha: .83; --impact-scale: .96; }
+.tier11 { --effect-scale: 1.05; --slash-alpha: .82; --impact-scale: .88; }
+.tier12 { --effect-scale: 1.08; --slash-alpha: .84; --impact-scale: .9; }
+.tier13 { --effect-scale: 1.11; --slash-alpha: .84; --impact-scale: .92; }
+.tier14 { --effect-scale: 1.15; --slash-alpha: .86; --impact-scale: 1; }
+
+.effect .slash,
+.effect .secondarySlash,
+.effect .momentumEcho { scale: var(--effect-scale); }
+.effect .slash { --resolved-alpha: var(--slash-alpha); }
+.effect .impact { scale: var(--impact-scale); }
+
+@keyframes rangeSettle {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.32) rotate(var(--effect-counter-rotation)); }
+  32% { opacity: .58; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.04) rotate(calc(var(--effect-counter-rotation) + 8deg)); }
+}
+@keyframes scarSettle {
+  0% { opacity: 0; transform: rotate(var(--effect-counter-rotation)) scale(.38); }
+  25% { opacity: .54; }
+  100% { opacity: 0; transform: rotate(var(--effect-counter-rotation)) scale(.96); }
+}
+@keyframes bladeSweep {
+  0% { opacity: 0; transform: rotate(var(--effect-rotation)) scale(.14, .55); }
+  24% { opacity: var(--resolved-alpha, .76); }
+  70% { opacity: var(--resolved-alpha, .76); transform: rotate(var(--effect-rotation)) scale(.94); }
+  100% { opacity: 0; transform: rotate(calc(var(--effect-rotation) + 7deg)) scale(1.12, .82); }
+}
+@keyframes secondBladeSweep {
+  0% { opacity: 0; transform: rotate(calc(var(--effect-rotation) + 67deg)) scale(.12, .45); }
+  28% { opacity: .58; }
+  72% { opacity: .58; transform: rotate(calc(var(--effect-rotation) + 67deg)) scale(.9); }
+  100% { opacity: 0; transform: rotate(calc(var(--effect-rotation) + 73deg)) scale(1.08, .75); }
+}
+@keyframes momentumTrail {
+  0% { opacity: 0; transform: translate(-38px, 24px) rotate(var(--effect-rotation)) scale(.28, .62); }
+  30% { opacity: .28; }
+  100% { opacity: 0; transform: translate(18px, -8px) rotate(var(--effect-rotation)) scale(1.08, .72); }
+}
+@keyframes impactBreak {
+  0% { opacity: 0; transform: scale(.14) rotate(8deg); }
+  28% { opacity: .8; transform: scale(.64) rotate(0); }
+  62% { opacity: .7; transform: scale(.9) rotate(-5deg); }
+  100% { opacity: 0; transform: scale(1.08) rotate(-9deg); }
+}
+@keyframes fragmentFly {
+  0% { opacity: 0; transform: rotate(var(--fragment-angle)) translateY(0) scale(.25); }
+  25% { opacity: .78; }
+  100% { opacity: 0; transform: rotate(var(--fragment-angle)) translateY(calc(0px - var(--fragment-distance))) scale(.72) rotate(38deg); }
+}
+@keyframes dustLift {
+  0% { opacity: 0; transform: translateX(var(--dust-x)) translateY(10px) scale(.3); }
+  35% { opacity: .22; }
+  100% { opacity: 0; transform: translateX(var(--dust-x)) translateY(-28px) scale(1.18); }
+}
+@keyframes stampStrike {
+  0% { opacity: 0; transform: rotate(var(--effect-counter-rotation)) scale(1.45); }
+  34% { opacity: .52; transform: rotate(var(--effect-counter-rotation)) scale(.82); }
+  72% { opacity: .38; }
+  100% { opacity: 0; transform: rotate(calc(var(--effect-counter-rotation) + 6deg)) scale(1.08); }
+}
+@keyframes crestTemper {
+  0% { opacity: 0; transform: rotate(calc(var(--effect-counter-rotation) + 39deg)) scale(.34); }
+  34% { opacity: .46; transform: rotate(calc(var(--effect-counter-rotation) + 45deg)) scale(.78); }
+  72% { opacity: .3; }
+  100% { opacity: 0; transform: rotate(calc(var(--effect-counter-rotation) + 51deg)) scale(1.04); }
+}
+@keyframes legendaryTemper {
+  0% { opacity: 0; transform: rotate(calc(var(--effect-rotation) - 31deg)) scale(.24, .58); }
+  30% { opacity: .42; }
+  72% { opacity: .34; transform: rotate(calc(var(--effect-rotation) - 27deg)) scale(.94); }
+  100% { opacity: 0; transform: rotate(calc(var(--effect-rotation) - 21deg)) scale(1.09, .8); }
+}
+@keyframes criticalNotch {
+  0% { opacity: 0; transform: rotate(calc(var(--effect-rotation) + 83deg)) scaleX(.12); }
+  30% { opacity: .82; }
+  76% { opacity: .7; transform: rotate(calc(var(--effect-rotation) + 83deg)) scaleX(1); }
+  100% { opacity: 0; transform: rotate(calc(var(--effect-rotation) + 83deg)) scaleX(1.18); }
+}
+@keyframes executionDrop {
+  0% { opacity: 0; transform: translateY(-52px) rotate(calc(var(--effect-rotation) + 8deg)) scaleY(.18); }
+  24% { opacity: .86; }
+  68% { opacity: .82; transform: translateY(0) rotate(calc(var(--effect-rotation) + 8deg)) scaleY(1); }
+  100% { opacity: 0; transform: translateY(42px) rotate(calc(var(--effect-rotation) + 8deg)) scale(.72, 1.08); }
+}
+@keyframes shockwaveDust {
+  0% { opacity: 0; transform: scale(.25) rotate(8deg); }
+  28% { opacity: .42; }
+  100% { opacity: 0; transform: scale(2.2) rotate(20deg); }
+}
+@keyframes damageRise {
+  0% { opacity: 0; transform: translate(-50%, 12px) scale(.72); }
+  24%, 62% { opacity: 1; transform: translate(-50%, -5px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -62px) scale(.9); }
+}
+
+@media (max-width: 560px) {
+  .effect { transform: scale(.76); }
+  .damage { top: -43px; font-size: 25px; }
+  .critical .damage { font-size: 32px; }
+  .execution .damage { font-size: 34px; }
+  .comboDamage strong:first-child { left: -34px; }
+  .comboDamage strong:last-child { left: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .range,
+  .groundScar,
+  .slash,
+  .secondarySlash,
+  .momentumEcho,
+  .impact,
+  .fragments > i,
+  .dust > i,
+  .forgeStamp,
+  .criticalNotch,
+  .executionCut,
+  .masterworkCrest,
+  .legendaryArc,
+  .shockwavePulse,
+  .damage,
+  .comboDamage strong { animation-duration: .01ms !important; animation-delay: 0ms !important; }
+}
