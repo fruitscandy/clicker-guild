@@ -1,27 +1,33 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { combatTraitFor, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "../game-data";
+import {
+  formatRecruitRate,
+  highRankRecruitChance,
+  MEMBER_SALE_PRICES,
+  RECRUIT_COSTS,
+  recruitRatesForLevel,
+  type RecruitResult,
+} from "../tavern-gacha";
 import styles from "./TavernHall.module.css";
 
 type MemberProgress = { level: number; xp: number; gear: number };
 
 type TavernHallProps = {
-  candidates: MemberDefinition[];
   members: MemberDefinition[];
   ownedIds: string[];
   progress: Partial<Record<string, MemberProgress>>;
   partyIds: string[];
   tavernLevel: number;
   gold: number;
-  refreshCost: number;
+  recruitResults: RecruitResult[];
   formatNumber: (value: number) => string;
   getAttack: (member: MemberDefinition, progress: MemberProgress) => number;
-  onRefresh: () => void;
-  onRandomHire: () => void;
-  onHire: (id: string) => void;
+  onRecruit: (count: 1 | 10) => void;
   onToggleParty: (id: string) => void;
+  onSell: (id: string) => void;
 };
 
 const fallbackProgress: MemberProgress = { level: 1, xp: 0, gear: 0 };
@@ -40,25 +46,27 @@ function portraitStyle(member: MemberDefinition) {
   } as CSSProperties;
 }
 
-export function TavernHall({ candidates, members, ownedIds, progress, partyIds, tavernLevel, gold, refreshCost, formatNumber, getAttack, onRefresh, onRandomHire, onHire, onToggleParty }: TavernHallProps) {
-  const [selectedId, setSelectedId] = useState(candidates[0]?.id ?? "");
-  const selected = candidates.find((member) => member.id === selectedId) ?? candidates[0] ?? null;
+function isRare(member: MemberDefinition) {
+  return RANK_ORDER.indexOf(member.rank) >= RANK_ORDER.indexOf("B");
+}
+
+export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel, gold, recruitResults, formatNumber, getAttack, onRecruit, onToggleParty, onSell }: TavernHallProps) {
   const ownedMembers = ownedIds.map((id) => members.find((member) => member.id === id)).filter((member): member is MemberDefinition => Boolean(member));
   const partyMembers = partyIds.map((id) => members.find((member) => member.id === id)).filter((member): member is MemberDefinition => Boolean(member));
-  const maxRank = RANK_ORDER[Math.min(RANK_ORDER.length - 1, 1 + tavernLevel)];
-  const selectedTrait = selected ? combatTraitFor(selected) : null;
+  const rates = recruitRatesForLevel(tavernLevel);
+  const highRankChance = highRankRecruitChance(tavernLevel);
 
-  return <section className={`${styles.tavern} panel facility-first-panel`} aria-label="방랑자의 잔 여관 고용과 파티 편성">
+  return <section className={`${styles.tavern} panel facility-first-panel`} aria-label="방랑자의 잔 여관 길드원 영입과 편성">
     <header className={styles.header}>
       <div>
-        <span className="eyebrow">THE WANDERING MUG · BUILD YOUR SWARM</span>
+        <span className="eyebrow">THE WANDERING MUG · RANDOM CONTRACTS</span>
         <h3>방랑자의 잔 여관</h3>
-        <p>고용한 길드원은 필드에 몸이 나타나지 않고 각자의 무기와 스킬을 자동 발동합니다. 최대 4명의 패시브 전투원을 편성하세요.</p>
+        <p>계약 종을 울려 새로운 길드원을 영입하세요. 모든 등급이 등장하며, 여관 증축은 상위 등급을 만날 확률을 높입니다.</p>
       </div>
       <div className={styles.headerStats}>
-        <span><small>모집 허가</small><strong>{maxRank} RANK</strong></span>
+        <span><small>여관 단계</small><strong>Lv.{tavernLevel}</strong></span>
+        <span><small>B 이상 확률</small><strong>{formatRecruitRate(highRankChance)}</strong></span>
         <span><small>길드 명부</small><strong>{ownedIds.length}/{members.length}명</strong></span>
-        <span><small>출전 파티</small><strong>{partyIds.length}/4명</strong></span>
         <span><small>보유 골드</small><strong>{formatNumber(gold)} G</strong></span>
       </div>
     </header>
@@ -66,53 +74,68 @@ export function TavernHall({ candidates, members, ownedIds, progress, partyIds, 
     <div className={styles.interior}>
       <div className={styles.innkeeperBar}>
         <span className={styles.innkeeperSeal}>M</span>
-        <span><small>여관주인 마르타</small><strong>오늘 도착한 모험가의 계약서와 길드 명부를 준비했습니다.</strong></span>
-        <em>후보 선택 → 상세 확인 → 고용</em>
+        <span><small>여관주인 마르타</small><strong>운명은 계약 종이 울리는 순간 정해지죠. 어떤 모험가든 문을 두드릴 수 있어요.</strong></span>
+        <em>등급 추첨 → 길드원 결정 → 즉시 명부 등록</em>
       </div>
 
-      {selected ? <div className={styles.recruitDesk} style={portraitStyle(selected)}>
-        <div className={styles.heroPortrait}>
-          <span className={styles.rankRibbon}>{selected.rank} RANK</span>
-          <Image className={styles.portraitImage} src={portraitSource(selected.id)} alt={`${selected.name} 초상화`} fill sizes="(max-width: 720px) 76vw, 300px" priority unoptimized draggable={false} />
+      <div className={styles.recruitCounter}>
+        <div className={styles.recruitPitch}>
+          <span className={styles.contractSeal}>契</span>
+          <span className="eyebrow">RANDOM GUILD CONTRACT</span>
+          <h4>길드원 영입</h4>
+          <p>낮은 등급일수록 자주, 높은 등급일수록 드물게 등장합니다. 이미 보유한 길드원은 등급별 판매가로 즉시 정산됩니다.</p>
+          <div className={styles.recruitActions}>
+            <button type="button" onClick={() => onRecruit(1)} disabled={gold < RECRUIT_COSTS.single}>
+              <small>SINGLE CONTRACT</small><strong>1명 영입</strong><em>{formatNumber(RECRUIT_COSTS.single)} G</em>
+            </button>
+            <button type="button" className={styles.tenRecruitButton} onClick={() => onRecruit(10)} disabled={gold < RECRUIT_COSTS.ten}>
+              <small>10% BUNDLE DISCOUNT</small><strong>10명 영입</strong><em>{formatNumber(RECRUIT_COSTS.ten)} G · 1명당 270 G</em>
+            </button>
+          </div>
         </div>
-        <div className={styles.recruitProfile}>
-          <span className={styles.jobLabel}>{selected.job} · 신규 고용 후보</span>
-          <h4>{selected.name}</h4>
-          <p>{selected.description}</p>
-          <dl>
-            <div><dt>기본 공격</dt><dd>{formatNumber(selected.attack)}</dd></div>
-            <div><dt>성장 계수</dt><dd>+{selected.growth}</dd></div>
-            <div><dt>공격 주기</dt><dd>{selected.interval}초</dd></div>
-            <div><dt>최대 레벨</dt><dd>Lv.{selected.maxLevel}</dd></div>
-          </dl>
-          {selectedTrait && <div className={styles.skillCard}><span>{selected.glyph}</span><div><small>고용 즉시 해금되는 패시브 공격</small><strong>{selectedTrait.title}</strong><em>{selectedTrait.description}</em></div></div>}
-          <button className={styles.hireButton} onClick={() => onHire(selected.id)} disabled={gold < selected.cost}>
-            <span>{gold >= selected.cost ? "길드 계약서 서명" : "고용 자금 부족"}</span>
-            <strong>{formatNumber(selected.cost)} G로 고용</strong>
-          </button>
-        </div>
-      </div> : <div className={styles.completeRoster}>
-        <span>♛</span><strong>현재 모집 가능한 모든 모험가가 합류했습니다</strong><small>길드 강화에서 여관을 증축하면 더 높은 등급의 영웅이 방문합니다.</small>
-      </div>}
 
-      {candidates.length > 0 && <div className={styles.candidateSection}>
-        <div className={styles.sectionTitle}><div><span>TONIGHT&apos;S GUESTS</span><strong>오늘의 고용 후보</strong><small>모든 후보 초상화는 같은 키와 시선 높이로 맞췄습니다.</small></div><div className={styles.actions}><button onClick={onRefresh}>후보 갱신 <b>{formatNumber(refreshCost)} G</b></button><button onClick={onRandomHire}>운명의 계약 <b>260 G</b></button></div></div>
-        <div className={styles.candidateRail} role="list" aria-label="고용 후보 목록">
-          {candidates.map((member) => {
-            const active = selected?.id === member.id;
-            return <button key={member.id} className={`${styles.candidateCard} ${active ? styles.selected : ""}`} style={portraitStyle(member)} onClick={() => setSelectedId(member.id)} aria-pressed={active}>
-              <span className={styles.cardPortrait}><Image className={styles.portraitImage} src={portraitSource(member.id)} alt={`${member.name} 초상화`} fill sizes="102px" unoptimized draggable={false} /></span>
-              <span className={styles.cardCopy}><small>{member.rank} RANK · {member.job}</small><strong>{member.name}</strong><em>{combatTraitFor(member).title}</em></span>
-              <b className={styles.cardCost}>{formatNumber(member.cost)} G</b>
-            </button>;
-          })}
+        <div className={styles.rateBoard}>
+          <div><span>RECRUIT ODDS</span><strong>등급별 영입 확률</strong><small>여관 Lv.{tavernLevel} 적용 중</small></div>
+          <ol>
+            {RANK_ORDER.map((rank) => <li key={rank} style={{ "--rank-color": RANK_COLORS[rank] } as CSSProperties}>
+              <b>{rank}</b><span><i style={{ width: `${Math.max(5, rates[rank] / 52 * 100)}%` }} /></span><strong>{formatRecruitRate(rates[rank])}</strong>
+            </li>)}
+          </ol>
+          <p>개별 결과는 서로 독립적으로 추첨됩니다. B·A·S 등급 카드는 특별한 빛으로 표시됩니다.</p>
         </div>
-      </div>}
+      </div>
+
+      <section className={styles.resultSection} aria-labelledby="latest-recruit-title" aria-live="polite">
+        <div className={styles.resultHeading}>
+          <div><span>LATEST CONTRACTS</span><strong id="latest-recruit-title">최신 영입 결과</strong></div>
+          {recruitResults.length > 0 && <b>{recruitResults.length} CONTRACTS OPENED</b>}
+        </div>
+        {recruitResults.length > 0 ? <div className={`${styles.resultGrid} ${recruitResults.length === 1 ? styles.singleResult : ""}`}>
+          {recruitResults.map((result, index) => {
+            const member = members.find((candidate) => candidate.id === result.memberId)!;
+            const rare = isRare(member);
+            return <article key={`${result.memberId}-${index}`} className={`${styles.resultCard} ${rare ? styles.rareResult : ""} ${rare ? styles[`rank${member.rank}`] : ""}`} style={portraitStyle(member)}>
+              {rare && <span className={styles.sparkles} aria-hidden="true">✦ · ✧ · ✦</span>}
+              <div className={styles.resultPortrait}>
+                <span className={styles.rankRibbon}>{member.rank} RANK</span>
+                <Image className={styles.portraitImage} src={portraitSource(member.id)} alt={`${member.name} 영입 결과 초상화`} fill sizes="(max-width: 560px) 42vw, 190px" unoptimized draggable={false} />
+              </div>
+              <div className={styles.resultCopy}>
+                <small>{member.job} · {combatTraitFor(member).title}</small>
+                <strong>{member.name}</strong>
+                <em className={result.isNew ? styles.newBadge : styles.duplicateBadge}>{result.isNew ? "NEW · 명부 등록" : `중복 정산 +${formatNumber(result.refund)} G`}</em>
+              </div>
+            </article>;
+          })}
+        </div> : <div className={styles.emptyResult}>
+          <span>♢</span><strong>아직 울리지 않은 계약 종</strong><small>1명 또는 10명 영입을 선택하면 이곳에 카드형 초상화가 펼쳐집니다.</small>
+        </div>}
+      </section>
     </div>
 
     <div className={styles.partySection}>
       <div className={styles.partyHeading}>
-        <div><span>GUILD PASSIVE ARSENAL</span><strong>편성 길드원</strong><small>최대 4명을 편성합니다. 필드에는 본체 없이 각자의 무기 공격과 스킬만 자동 발동합니다.</small></div>
+        <div><span>GUILD PASSIVE ARSENAL</span><strong>길드원 편성</strong><small>최대 4명을 편성합니다. 판매하려면 먼저 파티에서 해제하세요.</small></div>
         <b>{partyIds.length}/4 EQUIPPED</b>
       </div>
       <div className={styles.partySlots} aria-label="현재 토벌 파티">
@@ -128,22 +151,28 @@ export function TavernHall({ candidates, members, ownedIds, progress, partyIds, 
         })}
       </div>
 
-      <div className={styles.rosterHeading}><span><small>OWNED PASSIVE MEMBERS</small><strong>보유 길드원</strong></span><em>초상화를 눌러 자동 전투 슬롯에 편성하거나 해제합니다.</em></div>
+      <div className={styles.rosterHeading}><span><small>OWNED PASSIVE MEMBERS</small><strong>보유 길드원</strong></span><em>편성 버튼으로 파티를 구성하고, 사용하지 않는 길드원은 등급별 가격으로 판매할 수 있습니다.</em></div>
       <div className={styles.ownedRoster} role="list" aria-label="보유 길드원 목록">
         {ownedMembers.map((member) => {
           const memberProgress = progress[member.id] ?? fallbackProgress;
           const inParty = partyIds.includes(member.id);
-          return <button key={member.id} className={`${styles.rosterCard} ${inParty ? styles.inParty : ""}`} style={portraitStyle(member)} onClick={() => onToggleParty(member.id)} aria-pressed={inParty}>
-            <span className={styles.rosterPortrait}><Image className={styles.portraitImage} src={portraitSource(member.id)} alt={`${member.name} 보유 초상화`} fill sizes="90px" unoptimized draggable={false} /></span>
-            <span><small>{member.rank} RANK · {member.job}</small><strong>{member.name}</strong><em>{combatTraitFor(member).title} · Lv.{memberProgress.level}</em></span>
-            <b>{inParty ? "장착 중 ✓" : "장착 +"}</b>
-          </button>;
+          const cannotSell = inParty || ownedMembers.length === 1;
+          return <article key={member.id} className={`${styles.rosterCard} ${inParty ? styles.inParty : ""}`} style={portraitStyle(member)} role="listitem">
+            <button type="button" className={styles.rosterToggle} onClick={() => onToggleParty(member.id)} aria-pressed={inParty}>
+              <span className={styles.rosterPortrait}><Image className={styles.portraitImage} src={portraitSource(member.id)} alt={`${member.name} 보유 초상화`} fill sizes="90px" unoptimized draggable={false} /></span>
+              <span><small>{member.rank} RANK · {member.job}</small><strong>{member.name}</strong><em>{combatTraitFor(member).title} · Lv.{memberProgress.level}</em></span>
+              <b>{inParty ? "편성 중 ✓" : "편성 +"}</b>
+            </button>
+            <button type="button" className={styles.sellButton} onClick={() => onSell(member.id)} disabled={cannotSell} title={inParty ? "파티에서 해제한 뒤 판매할 수 있습니다." : ownedMembers.length === 1 ? "마지막 길드원은 판매할 수 없습니다." : `${formatNumber(MEMBER_SALE_PRICES[member.rank])} 골드에 판매`}>
+              <span>판매</span><strong>+{formatNumber(MEMBER_SALE_PRICES[member.rank])} G</strong>
+            </button>
+          </article>;
         })}
       </div>
     </div>
 
     <div className={styles.collection}>
-      <div><span className="eyebrow">GUILD PORTRAIT ARCHIVE</span><h4>길드원 도감</h4><p>영입한 길드원만 등급별 기록에 표시됩니다.</p></div>
+      <div><span className="eyebrow">GUILD PORTRAIT ARCHIVE</span><h4>길드원 도감</h4><p>현재 보유한 길드원만 등급별 기록에 표시됩니다.</p></div>
       <div className={styles.rankProgress}>
         {RANK_ORDER.map((rank) => {
           const rankMembers = members.filter((member) => member.rank === rank);

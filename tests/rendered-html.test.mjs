@@ -160,7 +160,7 @@ test("separates guild passive weapons from the player's forge click weapon", asy
   assert.match(css, /weapon-style-arcane/);
 });
 
-test("consolidates recruitment and party formation inside the portrait-driven tavern", async () => {
+test("runs portrait-driven gacha recruitment, party formation, and member sales inside the tavern", async () => {
   const [memberEntries, tavernAssets, game, progression, hub, tavern, tavernStyles] = await Promise.all([
     readdir(new URL("../public/assets/guild-members/", import.meta.url), { withFileTypes: true }),
     readdir(new URL("../public/assets/guild/tavern/", import.meta.url)),
@@ -181,17 +181,21 @@ test("consolidates recruitment and party formation inside the portrait-driven ta
   assert.doesNotMatch(game, /function trainMember/);
   assert.doesNotMatch(progression, /"training"/);
   assert.match(hub, /tavernBuildingArt/);
-  assert.match(tavern, /BUILD YOUR SWARM/);
-  assert.match(tavern, /편성 길드원/);
-  assert.match(tavern, /필드에는 본체 없이/);
+  assert.match(tavern, /RANDOM CONTRACTS/);
+  assert.match(tavern, /최신 영입 결과/);
+  assert.match(tavern, /길드원 편성/);
   assert.match(tavern, /보유 길드원/);
+  assert.match(tavern, /onRecruit/);
   assert.match(tavern, /onToggleParty/);
+  assert.match(tavern, /onSell/);
   assert.match(tavern, /finnCorrection/);
   assert.match(tavern, /-idle-preview\.webp/);
-  assert.match(tavernStyles, /\.heroPortrait/);
-  assert.match(tavernStyles, /\.candidateRail/);
+  assert.match(tavernStyles, /\.recruitCounter/);
+  assert.match(tavernStyles, /\.resultGrid/);
+  assert.match(tavernStyles, /\.rareResult/);
   assert.match(tavernStyles, /\.partySlots/);
   assert.match(tavernStyles, /\.ownedRoster/);
+  assert.match(tavernStyles, /\.sellButton/);
   assert.match(tavernStyles, /--portrait-scale/);
 });
 

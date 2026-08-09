@@ -47,6 +47,7 @@ import { useSpecialAttackController } from "./special-attack-controller";
 import { SPECIAL_RESEARCH_NODES } from "./special-attacks";
 import { StageMap } from "./stage-map";
 import { canAffordWeaponRecipe, consumeWeaponRecipe, materialIconVars, migrateMaterialInventory, stageMaterialById, stageMaterialFor, weaponMaterialRecipe } from "./stage-materials";
+import { formatRecruitRate, highRankRecruitChance, MEMBER_SALE_PRICES, RECRUIT_COSTS, rollRecruitMembers, settleRecruitment, type RecruitResult } from "./tavern-gacha";
 import { UPGRADE_ICON_BY_KEY } from "./upgrade-icons";
 
 type LootPhase = "idle" | "fighting" | "collecting" | "complete";
@@ -121,7 +122,6 @@ type SaveState = {
   weaponLevel: number;
   upgrades: Record<UpgradeKey, number>;
   nodes: string[];
-  candidates: string[];
   autoAdvance: boolean;
 };
 
@@ -179,7 +179,6 @@ const initialState: SaveState = {
   weaponLevel: 0,
   upgrades: { range: 0, critical: 0, combo: 0, execution: 0, shockwave: 0, momentum: 0, time: 0, scout: 0, guild: 0, gold: 0, tavern: 0, loot: 0 },
   nodes: ["foundation"],
-  candidates: ["mia", "finn", "lulu"],
   autoAdvance: true,
 };
 
@@ -193,7 +192,6 @@ function cloneSaveState(state: SaveState): SaveState {
     progress: Object.fromEntries(Object.entries(state.progress).map(([id, progress]) => [id, { ...progress }])),
     upgrades: { ...state.upgrades },
     nodes: [...state.nodes],
-    candidates: [...state.candidates],
   };
 }
 
@@ -208,7 +206,7 @@ const upgradeInfo: Record<UpgradeKey, { title: string; description: string; base
   scout: { title: "전장 정찰", description: "잔존 세력 추정 정밀화", base: 135, accent: "눈" },
   guild: { title: "길드 전술", description: "길드원 공격력 +15%", base: 140, accent: "기" },
   gold: { title: "행운의 금고", description: "토벌 골드 +10%", base: 180, accent: "금" },
-  tavern: { title: "여관 증축", description: "상위 등급 후보 해금", base: 300, accent: "관" },
+  tavern: { title: "여관 증축", description: "상위 등급 영입 확률 증가", base: 300, accent: "관" },
   loot: { title: "전리품 감정", description: "장비 획득 확률 +3%", base: 260, accent: "보" },
 };
 
@@ -282,9 +280,9 @@ const UPGRADE_NODES: UpgradeNode[] = [
   { id: "loot-2", title: "전리품 감정 II", description: "장비 획득 확률 +3%", glyph: "♣", target: "loot", cost: 680, prerequisites: ["loot-1"], x: 59, y: 1240 },
   { id: "loot-3", title: "보물 사냥단", description: "장비 획득 확률 +3%", glyph: "寶", target: "loot", cost: 1520, prerequisites: ["loot-2"], x: 83, y: 1240 },
 
-  { id: "tavern-1", title: "여관 증축 I", description: "고용 가능 등급 상승", glyph: "관", target: "tavern", cost: 300, prerequisites: ["foundation"], x: 35, y: 1370 },
-  { id: "tavern-2", title: "여관 증축 II", description: "고용 가능 등급 상승", glyph: "잔", target: "tavern", cost: 820, prerequisites: ["tavern-1"], x: 59, y: 1370 },
-  { id: "tavern-3", title: "영웅의 주점", description: "고용 가능 등급 상승", glyph: "杯", target: "tavern", cost: 1800, prerequisites: ["tavern-2"], x: 83, y: 1370 },
+  { id: "tavern-1", title: "여관 증축 I", description: "상위 등급 영입 확률 증가", glyph: "관", target: "tavern", cost: 300, prerequisites: ["foundation"], x: 35, y: 1370 },
+  { id: "tavern-2", title: "여관 증축 II", description: "상위 등급 영입 확률 증가", glyph: "잔", target: "tavern", cost: 820, prerequisites: ["tavern-1"], x: 59, y: 1370 },
+  { id: "tavern-3", title: "영웅의 주점", description: "최상급 계약 확률 증가", glyph: "杯", target: "tavern", cost: 1800, prerequisites: ["tavern-2"], x: 83, y: 1370 },
 
   { id: "momentum-1", title: "전투 호흡", description: "빠른 연속 클릭으로 최대 13% 피해 증가", glyph: "속", target: "momentum", cost: 360, prerequisites: ["foundation"], x: 35, y: 1500 },
   { id: "momentum-2", title: "무아지경", description: "몰입 중 최대 35% 피해 증가", glyph: "無", target: "momentum", cost: 940, prerequisites: ["momentum-1"], x: 59, y: 1500 },
@@ -323,13 +321,6 @@ function combatStyleCounts(members: MemberDefinition[]) {
     counts[style] += 1;
     return counts;
   }, { vanguard: 0, marksman: 0, assassin: 0, arcane: 0, support: 0, breaker: 0 });
-}
-
-function randomCandidates(state: SaveState, count = 3) {
-  const maxRank = Math.min(6, 1 + state.upgrades.tavern);
-  const pool = MEMBERS.filter((member) => !state.owned.includes(member.id) && RANK_ORDER.indexOf(member.rank) <= maxRank);
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(count, shuffled.length)).map((member) => member.id);
 }
 
 function spawnMonsterPack(stage: ReturnType<typeof getStage>): FieldMonster[] {
@@ -405,7 +396,7 @@ function upgradeEffectText(key: UpgradeKey, level: number) {
     case "scout": return `잔존 세력 추정 정밀도 ${level}/3`;
     case "guild": return `길드원 공격력 +${Math.round((Math.pow(1.15, level) - 1) * 100)}%`;
     case "gold": return `토벌 골드 +${Math.round((Math.pow(1.1, level) - 1) * 100)}%`;
-    case "tavern": return `고용 후보 최대 ${RANK_ORDER[Math.min(RANK_ORDER.length - 1, 1 + level)]}등급`;
+    case "tavern": return `B 이상 영입 확률 ${formatRecruitRate(highRankRecruitChance(level))}`;
     case "loot": return `장비 획득 확률 +${level * 3}%`;
   }
 }
@@ -419,6 +410,7 @@ export default function Game() {
   const [now, setNow] = useState(0);
   const [stagePicker, setStagePicker] = useState(false);
   const [toast, setToast] = useState("");
+  const [recruitResults, setRecruitResults] = useState<RecruitResult[]>([]);
   const [victory, setVictory] = useState(false);
   const [defeat, setDefeat] = useState(false);
   const [battleDeadline, setBattleDeadline] = useState<number | null>(null);
@@ -1004,43 +996,51 @@ export default function Game() {
     setToast(`${node.title} 노드를 해금했습니다. 새로운 성장 경로가 발견됩니다!`);
   }
 
-  function hire(id: string) {
+  function recruitGuildMembers(count: 1 | 10) {
+    const cost = count === 1 ? RECRUIT_COSTS.single : RECRUIT_COSTS.ten;
+    if (save.gold < cost) return setToast(`${count}명 영입에 필요한 골드가 부족합니다.`);
+
+    const rolls = rollRecruitMembers(MEMBERS, count, effectiveUpgrades.tavern);
+    const settlement = settleRecruitment(save.owned, rolls);
+    setRecruitResults(settlement.results);
+    setSave((current) => {
+      const progress = { ...current.progress };
+      settlement.newMemberIds.forEach((id) => {
+        progress[id] = { level: 1, xp: 0, gear: 0 };
+      });
+      return {
+        ...current,
+        gold: current.gold - cost + settlement.refund,
+        owned: [...current.owned, ...settlement.newMemberIds],
+        progress,
+      };
+    });
+    playGuildMemberHireSound();
+
+    const bestRoll = rolls.reduce((best, member) => RANK_ORDER.indexOf(member.rank) > RANK_ORDER.indexOf(best.rank) ? member : best);
+    const rareCallout = RANK_ORDER.indexOf(bestRoll.rank) >= RANK_ORDER.indexOf("B") ? `${bestRoll.rank}등급 ${bestRoll.name}! ` : "";
+    const refundCallout = settlement.refund > 0 ? ` · 중복 정산 +${compactNumber(settlement.refund)} G` : "";
+    setToast(`${rareCallout}${count}명 영입 완료 · 신규 ${settlement.newMemberIds.length}명${refundCallout}`);
+  }
+
+  function sellMember(id: string) {
     const member = memberById(id);
-    if (save.gold < member.cost) return setToast("고용 골드가 부족합니다.");
-    setSave((current) => {
-      const owned = [...current.owned, id];
-      const party = current.party.length < 4 ? [...current.party, id] : current.party;
-      const next = { ...current, gold: current.gold - member.cost, owned, party, progress: { ...current.progress, [id]: { level: 1, xp: 0, gear: 0 } } };
-      return { ...next, candidates: randomCandidates(next) };
-    });
-    playGuildMemberHireSound();
-    setToast(`${member.name} 합류 · ${combatTraitFor(member).title} 효과가 전투에 즉시 적용됩니다!`);
-  }
+    if (save.party.includes(id)) return setToast("편성 중인 길드원은 파티에서 해제한 뒤 판매할 수 있습니다.");
+    if (save.owned.length <= 1) return setToast("길드를 지킬 마지막 길드원은 판매할 수 없습니다.");
+    const salePrice = MEMBER_SALE_PRICES[member.rank];
+    if (!window.confirm(`${member.name}을(를) ${compactNumber(salePrice)} G에 판매할까요? 레벨과 장비 진행도도 함께 사라집니다.`)) return;
 
-  function refreshCandidates() {
-    const cost = Math.max(20, 60 - effectiveUpgrades.tavern * 5);
-    if (save.gold < cost) return setToast("여관 후보를 갱신할 골드가 부족합니다.");
     setSave((current) => {
-      const next = { ...current, gold: current.gold - cost };
-      return { ...next, candidates: randomCandidates(next) };
+      const nextProgress = { ...current.progress };
+      delete nextProgress[id];
+      return {
+        ...current,
+        gold: current.gold + salePrice,
+        owned: current.owned.filter((memberId) => memberId !== id),
+        progress: nextProgress,
+      };
     });
-    setToast("새로운 모험가들이 여관에 도착했습니다.");
-  }
-
-  function randomHire() {
-    const cost = 260;
-    if (save.gold < cost) return setToast("랜덤 고용에 필요한 골드가 부족합니다.");
-    const available = MEMBERS.filter((member) => !save.owned.includes(member.id) && RANK_ORDER.indexOf(member.rank) <= Math.min(6, 1 + effectiveUpgrades.tavern));
-    if (!available.length) return setToast("현재 등급에서 고용 가능한 길드원을 모두 모았습니다.");
-    const roll = available[Math.floor(Math.random() * available.length)];
-    setSave((current) => {
-      const owned = [...current.owned, roll.id];
-      const party = current.party.length < 4 ? [...current.party, roll.id] : current.party;
-      const next = { ...current, gold: current.gold - cost, owned, party, progress: { ...current.progress, [roll.id]: { level: 1, xp: 0, gear: 0 } } };
-      return { ...next, candidates: randomCandidates(next) };
-    });
-    playGuildMemberHireSound();
-    setToast(`운명의 계약! ${roll.name} 합류 · ${combatTraitFor(roll).title} 효과가 즉시 적용됩니다.`);
+    setToast(`${member.name} 계약 해지 · ${compactNumber(salePrice)} G를 돌려받았습니다.`);
   }
 
   function selectGuildFacility(facility: GuildFacility) {
@@ -1160,7 +1160,7 @@ export default function Game() {
               researchTotal={UPGRADE_NODES.length}
               weaponName={clickAttackPattern(save.weaponLevel).weaponName}
               partyCount={save.party.length}
-              candidateCount={save.candidates.length}
+              candidateCount={MEMBERS.length}
               pulse={territoryPulse}
               onSelect={selectGuildFacility}
             />
@@ -1230,20 +1230,18 @@ export default function Game() {
 
           {activeFacility === "tavern" && <>
           <TavernHall
-            candidates={save.candidates.map(memberById)}
             members={MEMBERS}
             ownedIds={save.owned}
             progress={save.progress}
             partyIds={save.party}
             tavernLevel={effectiveUpgrades.tavern}
             gold={save.gold}
-            refreshCost={Math.max(20, 60 - effectiveUpgrades.tavern * 5)}
+            recruitResults={recruitResults}
             formatNumber={compactNumber}
             getAttack={(member, progress) => attackFor(member, progress)}
-            onRefresh={refreshCandidates}
-            onRandomHire={randomHire}
-            onHire={hire}
+            onRecruit={recruitGuildMembers}
             onToggleParty={toggleParty}
+            onSell={sellMember}
           />
           </>}
           </div>
