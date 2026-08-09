@@ -7,7 +7,7 @@ import styles from "./BgmPreview.module.css";
 
 export default function BgmPreview() {
   const players = useRef<Record<string, HTMLAudioElement | null>>({});
-  const sceneTracks = BGM_TRACKS.filter((track) => track.id !== "battle");
+  const sceneTracks = BGM_TRACKS.filter((track) => track.sceneId === "guild" || track.sceneId === "field-select");
 
   const playOnly = (activeId: string) => {
     Object.entries(players.current).forEach(([id, player]) => {
@@ -22,11 +22,11 @@ export default function BgmPreview() {
         <header className={styles.header}>
           <span className={styles.eyebrow}>CLICKER GUILD · ORIGINAL SOUNDTRACK</span>
           <h1>장면마다 다른 모험의 박자</h1>
-          <p>외부 음원 없이 직접 합성·편곡한 일곱 개의 루프입니다. 한 곡을 재생하면 다른 곡은 자동으로 멈추므로 장면별 분위기를 바로 비교할 수 있습니다.</p>
+          <p>길드와 필드 테마, 그리고 Flow Music으로 생성한 네 개의 전투곡을 비교할 수 있습니다. 한 곡을 재생하면 다른 곡은 자동으로 멈춥니다.</p>
         </header>
         <div className={styles.sectionHeading}>
           <div><span>SCENE THEMES</span><h2>확정 장면 테마</h2></div>
-          <p>길드 관리·필드 선택·보스 전투에 적용되는 현재 테마입니다.</p>
+          <p>길드 관리와 필드 선택에 적용되는 고정 테마입니다.</p>
         </div>
         <section className={styles.grid} aria-label="확정 장면 배경 음악 미리듣기">
           {sceneTracks.map((track, index) => (
@@ -55,19 +55,19 @@ export default function BgmPreview() {
           ))}
         </section>
         <div className={styles.sectionHeading}>
-          <div><span>BATTLE THEME DECISION</span><h2>일반 전투 최종 선택과 후보군</h2></div>
-          <p>최초 선택곡인 후보 A ‘Steel Rush’를 최종 확정했습니다. 중세풍 제안곡 B·C·D는 비교 가능한 후보군으로 보관합니다.</p>
+          <div><span>BATTLE THEME ROTATION</span><h2>일반·보스 전투 순환곡</h2></div>
+          <p>일반 전투 두 곡과 보스 전투 두 곡이 장면별 풀에서 번갈아 재생됩니다.</p>
         </div>
         <section className={styles.grid} aria-label="일반 전투 배경 음악 최종 선택과 후보 미리듣기">
           {BATTLE_BGM_CANDIDATES.map((track) => (
             <article className={`${styles.card} ${track.current ? styles.currentCandidate : ""}`} data-track={track.id} key={track.id}>
               <div className={styles.candidateTopline}>
-                <span className={styles.candidateBadge}>{track.current ? "최종 선택 · 후보 A" : `보관 후보 ${track.candidate}`}</span>
+                <span className={styles.candidateBadge}>{track.scene} · 순환곡 {track.candidate}</span>
                 <strong>{track.direction}</strong>
               </div>
               <div className={styles.meta}>
                 <div>
-                  <small>일반 전투</small>
+                  <small>{track.scene}</small>
                   <h2>{track.title}</h2>
                   <p>{track.subtitle} · {track.duration}</p>
                 </div>
@@ -88,7 +88,7 @@ export default function BgmPreview() {
             </article>
           ))}
         </section>
-        <p className={styles.note}>일반 전투곡은 후보 A ‘Steel Rush’로 최종 확정되어 게임 화면 전환에 연결됩니다. 나머지 중세풍 후보는 이후 테마 이벤트나 지역별 변주를 검토할 때 재사용할 수 있습니다. 모든 곡은 16마디 루프와 짧은 경계 페이드를 사용합니다.</p>
+        <p className={styles.note}>같은 전투 유형에 다시 진입하면 다음 곡으로 넘어갑니다. 일반 전투와 보스 전투는 서로 다른 풀을 사용하며, 장면 전환에는 기존 크로스페이드가 적용됩니다.</p>
       </div>
     </main>
   );
