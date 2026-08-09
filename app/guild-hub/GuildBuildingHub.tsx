@@ -35,10 +35,6 @@ export function GuildBuildingHub(props: GuildBuildingHubProps) {
   return (
     <section className={styles.hub} aria-label="길드 건물 선택">
       <div className={styles.scene} style={sceneStyle}>
-        <div className={styles.sky} aria-hidden="true"><i /><i /><i /></div>
-        <div className={styles.mountain} aria-hidden="true" />
-        <div className={styles.road} aria-hidden="true" />
-
         <button
           className={`${styles.mainHall} ${props.activeFacility === "hall" ? styles.active : ""}`}
           onClick={() => props.onSelect("hall")}
@@ -66,7 +62,6 @@ export function GuildBuildingHub(props: GuildBuildingHubProps) {
           </button>
         ))}
 
-        <div className={styles.sceneHint}><span>건물을 선택하세요</span><strong>{GUILD_FACILITIES.find((facility) => facility.id === props.activeFacility)?.title}</strong><small>선택한 시설의 콘텐츠가 아래에 열립니다.</small></div>
       </div>
     </section>
   );

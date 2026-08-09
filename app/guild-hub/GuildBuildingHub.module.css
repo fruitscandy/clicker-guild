@@ -4,15 +4,26 @@
 
 .scene {
   position: relative;
-  min-height: 540px;
+  min-height: 620px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 74% 14%, rgba(255, 224, 145, .3), transparent 16%),
-    linear-gradient(#263f42 0 45%, #3f614b 45% 68%, #304936 68%);
-  border: 4px solid #173f32;
-  border-radius: 26px;
-  box-shadow: 0 8px 0 rgba(23, 63, 50, .24), inset 0 0 70px rgba(14, 28, 25, .38);
+    linear-gradient(180deg, rgba(20, 27, 26, .02), rgba(20, 14, 10, .24)),
+    url("/assets/guild/guild-territory-backdrop-v1.png") center 52% / cover no-repeat;
+  border: 4px solid #2d2119;
+  border-radius: 18px;
+  box-shadow: 0 8px 0 #1b1511, 0 18px 35px rgba(21, 14, 10, .32), inset 0 0 70px rgba(14, 20, 20, .2);
   isolation: isolate;
+}
+
+.scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse at 50% 78%, rgba(255, 184, 83, .12), transparent 38%),
+    linear-gradient(90deg, rgba(12, 19, 18, .2), transparent 22% 78%, rgba(12, 19, 18, .24));
+  pointer-events: none;
 }
 
 .scene::after {
@@ -20,55 +31,10 @@
   position: absolute;
   inset: 0;
   z-index: 20;
-  border: 1px solid rgba(255, 232, 178, .22);
+  border: 1px solid rgba(255, 221, 155, .24);
   border-radius: inherit;
-  box-shadow: inset 0 0 80px rgba(11, 24, 22, .28);
+  box-shadow: inset 0 0 96px rgba(13, 18, 17, .34), inset 0 -40px 55px rgba(16, 11, 8, .18);
   pointer-events: none;
-}
-
-.sky {
-  position: absolute;
-  inset: 0 0 48%;
-  z-index: -3;
-  background: radial-gradient(circle at 76% 20%, #e0b65c 0 35px, rgba(224, 182, 92, .14) 36px 62px, transparent 63px);
-}
-
-.sky::before,
-.sky::after {
-  content: "";
-  position: absolute;
-  width: 140px;
-  height: 28px;
-  background: rgba(228, 232, 211, .12);
-  border-radius: 50%;
-}
-
-.sky::before { left: 8%; top: 24%; box-shadow: 54px 5px rgba(228, 232, 211, .08); }
-.sky::after { right: 25%; top: 15%; width: 92px; height: 20px; }
-.sky i { position: absolute; width: 3px; height: 3px; background: #ffe094; border-radius: 50%; box-shadow: 0 0 7px #ffe094; animation: starPulse 2.6s ease-in-out infinite alternate; }
-.sky i:nth-child(1) { left: 22%; top: 22%; }.sky i:nth-child(2) { left: 46%; top: 12%; animation-delay: -.8s; }.sky i:nth-child(3) { right: 18%; top: 38%; animation-delay: -1.5s; }
-
-.mountain {
-  position: absolute;
-  left: -5%;
-  right: -5%;
-  top: 28%;
-  z-index: -2;
-  height: 220px;
-  background: linear-gradient(#29433a, #35533f);
-  clip-path: polygon(0 75%, 11% 34%, 23% 68%, 36% 17%, 52% 70%, 65% 29%, 82% 70%, 93% 38%, 100% 72%, 100% 100%, 0 100%);
-}
-
-.road {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  z-index: -1;
-  width: 360px;
-  height: 230px;
-  background: linear-gradient(90deg, transparent, rgba(172, 144, 104, .72) 22% 78%, transparent);
-  clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
-  transform: translateX(-50%);
 }
 
 .mainHall,
@@ -84,10 +50,31 @@
 
 .mainHall {
   left: 50%;
-  bottom: 66px;
+  bottom: 58px;
   width: min(53%, 520px);
   aspect-ratio: 1;
   transform: translateX(-50%);
+}
+
+.mainHall::before,
+.facility::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 7%;
+  z-index: 0;
+  width: 72%;
+  height: 14%;
+  background: radial-gradient(ellipse, rgba(20, 13, 9, .54), transparent 68%);
+  filter: blur(3px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.facility::before {
+  bottom: 3px;
+  width: 88%;
+  height: 22px;
 }
 
 .hallSprite {
@@ -241,14 +228,27 @@
   border: 1px solid rgba(239, 194, 99, .54);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, .28);
-  transform: translateX(-50%);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 7px);
   text-align: center;
+  transition: opacity .16s ease, visibility .16s ease, transform .16s ease;
+  pointer-events: none;
 }
 
 .mainHall .buildingLabel { bottom: 9%; }
 .buildingLabel b { color: #eab94f; font-size: 8px; letter-spacing: .08em; }
 .buildingLabel strong { font-size: 11px; }
 .buildingLabel small { margin-top: 2px; color: #c8bda9; font-size: 8px; }
+
+.mainHall:hover .buildingLabel,
+.mainHall:focus-visible .buildingLabel,
+.facility:hover .buildingLabel,
+.facility:focus-visible .buildingLabel {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%);
+}
 
 .active .buildingLabel {
   color: #2b241c;
@@ -259,34 +259,14 @@
 .active .buildingLabel b,
 .active .buildingLabel small { color: #5f4422; }
 
-.sceneHint {
-  position: absolute;
-  left: 20px;
-  bottom: 18px;
-  z-index: 18;
-  display: grid;
-  max-width: 235px;
-  padding: 10px 12px;
-  color: #f8ecd4;
-  background: rgba(22, 29, 25, .87);
-  border-left: 4px solid #dca941;
-  border-radius: 6px;
-  pointer-events: none;
-}
-.sceneHint span { color: #dca941; font-size: 7px; font-weight: 1000; letter-spacing: .12em; }
-.sceneHint strong { margin-top: 2px; font-size: 13px; }
-.sceneHint small { margin-top: 2px; color: #bfb8a9; font-size: 8px; }
-
 @keyframes hallUpgrade {
   0% { opacity: .3; filter: brightness(2) drop-shadow(0 0 26px #ffe17d); transform: translateY(18px) scale(.88); }
   38% { opacity: 1; filter: brightness(1.55) drop-shadow(0 0 40px #ffe17d); transform: translateY(-9px) scale(1.05); }
   100% { opacity: 1; filter: drop-shadow(0 15px 9px rgba(15, 21, 17, .42)); transform: none; }
 }
 
-@keyframes starPulse { to { opacity: .22; transform: scale(.55); } }
-
 @media (max-width: 900px) {
-  .scene { min-height: 500px; }
+  .scene { min-height: 560px; }
   .mainHall { width: min(62%, 470px); }
   .facility { transform: scale(.86); }
   .facility:hover, .facility:focus-visible, .facility.active { transform: translateY(-5px) scale(.86); }
@@ -300,11 +280,248 @@
   .facility:hover, .facility:focus-visible, .facility.active { transform: translateY(-4px) scale(.72); }
   .research { right: -2%; top: 76px; }
   .tavern { left: -5%; bottom: 126px; }.forge { right: -2%; bottom: 126px; }
-  .sceneHint { left: 12px; right: 12px; bottom: 10px; max-width: none; }
   .mainHall .buildingLabel { bottom: 5%; }
 }
 
+/* The hall view is one focused upgrade decision, not a facility roadmap. */
+:global(.facility-hall .guild-hall-management) {
+  grid-template-columns: 1fr;
+}
+
+:global(.facility-hall .guild-hall-management > .upgrade-panel) {
+  display: none;
+}
+
+:global(.facility-hall .hall-upgrade-panel) {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(280px, .78fr) minmax(0, 1.22fr);
+  grid-template-areas:
+    "title title"
+    "current summary"
+    "current progress"
+    "current action";
+  gap: 12px 18px;
+  padding: 0;
+  overflow: hidden;
+  color: #ead7b7;
+  background:
+    radial-gradient(circle at 12% 54%, rgba(186, 82, 40, .2), transparent 28%),
+    linear-gradient(135deg, #2a211c, #171513 58%, #24201b);
+  border: 2px solid #3a281e;
+  border-top: 2px solid #a66a37;
+  border-radius: 11px;
+  box-shadow: 0 7px 0 #1a120f, 0 18px 34px rgba(25, 15, 10, .28), inset 0 1px rgba(255, 218, 157, .1);
+}
+
+:global(.facility-hall .hall-upgrade-panel::before) {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 118px, rgba(255,255,255,.018) 119px 120px),
+    linear-gradient(105deg, transparent 48%, rgba(222, 162, 83, .035) 49% 51%, transparent 52%);
+  pointer-events: none;
+}
+
+:global(.facility-hall .hall-upgrade-panel > *) {
+  position: relative;
+  z-index: 1;
+}
+
+:global(.facility-hall .hall-upgrade-panel .panel-title) {
+  grid-area: title;
+  padding: 20px 24px 17px;
+  background: linear-gradient(90deg, rgba(91, 47, 31, .76), rgba(39, 29, 24, .55) 60%, rgba(28, 24, 20, .86));
+  border-bottom: 1px solid #745039;
+  box-shadow: inset 0 -8px 16px rgba(0, 0, 0, .16);
+}
+
+:global(.facility-hall .hall-upgrade-panel .panel-title h3) {
+  color: #fff0d1;
+  font: 900 25px Georgia, "Noto Serif KR", serif;
+  letter-spacing: -.03em;
+}
+
+:global(.facility-hall .hall-upgrade-panel .eyebrow) {
+  color: #dc9c53;
+  letter-spacing: .13em;
+}
+
+:global(.facility-hall .hall-upgrade-panel .level-chip) {
+  color: #ffe5a4;
+  background: linear-gradient(#65452e, #39281f);
+  border: 1px solid #a67643;
+  box-shadow: inset 0 1px rgba(255, 230, 172, .12);
+}
+
+:global(.facility-hall .hall-current-stage) {
+  grid-area: current;
+  grid-template-columns: 82px 1fr;
+  align-content: center;
+  gap: 15px;
+  margin: 8px 0 22px 22px;
+  padding: 22px 18px;
+  background:
+    linear-gradient(145deg, rgba(77, 52, 38, .92), rgba(37, 29, 25, .96)),
+    #34271f;
+  border: 1px solid #76533a;
+  border-left: 4px solid #c57b3c;
+  border-radius: 8px;
+  box-shadow: inset 0 1px rgba(255, 225, 175, .08), 0 8px 18px rgba(0, 0, 0, .24);
+}
+
+:global(.facility-hall .hall-stage-seal) {
+  width: 76px;
+  height: 76px;
+  color: #ffe9a9;
+  background: radial-gradient(circle at 38% 32%, #c4773d, #763426 66%, #4a241f);
+  border: 2px solid #e0a55b;
+  box-shadow: 0 5px 0 #241713, 0 0 0 4px #4a3125, inset 0 0 0 3px rgba(255, 228, 158, .12), 0 0 18px rgba(197, 102, 48, .2);
+  text-shadow: 0 2px #4b251d;
+}
+
+:global(.facility-hall .hall-current-stage small) {
+  color: #d09a5d;
+}
+
+:global(.facility-hall .hall-current-stage strong) {
+  color: #fff0d0;
+  font: 900 19px Georgia, "Noto Serif KR", serif;
+}
+
+:global(.facility-hall .hall-current-stage p) {
+  color: #c0aa91;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+:global(.facility-hall .hall-unlock-summary) {
+  grid-area: summary;
+  margin: 8px 22px 0 0;
+}
+
+:global(.facility-hall .hall-unlock-summary span) {
+  padding: 12px 10px;
+  background: linear-gradient(#27231f, #1b1917);
+  border: 1px solid #544438;
+  border-radius: 6px;
+  box-shadow: inset 0 1px rgba(255, 255, 255, .035);
+}
+
+:global(.facility-hall .hall-unlock-summary b) {
+  color: #a99884;
+}
+
+:global(.facility-hall .hall-unlock-summary strong) {
+  color: #f3cf85;
+}
+
+:global(.facility-hall .growth-progress) {
+  grid-area: progress;
+  height: 13px;
+  margin: 0 22px 0 0;
+  padding: 2px;
+  background: #100f0e;
+  border: 1px solid #594638;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .55);
+}
+
+:global(.facility-hall .growth-progress i) {
+  background: linear-gradient(90deg, #9e3f2b, #dc8f42 66%, #f2c56b);
+  box-shadow: 0 0 10px rgba(220, 127, 56, .38);
+}
+
+:global(.facility-hall .hall-upgrade-button) {
+  grid-area: action;
+  margin: 0 22px 22px 0;
+  padding: 14px 16px;
+  color: #fff0ce;
+  background: linear-gradient(145deg, #a84d2e, #6d2d24);
+  border: 2px solid #d48a43;
+  border-radius: 7px;
+  box-shadow: 0 5px 0 #2a1914, inset 0 1px rgba(255, 231, 173, .16), 0 0 20px rgba(173, 68, 38, .18);
+}
+
+:global(.facility-hall .hall-upgrade-button:hover) {
+  filter: brightness(1.1) saturate(1.05);
+}
+
+:global(.facility-hall .hall-upgrade-button small) {
+  color: #ffd57f;
+}
+
+:global(.facility-hall .hall-upgrade-button em) {
+  color: #e5c4a8;
+}
+
+:global(.facility-hall .hall-max-stage) {
+  grid-area: action;
+  margin: 0 22px 22px 0;
+  color: #ffedbc;
+  background: linear-gradient(145deg, #72502f, #3d3026);
+  border: 1px solid #c9974f;
+  border-radius: 7px;
+  box-shadow: 0 5px 0 #211814, inset 0 1px rgba(255, 238, 185, .12);
+}
+
+:global(.facility-hall .hall-max-stage small) {
+  color: #cdb68f;
+}
+
+@media (max-width: 900px) {
+  :global(.facility-hall .hall-upgrade-panel) {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "title"
+      "current"
+      "summary"
+      "progress"
+      "action";
+  }
+
+  :global(.facility-hall .hall-current-stage) {
+    margin: 8px 18px 0;
+  }
+
+  :global(.facility-hall .hall-unlock-summary),
+  :global(.facility-hall .growth-progress),
+  :global(.facility-hall .hall-upgrade-button),
+  :global(.facility-hall .hall-max-stage) {
+    margin-right: 18px;
+    margin-left: 18px;
+  }
+
+  :global(.facility-hall .hall-upgrade-button),
+  :global(.facility-hall .hall-max-stage) {
+    margin-bottom: 18px;
+  }
+}
+
+@media (max-width: 620px) {
+  :global(.facility-hall .hall-upgrade-panel .panel-title) {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 17px;
+  }
+
+  :global(.facility-hall .hall-current-stage) {
+    grid-template-columns: 64px 1fr;
+    padding: 17px 13px;
+  }
+
+  :global(.facility-hall .hall-stage-seal) {
+    width: 60px;
+    height: 60px;
+    font-size: 23px;
+  }
+
+  :global(.facility-hall .hall-unlock-summary) {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .sky i,
   .hallSprite.upgrading { animation: none; }
 }

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState, type CSSProperties } from "react";
 import { BASE_CLICK_DAMAGE } from "../game-balance";
-import { allStageMaterials, canAffordWeaponRecipe, materialIconVars, weaponMaterialRecipe } from "../stage-materials";
+import { canAffordWeaponRecipe, materialIconVars, weaponMaterialRecipe } from "../stage-materials";
 import { WeaponArt, type WeaponView } from "./WeaponArt";
 import styles from "./ForgeWorkshop.module.css";
 
@@ -17,7 +17,7 @@ type ForgeWorkshopProps = {
 };
 
 export function ForgeWorkshop({ weapons, currentLevel, gold, materials, formatNumber, onUpgrade }: ForgeWorkshopProps) {
-  const [previewTier, setPreviewTier] = useState(currentLevel);
+  const [previewTier, setPreviewTier] = useState(Math.min(weapons.length - 1, currentLevel + 1));
   const current = weapons[currentLevel];
   const next = weapons[currentLevel + 1] ?? null;
   const maxPreviewTier = Math.min(weapons.length - 1, currentLevel + 1);
@@ -32,7 +32,6 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, materials, formatNu
   })) ?? [];
   const firstShortage = recipeProgress.find(({ owned, amount }) => owned < amount);
   const canAffordNext = Boolean(next && gold >= next.cost && canAffordWeaponRecipe(materials, nextRecipe));
-  const vaultMaterials = allStageMaterials().map((material) => ({ material, amount: materials[material.id] ?? 0 }));
 
   function movePreview(direction: -1 | 1) {
     setPreviewTier(Math.max(0, Math.min(maxPreviewTier, visiblePreviewTier + direction)));
@@ -40,7 +39,7 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, materials, formatNu
 
   function craftNextWeapon() {
     if (!next || !canAffordNext) return;
-    setPreviewTier(next.tier);
+    setPreviewTier(Math.min(weapons.length - 1, next.tier + 1));
     onUpgrade();
   }
 
@@ -50,10 +49,6 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, materials, formatNu
         <span className="eyebrow">FLAME FORGE · MASTERWORK ARSENAL</span>
         <h3>불꽃 대장간</h3>
         <p>새 무기를 제작하면 플레이어의 클릭 무기 공격력이 높아집니다. 무기는 현재 단계의 다음 무기부터 하나씩 완성됩니다.</p>
-      </div>
-      <div className={styles.resources} aria-label="대장간 보유 자원">
-        <span><i className={styles.gold} />골드<strong>{formatNumber(gold)}</strong></span>
-        {nextRecipe && <span className={styles.recipeResource}><i className={`stage-material-icon ${styles.materialIcon}`} style={materialIconVars(nextRecipe.ingredients[0].material) as CSSProperties} />다음 제작 재료<strong>{recipeProgress.map(({ owned, amount }) => `${owned}/${amount}`).join(" + ")}</strong></span>}
       </div>
     </header>
 
@@ -94,29 +89,13 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, materials, formatNu
           </div>
           <small>{canAffordNext ? "골드와 재료 준비 완료" : gold < preview.cost ? `${formatNumber(preview.cost - gold)} G 부족` : firstShortage ? `${firstShortage.material.name} ${firstShortage.amount - firstShortage.owned}개 부족 · STAGE ${firstShortage.material.firstStage}~${firstShortage.material.lastStage}` : "제작 조건 확인 중"}</small>
         </div>}
+        {previewCraftable && next && <button className={styles.craftButton} onClick={craftNextWeapon} disabled={!canAffordNext}>
+          <span>FORGE NEXT WEAPON</span>
+          <strong>{canAffordNext ? "다음 무기 제작" : "제작 재료 확인"}</strong>
+          <small>{canAffordNext ? "완성 즉시 장착됩니다" : "부족한 자원을 모아 다시 찾아오세요"}</small>
+        </button>}
+        {!next && <div className={styles.masterwork}><span>MASTERWORK COMPLETE</span><strong>길드마스터 신검 완성</strong><small>최종 무기 공격력 {formatNumber(Math.round(BASE_CLICK_DAMAGE * current.damageScale))}</small></div>}
       </aside>
-    </div>
-
-    <div className={styles.craftBar}>
-      <div className={styles.equippedSummary}>
-        <WeaponArt tier={current.tier} glyph={current.glyph} label={current.weaponName} className={styles.equippedWeapon} />
-        <span><small>PLAYER WEAPON · CURRENT</small><strong>{current.weaponName}</strong><em>공격력 {formatNumber(Math.round(BASE_CLICK_DAMAGE * current.damageScale))}</em></span>
-      </div>
-      {next ? <button className={styles.craftButton} onClick={craftNextWeapon} disabled={!canAffordNext}>
-        <span>다음 무기 제작</span>
-        <strong>미확인 무기</strong>
-        <small>{formatNumber(next.cost)} G · {recipeProgress.map(({ material, amount }) => `${material.name} ${amount}개`).join(" + ")}</small>
-      </button> : <div className={styles.masterwork}><span>MASTERWORK COMPLETE</span><strong>길드마스터 신검 완성</strong><small>최종 무기 공격력 {formatNumber(Math.round(BASE_CLICK_DAMAGE * current.damageScale))}</small></div>}
-    </div>
-
-    <div className={styles.materialVault}>
-      <div className={styles.vaultHeading}><span>REGIONAL MATERIAL VAULT</span><strong>10종 강화 소재</strong><small>지역당 하나의 핵심 소재만 기억하면 됩니다. 모든 소재는 무기 제작에 실제로 소모됩니다.</small></div>
-      <div className={styles.vaultGrid}>
-        {vaultMaterials.map(({ material, amount }) => <div className={styles.vaultItem} key={material.id} title={material.description}>
-          <i className={`stage-material-icon ${styles.vaultIcon}`} style={materialIconVars(material) as CSSProperties} />
-          <span><strong>{material.name}</strong><small>STAGE {material.firstStage}–{material.lastStage} · 보유 {amount}</small></span>
-        </div>)}
-      </div>
     </div>
 
     <div className={styles.arsenalHeading}><span>무기 진열대</span><strong>{currentLevel + 1}/{weapons.length} 완성</strong><small>완성한 무기와 바로 다음 무기의 실루엣만 확인할 수 있습니다.</small></div>

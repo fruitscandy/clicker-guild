@@ -54,8 +54,19 @@
   border: 1px solid rgba(142, 205, 109, .65);
   border-radius: 9px;
   box-shadow: 0 5px 14px rgba(0, 0, 0, .32);
-  transform: translateX(-50%);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 7px);
   text-align: center;
+  transition: opacity .16s ease, visibility .16s ease, transform .16s ease;
+  pointer-events: none;
+}
+
+.gate:hover .gateLabel,
+.gate:focus-visible .gateLabel {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%);
 }
 
 .gateLabel small {
