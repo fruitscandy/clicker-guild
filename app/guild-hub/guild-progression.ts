@@ -1,4 +1,4 @@
-export type GuildFacility = "hall" | "tavern" | "research";
+export type GuildFacility = "hall" | "tavern" | "forge" | "research";
 
 export type GuildHallStage = {
   level: number;
@@ -21,7 +21,7 @@ export const GUILD_HALL_STAGES: readonly GuildHallStage[] = [
   {
     level: 2,
     name: "정식 길드 본관",
-    description: "여관과 작전실이 자리를 잡고 전문 연구가 시작되는 거점",
+    description: "여관과 대장간이 자리를 잡고 전문 연구가 시작되는 거점",
     researchDepth: 2,
     upgradeCost: 2_400,
     requiredResearch: 10,
@@ -68,6 +68,7 @@ export const GUILD_FACILITIES: ReadonlyArray<{
 }> = [
   { id: "hall", title: "길드 본관", subtitle: "건물 승급과 해금 관리", glyph: "G" },
   { id: "tavern", title: "방랑자의 잔", subtitle: "고용과 파티 편성", glyph: "잔" },
+  { id: "forge", title: "불꽃 대장간", subtitle: "플레이어 무기 제작과 강화", glyph: "鍛" },
   { id: "research", title: "길드 강화소", subtitle: "4방향 발전 연구", glyph: "✦" },
 ] as const;
 

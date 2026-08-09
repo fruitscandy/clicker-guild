@@ -72,12 +72,13 @@ test("routes guild management through buildings and gates four-way research", as
   assert.match(game, /requiredHallLevelForNode/);
   assert.match(game, /activeFacility === "tavern"/);
   assert.match(game, /activeFacility === "research"/);
-  assert.doesNotMatch(game, /activeFacility === "forge"/);
+  assert.match(game, /activeFacility === "forge"/);
   assert.doesNotMatch(game, /activeFacility === "training"/);
   assert.doesNotMatch(progression, /"training"/);
   assert.match(progression, /researchDepth: 7/);
   assert.match(progression, /inferHallLevelFromNodes/);
   assert.match(hub, /길드 건물 선택/);
+  assert.match(hub, /forgeBuildingArt/);
   assert.match(researchMap, /길드 공세/);
   assert.match(researchMap, /연계 전술/);
   assert.match(researchMap, /원정 지원/);
@@ -85,28 +86,32 @@ test("routes guild management through buildings and gates four-way research", as
   assert.match(researchMap, /본관 Lv\.\$\{requiredHallLevel\} 필요/);
 });
 
-test("turns equipped guild members into the weapons without field character bodies", async () => {
-  const [game, hub, gameData, css] = await Promise.all([
+test("separates guild passive weapons from the player's forge click weapon", async () => {
+  const [game, hub, gameData, css, forge, weaponArt] = await Promise.all([
     readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/guild-hub/GuildBuildingHub.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/game-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/ForgeWorkshop.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/WeaponArt.tsx", import.meta.url), "utf8"),
   ]);
+  const directAttack = game.slice(game.indexOf("const directAttackAt"), game.indexOf("function selectStage"));
 
-  assert.doesNotMatch(hub, /forgeBuildingArt/);
-  assert.doesNotMatch(game, /<ForgeWorkshop/);
-  assert.doesNotMatch(game, /weaponLevel/);
+  assert.match(hub, /forgeBuildingArt/);
+  assert.match(game, /<ForgeWorkshop/);
+  assert.match(game, /weaponLevel/);
+  assert.match(game, /purchaseWeaponUpgrade/);
   assert.match(gameData, /MEMBER_COMBAT_TRAITS/);
-  assert.match(game, /marksmanVolley/);
-  assert.match(game, /arcaneBurst/);
-  assert.match(game, /combat-trait-grid/);
   assert.match(game, /emitMemberWeaponFx/);
   assert.match(game, /member-weapon-layer/);
   assert.match(game, /equipped-member-weapons/);
-  assert.doesNotMatch(game, /<WeaponCursor/);
-  assert.doesNotMatch(game, /click-attack-fx/);
+  assert.doesNotMatch(directAttack, /emitMemberWeaponFx/);
+  assert.match(game, /<WeaponCursor/);
+  assert.match(game, /click-attack-fx/);
   assert.doesNotMatch(game, /className="fighters"/);
   assert.doesNotMatch(game, /memberAnimationSource/);
+  assert.match(forge, /플레이어의 클릭 무기 공격력/);
+  assert.match(weaponArt, /export function WeaponCursor/);
   assert.match(css, /weapon-style-vanguard/);
   assert.match(css, /weapon-style-marksman/);
   assert.match(css, /weapon-style-arcane/);
@@ -134,9 +139,9 @@ test("consolidates recruitment and party formation inside the portrait-driven ta
   assert.doesNotMatch(progression, /"training"/);
   assert.match(hub, /tavernBuildingArt/);
   assert.match(tavern, /BUILD YOUR SWARM/);
-  assert.match(tavern, /장착 길드원 무기/);
+  assert.match(tavern, /편성 길드원 패시브/);
   assert.match(tavern, /필드에는 본체 없이/);
-  assert.match(tavern, /보유 길드원 무기/);
+  assert.match(tavern, /보유 길드원 패시브/);
   assert.match(tavern, /onToggleParty/);
   assert.match(tavern, /finnCorrection/);
   assert.match(tavern, /-idle-preview\.webp/);

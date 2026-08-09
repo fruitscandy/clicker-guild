@@ -53,7 +53,7 @@ export function TavernHall({ candidates, members, ownedIds, progress, partyIds, 
       <div>
         <span className="eyebrow">THE WANDERING MUG · BUILD YOUR SWARM</span>
         <h3>방랑자의 잔 여관</h3>
-        <p>고용한 길드원은 필드 캐릭터가 아니라 뱀서식 무기가 됩니다. 최대 4명의 칼날·화살·단검·마법을 장착하세요.</p>
+        <p>고용한 길드원은 필드에 몸이 나타나지 않고 각자의 무기와 스킬을 자동 발동합니다. 최대 4명의 패시브 전투원을 편성하세요.</p>
       </div>
       <div className={styles.headerStats}>
         <span><small>모집 허가</small><strong>{maxRank} RANK</strong></span>
@@ -85,7 +85,7 @@ export function TavernHall({ candidates, members, ownedIds, progress, partyIds, 
             <div><dt>공격 주기</dt><dd>{selected.interval}초</dd></div>
             <div><dt>최대 레벨</dt><dd>Lv.{selected.maxLevel}</dd></div>
           </dl>
-          {selectedTrait && <div className={styles.skillCard}><span>{selected.glyph}</span><div><small>고용 즉시 해금되는 길드원 무기</small><strong>{selectedTrait.title}</strong><em>{selectedTrait.description}</em></div></div>}
+          {selectedTrait && <div className={styles.skillCard}><span>{selected.glyph}</span><div><small>고용 즉시 해금되는 패시브 공격</small><strong>{selectedTrait.title}</strong><em>{selectedTrait.description}</em></div></div>}
           <button className={styles.hireButton} onClick={() => onHire(selected.id)} disabled={gold < selected.cost}>
             <span>{gold >= selected.cost ? "길드 계약서 서명" : "고용 자금 부족"}</span>
             <strong>{formatNumber(selected.cost)} G로 고용</strong>
@@ -112,13 +112,13 @@ export function TavernHall({ candidates, members, ownedIds, progress, partyIds, 
 
     <div className={styles.partySection}>
       <div className={styles.partyHeading}>
-        <div><span>GUILD SURVIVOR ARSENAL</span><strong>장착 길드원 무기</strong><small>최대 4명을 무기 슬롯에 장착합니다. 필드에는 본체 없이 각자의 무기 공격만 발사됩니다.</small></div>
+        <div><span>GUILD PASSIVE ARSENAL</span><strong>편성 길드원 패시브</strong><small>최대 4명을 편성합니다. 필드에는 본체 없이 각자의 무기 공격과 스킬만 자동 발동합니다.</small></div>
         <b>{partyIds.length}/4 EQUIPPED</b>
       </div>
       <div className={styles.partySlots} aria-label="현재 토벌 파티">
         {Array.from({ length: 4 }, (_, index) => {
           const member = partyMembers[index];
-          if (!member) return <div className={styles.emptySlot} key={`empty-${index}`}><span>{index + 1}</span><strong>빈 무기 슬롯</strong><small>아래 명부에서 길드원을 장착하세요</small></div>;
+          if (!member) return <div className={styles.emptySlot} key={`empty-${index}`}><span>{index + 1}</span><strong>빈 패시브 슬롯</strong><small>아래 명부에서 길드원을 편성하세요</small></div>;
           const memberProgress = progress[member.id] ?? fallbackProgress;
           return <button className={styles.partySlot} key={member.id} style={portraitStyle(member)} onClick={() => onToggleParty(member.id)} aria-label={`${member.name} 파티에서 제외`}>
             <span className={styles.partyPortrait}><Image className={styles.portraitImage} src={portraitSource(member.id)} alt={`${member.name} 파티 초상화`} fill sizes="128px" unoptimized draggable={false} /></span>
@@ -128,7 +128,7 @@ export function TavernHall({ candidates, members, ownedIds, progress, partyIds, 
         })}
       </div>
 
-      <div className={styles.rosterHeading}><span><small>OWNED MEMBER WEAPONS</small><strong>보유 길드원 무기</strong></span><em>초상화를 눌러 무기 슬롯에 장착하거나 해제합니다.</em></div>
+      <div className={styles.rosterHeading}><span><small>OWNED PASSIVE MEMBERS</small><strong>보유 길드원 패시브</strong></span><em>초상화를 눌러 자동 전투 슬롯에 편성하거나 해제합니다.</em></div>
       <div className={styles.ownedRoster} role="list" aria-label="보유 길드원 목록">
         {ownedMembers.map((member) => {
           const memberProgress = progress[member.id] ?? fallbackProgress;

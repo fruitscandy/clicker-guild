@@ -1,0 +1,61 @@
+.art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 8px 5px rgba(22, 13, 8, .48)) drop-shadow(0 0 10px color-mix(in srgb, var(--weapon-glow), transparent 58%));
+}
+
+.weapon { transform-origin: 90px 170px; }
+.blade { stroke: #382b25; stroke-width: 5; stroke-linejoin: round; }
+.edge { fill: var(--weapon-edge); opacity: .9; }
+.guard { fill: var(--weapon-guard); stroke: #3a291e; stroke-width: 5; stroke-linejoin: round; }
+.handle { fill: var(--weapon-grip); stroke: #35241e; stroke-width: 5; stroke-linejoin: round; }
+.pommel { fill: var(--weapon-metal); stroke: #34231d; stroke-width: 4; stroke-linejoin: round; }
+.gem { fill: var(--weapon-glow); stroke: var(--weapon-edge); stroke-width: 3; filter: drop-shadow(0 0 8px var(--weapon-glow)); }
+.rune { fill: var(--weapon-edge); font: 900 19px Georgia, serif; text-anchor: middle; paint-order: stroke; stroke: color-mix(in srgb, var(--weapon-metal), #000 28%); stroke-width: 4; }
+.aura { fill: none; stroke: var(--weapon-glow); stroke-width: 3; stroke-dasharray: 8 12; opacity: .35; filter: drop-shadow(0 0 8px var(--weapon-glow)); }
+.motes { fill: var(--weapon-edge); filter: drop-shadow(0 0 7px var(--weapon-glow)); }
+.motes circle { transform-origin: 90px 130px; animation: weaponMotes 2.3s ease-in-out infinite alternate; }
+.motes circle:nth-child(2n) { animation-delay: -1.1s; }
+
+.locked { filter: grayscale(1) brightness(.43) drop-shadow(0 6px 4px rgba(0,0,0,.55)); opacity: .72; }
+.locked .aura, .locked .motes, .locked .rune { display: none; }
+
+.cursor {
+  position: absolute;
+  z-index: 28;
+  display: block;
+  width: 88px;
+  height: 128px;
+  opacity: 0;
+  transform: translate(-50%, -88%) rotate(43deg) scale(.72);
+  transform-origin: 50% 88%;
+  transition: opacity .08s ease, transform .08s ease;
+  pointer-events: none;
+  will-change: left, top, transform;
+}
+
+.cursorVisible { opacity: 1; transform: translate(-50%, -88%) rotate(43deg) scale(1); }
+.cursorWeapon { position: relative; z-index: 2; }
+.cursorRing { position: absolute; left: 50%; bottom: 8%; z-index: 1; width: 27px; height: 27px; border: 2px solid var(--weapon-glow, #f1c45a); border-radius: 50%; box-shadow: 0 0 14px var(--weapon-glow, #f1c45a), inset 0 0 8px var(--weapon-glow, #f1c45a); transform: translate(-50%, 50%) rotate(-43deg); animation: cursorRing 1.4s linear infinite; }
+.cursorLabel { position: absolute; left: 50%; top: 94%; z-index: 3; display: flex; gap: 4px; align-items: center; padding: 3px 6px; color: #f8ecd4; background: rgba(31, 23, 19, .88); border: 1px solid rgba(245, 205, 112, .7); border-radius: 4px; box-shadow: 0 3px 8px rgba(0,0,0,.35); transform: translateX(-50%) rotate(-43deg); white-space: nowrap; font-size: 7px; font-weight: 900; }
+.cursorLabel b { color: #f5ca68; }
+.cursorTier0 { --weapon-glow: #d7ae68; }
+.cursorTier1 { --weapon-glow: #70dff0; }
+.cursorTier2 { --weapon-glow: #d98cff; }
+.cursorTier3 { --weapon-glow: #fff09a; }
+.cursorTier4 { --weapon-glow: #a8ffdd; }
+.cursorTier1 { width: 92px; height: 134px; }.cursorTier2 { width: 98px; height: 142px; }.cursorTier3 { width: 104px; height: 150px; }.cursorTier4 { width: 112px; height: 160px; }
+
+@keyframes weaponMotes { to { opacity: .25; transform: rotate(18deg) scale(.7); } }
+@keyframes cursorRing { to { transform: translate(-50%, 50%) rotate(317deg); } }
+
+@media (pointer: coarse) {
+  .cursor { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motes circle,
+  .cursorRing { animation: none; }
+}

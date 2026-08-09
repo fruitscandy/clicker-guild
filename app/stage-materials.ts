@@ -30,6 +30,12 @@ export type StageMaterial = {
   boss: boolean;
 };
 
+export type WeaponMaterialRecipe = {
+  weaponTier: number;
+  material: StageMaterial;
+  amount: number;
+};
+
 const MATERIAL_FAMILIES = [
   { familyName: "새싹 호박", accent: "#aee856", soundProfile: "seed-amber" as const, description: "초목의 생명력이 굳어 만들어진 수림 촉매" },
   { familyName: "태양 유리", accent: "#ffd25e", soundProfile: "sun-glass" as const, description: "메마른 모래와 햇빛이 고열로 융합된 결정" },
@@ -48,6 +54,11 @@ const STAGE_GRADES = [
   "폭주하는",
   "군주의",
 ] as const;
+
+// The 15-step arsenal is compressed across the 30-wave hack-and-slash run.
+// Each recipe points at a material the player can reach before the next major power spike.
+const WEAPON_RECIPE_STAGES = [1, 2, 3, 4, 5, 7, 9, 11, 13, 15, 18, 21, 24, 27] as const;
+const WEAPON_RECIPE_AMOUNTS = [4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20] as const;
 
 function clampStage(stage: number) {
   return Math.min(30, Math.max(1, Math.round(stage)));
@@ -82,6 +93,28 @@ export function stageMaterialById(id: string) {
   const stage = Number(match[1]);
   if (stage < 1 || stage > 30) return null;
   return stageMaterialFor(stage);
+}
+
+export function weaponMaterialRecipe(weaponTier: number): WeaponMaterialRecipe | null {
+  if (weaponTier < 1 || weaponTier > WEAPON_RECIPE_STAGES.length) return null;
+  const index = weaponTier - 1;
+  return {
+    weaponTier,
+    material: stageMaterialFor(WEAPON_RECIPE_STAGES[index]),
+    amount: WEAPON_RECIPE_AMOUNTS[index],
+  };
+}
+
+export function canAffordWeaponRecipe(inventory: Readonly<Record<string, number>>, recipe: WeaponMaterialRecipe | null) {
+  if (!recipe) return true;
+  return (inventory[recipe.material.id] ?? 0) >= recipe.amount;
+}
+
+export function consumeWeaponRecipe(inventory: Readonly<Record<string, number>>, recipe: WeaponMaterialRecipe | null) {
+  if (!recipe) return { ...inventory };
+  const owned = inventory[recipe.material.id] ?? 0;
+  if (owned < recipe.amount) return null;
+  return { ...inventory, [recipe.material.id]: owned - recipe.amount };
 }
 
 export function materialIconVars(material: StageMaterial) {
