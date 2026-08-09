@@ -411,6 +411,8 @@ export default function Game() {
   const [stagePicker, setStagePicker] = useState(false);
   const [toast, setToast] = useState("");
   const [recruitResults, setRecruitResults] = useState<RecruitResult[]>([]);
+  const [recruitSequence, setRecruitSequence] = useState(0);
+  const [pendingSaleId, setPendingSaleId] = useState<string | null>(null);
   const [victory, setVictory] = useState(false);
   const [defeat, setDefeat] = useState(false);
   const [battleDeadline, setBattleDeadline] = useState<number | null>(null);
@@ -1003,6 +1005,7 @@ export default function Game() {
     const rolls = rollRecruitMembers(MEMBERS, count, effectiveUpgrades.tavern);
     const settlement = settleRecruitment(save.owned, rolls);
     setRecruitResults(settlement.results);
+    setRecruitSequence((current) => current + 1);
     setSave((current) => {
       const progress = { ...current.progress };
       settlement.newMemberIds.forEach((id) => {
@@ -1015,7 +1018,7 @@ export default function Game() {
         progress,
       };
     });
-    playGuildMemberHireSound();
+    playGuildMemberHireSound(count);
 
     const bestRoll = rolls.reduce((best, member) => RANK_ORDER.indexOf(member.rank) > RANK_ORDER.indexOf(best.rank) ? member : best);
     const rareCallout = RANK_ORDER.indexOf(bestRoll.rank) >= RANK_ORDER.indexOf("B") ? `${bestRoll.rank}등급 ${bestRoll.name}! ` : "";
@@ -1023,27 +1026,38 @@ export default function Game() {
     setToast(`${rareCallout}${count}명 영입 완료 · 신규 ${settlement.newMemberIds.length}명${refundCallout}`);
   }
 
-  function sellMember(id: string) {
+  function requestMemberSale(id: string) {
     const member = memberById(id);
     if (save.party.includes(id)) return setToast("편성 중인 길드원은 파티에서 해제한 뒤 판매할 수 있습니다.");
     if (save.owned.length <= 1) return setToast("길드를 지킬 마지막 길드원은 판매할 수 없습니다.");
+    setPendingSaleId(member.id);
+  }
+
+  function confirmMemberSale() {
+    if (!pendingSaleId) return;
+    const member = memberById(pendingSaleId);
+    if (save.party.includes(member.id) || save.owned.length <= 1 || !save.owned.includes(member.id)) {
+      setPendingSaleId(null);
+      return setToast("현재 상태에서는 이 길드원을 판매할 수 없습니다.");
+    }
     const salePrice = MEMBER_SALE_PRICES[member.rank];
-    if (!window.confirm(`${member.name}을(를) ${compactNumber(salePrice)} G에 판매할까요? 레벨과 장비 진행도도 함께 사라집니다.`)) return;
 
     setSave((current) => {
       const nextProgress = { ...current.progress };
-      delete nextProgress[id];
+      delete nextProgress[member.id];
       return {
         ...current,
         gold: current.gold + salePrice,
-        owned: current.owned.filter((memberId) => memberId !== id),
+        owned: current.owned.filter((memberId) => memberId !== member.id),
         progress: nextProgress,
       };
     });
+    setPendingSaleId(null);
     setToast(`${member.name} 계약 해지 · ${compactNumber(salePrice)} G를 돌려받았습니다.`);
   }
 
   function selectGuildFacility(facility: GuildFacility) {
+    setPendingSaleId(null);
     playMenuTabSound();
     setActiveFacility(facility);
   }
@@ -1237,11 +1251,15 @@ export default function Game() {
             tavernLevel={effectiveUpgrades.tavern}
             gold={save.gold}
             recruitResults={recruitResults}
+            recruitSequence={recruitSequence}
+            pendingSaleId={pendingSaleId}
             formatNumber={compactNumber}
             getAttack={(member, progress) => attackFor(member, progress)}
             onRecruit={recruitGuildMembers}
             onToggleParty={toggleParty}
-            onSell={sellMember}
+            onRequestSale={requestMemberSale}
+            onCancelSale={() => setPendingSaleId(null)}
+            onConfirmSale={confirmMemberSale}
           />
           </>}
           </div>

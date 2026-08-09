@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+import { playGuildRecruitRevealSound } from "../battle-audio";
 import { combatTraitFor, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "../game-data";
 import {
   formatRecruitRate,
@@ -23,11 +24,15 @@ type TavernHallProps = {
   tavernLevel: number;
   gold: number;
   recruitResults: RecruitResult[];
+  recruitSequence: number;
+  pendingSaleId: string | null;
   formatNumber: (value: number) => string;
   getAttack: (member: MemberDefinition, progress: MemberProgress) => number;
   onRecruit: (count: 1 | 10) => void;
   onToggleParty: (id: string) => void;
-  onSell: (id: string) => void;
+  onRequestSale: (id: string) => void;
+  onCancelSale: () => void;
+  onConfirmSale: () => void;
 };
 
 const fallbackProgress: MemberProgress = { level: 1, xp: 0, gear: 0 };
@@ -50,11 +55,91 @@ function isRare(member: MemberDefinition) {
   return RANK_ORDER.indexOf(member.rank) >= RANK_ORDER.indexOf("B");
 }
 
-export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel, gold, recruitResults, formatNumber, getAttack, onRecruit, onToggleParty, onSell }: TavernHallProps) {
+const REVEAL_LEAD_MS = 180;
+const REVEAL_STAGGER_MS = 175;
+
+type RecruitRevealProps = {
+  sequence: number;
+  results: RecruitResult[];
+  members: MemberDefinition[];
+  formatNumber: (value: number) => string;
+};
+
+function RecruitReveal({ sequence, results, members, formatNumber }: RecruitRevealProps) {
+  const [revealedCount, setRevealedCount] = useState(0);
+
+  useEffect(() => {
+    if (!results.length) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const timer = window.setTimeout(() => setRevealedCount(results.length), 0);
+      return () => window.clearTimeout(timer);
+    }
+
+    const timers = results.map((result, index) => window.setTimeout(() => {
+      const member = members.find((candidate) => candidate.id === result.memberId);
+      setRevealedCount(index + 1);
+      if (member) playGuildRecruitRevealSound(member.rank, index);
+    }, REVEAL_LEAD_MS + index * REVEAL_STAGGER_MS));
+
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [members, results, sequence]);
+
+  if (!results.length) return <div className={styles.emptyResult}>
+    <span>♢</span><strong>아직 울리지 않은 계약 종</strong><small>1명 또는 10명 영입을 선택하면 이곳에 카드형 초상화가 펼쳐집니다.</small>
+  </div>;
+
+  const visibleResults = results.slice(0, revealedCount);
+  const latestResult = visibleResults.at(-1);
+  const latestMember = latestResult ? members.find((candidate) => candidate.id === latestResult.memberId) : null;
+  const revealing = revealedCount < results.length;
+
+  return <div className={`${styles.resultStage} ${revealing ? styles.revealing : styles.revealComplete}`}>
+    {latestMember && <span key={`${sequence}-${revealedCount}`} className={`${styles.revealSlash} ${isRare(latestMember) ? styles.rareRevealSlash : ""}`} aria-hidden="true" />}
+    <div className={styles.revealProgress} aria-label={`계약 공개 ${revealedCount}/${results.length}`}>
+      <span>{revealing ? "CONTRACT REVEAL" : "ALL CONTRACTS REVEALED"}</span>
+      <div>{results.map((result, index) => {
+        const member = members.find((candidate) => candidate.id === result.memberId);
+        const revealed = index < revealedCount;
+        return <i key={`${result.memberId}-${index}`} className={`${revealed ? styles.revealedPip : ""} ${revealed && member && isRare(member) ? styles.rarePip : ""}`} />;
+      })}</div>
+      <strong>{revealedCount}/{results.length}</strong>
+    </div>
+    <div className={`${styles.resultGrid} ${results.length === 1 ? styles.singleResult : ""}`}>
+      {visibleResults.map((result, index) => {
+        const member = members.find((candidate) => candidate.id === result.memberId)!;
+        const rare = isRare(member);
+        return <article key={`${sequence}-${result.memberId}-${index}`} className={`${styles.resultCard} ${rare ? styles.rareResult : ""} ${rare ? styles[`rank${member.rank}`] : ""}`} style={portraitStyle(member)}>
+          {rare && <span className={styles.sparkles} aria-hidden="true">✦ · ✧ · ✦</span>}
+          <div className={styles.resultPortrait}>
+            <span className={styles.rankRibbon}>{member.rank} RANK</span>
+            <Image className={styles.portraitImage} src={portraitSource(member.id)} alt={`${member.name} 영입 결과 초상화`} fill sizes="(max-width: 560px) 42vw, 190px" unoptimized draggable={false} />
+          </div>
+          <div className={styles.resultCopy}>
+            <small>{member.job} · {combatTraitFor(member).title}</small>
+            <strong>{member.name}</strong>
+            <em className={result.isNew ? styles.newBadge : styles.duplicateBadge}>{result.isNew ? "NEW · 명부 등록" : `중복 정산 +${formatNumber(result.refund)} G`}</em>
+          </div>
+        </article>;
+      })}
+    </div>
+  </div>;
+}
+
+export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel, gold, recruitResults, recruitSequence, pendingSaleId, formatNumber, getAttack, onRecruit, onToggleParty, onRequestSale, onCancelSale, onConfirmSale }: TavernHallProps) {
   const ownedMembers = ownedIds.map((id) => members.find((member) => member.id === id)).filter((member): member is MemberDefinition => Boolean(member));
   const partyMembers = partyIds.map((id) => members.find((member) => member.id === id)).filter((member): member is MemberDefinition => Boolean(member));
+  const pendingSaleMember = members.find((member) => member.id === pendingSaleId) ?? null;
   const rates = recruitRatesForLevel(tavernLevel);
   const highRankChance = highRankRecruitChance(tavernLevel);
+
+  useEffect(() => {
+    if (!pendingSaleId) return;
+    const dismissOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCancelSale();
+    };
+    document.addEventListener("keydown", dismissOnEscape);
+    return () => document.removeEventListener("keydown", dismissOnEscape);
+  }, [onCancelSale, pendingSaleId]);
 
   return <section className={`${styles.tavern} panel facility-first-panel`} aria-label="방랑자의 잔 여관 길드원 영입과 편성">
     <header className={styles.header}>
@@ -72,12 +157,6 @@ export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel,
     </header>
 
     <div className={styles.interior}>
-      <div className={styles.innkeeperBar}>
-        <span className={styles.innkeeperSeal}>M</span>
-        <span><small>여관주인 마르타</small><strong>운명은 계약 종이 울리는 순간 정해지죠. 어떤 모험가든 문을 두드릴 수 있어요.</strong></span>
-        <em>등급 추첨 → 길드원 결정 → 즉시 명부 등록</em>
-      </div>
-
       <div className={styles.recruitCounter}>
         <div className={styles.recruitPitch}>
           <span className={styles.contractSeal}>契</span>
@@ -95,13 +174,18 @@ export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel,
         </div>
 
         <div className={styles.rateBoard}>
-          <div><span>RECRUIT ODDS</span><strong>등급별 영입 확률</strong><small>여관 Lv.{tavernLevel} 적용 중</small></div>
+          <div className={styles.rateBoardHeader}>
+            <span className={styles.oddsSeal}>%</span>
+            <div><small>CONTRACT PROBABILITY</small><strong>등급별 영입 확률</strong><em>여관 Lv.{tavernLevel} 적용 중</em></div>
+            <b>B+ {formatRecruitRate(highRankChance)}</b>
+          </div>
+          <div className={styles.rateLegend}><span>COMMON</span><i /><span>LEGENDARY</span></div>
           <ol>
             {RANK_ORDER.map((rank) => <li key={rank} style={{ "--rank-color": RANK_COLORS[rank] } as CSSProperties}>
-              <b>{rank}</b><span><i style={{ width: `${Math.max(5, rates[rank] / 52 * 100)}%` }} /></span><strong>{formatRecruitRate(rates[rank])}</strong>
+              <b><span>{rank}</span><small>RANK</small></b><span><i style={{ width: `${Math.max(5, rates[rank] / 52 * 100)}%` }} /></span><strong>{formatRecruitRate(rates[rank])}</strong>
             </li>)}
           </ol>
-          <p>개별 결과는 서로 독립적으로 추첨됩니다. B·A·S 등급 카드는 특별한 빛으로 표시됩니다.</p>
+          <p><b>모든 등급 등장</b><span>각 계약은 독립 추첨 · B·A·S 등급은 특별 연출</span></p>
         </div>
       </div>
 
@@ -110,33 +194,14 @@ export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel,
           <div><span>LATEST CONTRACTS</span><strong id="latest-recruit-title">최신 영입 결과</strong></div>
           {recruitResults.length > 0 && <b>{recruitResults.length} CONTRACTS OPENED</b>}
         </div>
-        {recruitResults.length > 0 ? <div className={`${styles.resultGrid} ${recruitResults.length === 1 ? styles.singleResult : ""}`}>
-          {recruitResults.map((result, index) => {
-            const member = members.find((candidate) => candidate.id === result.memberId)!;
-            const rare = isRare(member);
-            return <article key={`${result.memberId}-${index}`} className={`${styles.resultCard} ${rare ? styles.rareResult : ""} ${rare ? styles[`rank${member.rank}`] : ""}`} style={portraitStyle(member)}>
-              {rare && <span className={styles.sparkles} aria-hidden="true">✦ · ✧ · ✦</span>}
-              <div className={styles.resultPortrait}>
-                <span className={styles.rankRibbon}>{member.rank} RANK</span>
-                <Image className={styles.portraitImage} src={portraitSource(member.id)} alt={`${member.name} 영입 결과 초상화`} fill sizes="(max-width: 560px) 42vw, 190px" unoptimized draggable={false} />
-              </div>
-              <div className={styles.resultCopy}>
-                <small>{member.job} · {combatTraitFor(member).title}</small>
-                <strong>{member.name}</strong>
-                <em className={result.isNew ? styles.newBadge : styles.duplicateBadge}>{result.isNew ? "NEW · 명부 등록" : `중복 정산 +${formatNumber(result.refund)} G`}</em>
-              </div>
-            </article>;
-          })}
-        </div> : <div className={styles.emptyResult}>
-          <span>♢</span><strong>아직 울리지 않은 계약 종</strong><small>1명 또는 10명 영입을 선택하면 이곳에 카드형 초상화가 펼쳐집니다.</small>
-        </div>}
+        <RecruitReveal key={recruitSequence} sequence={recruitSequence} results={recruitResults} members={members} formatNumber={formatNumber} />
       </section>
     </div>
 
     <div className={styles.partySection}>
       <div className={styles.partyHeading}>
-        <div><span>GUILD PASSIVE ARSENAL</span><strong>길드원 편성</strong><small>최대 4명을 편성합니다. 판매하려면 먼저 파티에서 해제하세요.</small></div>
-        <b>{partyIds.length}/4 EQUIPPED</b>
+        <div><span>GUILD PARTY FORMATION</span><strong>길드원 편성</strong><small>최대 4명을 편성합니다. 판매하려면 먼저 파티에서 해제하세요.</small></div>
+        <b>{partyIds.length}/4 IN PARTY</b>
       </div>
       <div className={styles.partySlots} aria-label="현재 토벌 파티">
         {Array.from({ length: 4 }, (_, index) => {
@@ -163,13 +228,28 @@ export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel,
               <span><small>{member.rank} RANK · {member.job}</small><strong>{member.name}</strong><em>{combatTraitFor(member).title} · Lv.{memberProgress.level}</em></span>
               <b>{inParty ? "편성 중 ✓" : "편성 +"}</b>
             </button>
-            <button type="button" className={styles.sellButton} onClick={() => onSell(member.id)} disabled={cannotSell} title={inParty ? "파티에서 해제한 뒤 판매할 수 있습니다." : ownedMembers.length === 1 ? "마지막 길드원은 판매할 수 없습니다." : `${formatNumber(MEMBER_SALE_PRICES[member.rank])} 골드에 판매`}>
+            <button type="button" className={styles.sellButton} onClick={() => onRequestSale(member.id)} disabled={cannotSell} title={inParty ? "파티에서 해제한 뒤 판매할 수 있습니다." : ownedMembers.length === 1 ? "마지막 길드원은 판매할 수 없습니다." : `${formatNumber(MEMBER_SALE_PRICES[member.rank])} 골드에 판매`}>
               <span>판매</span><strong>+{formatNumber(MEMBER_SALE_PRICES[member.rank])} G</strong>
             </button>
           </article>;
         })}
       </div>
     </div>
+
+    {pendingSaleMember && <div className={styles.saleDialogBackdrop} onMouseDown={onCancelSale}>
+      <div className={styles.saleDialog} role="dialog" aria-modal="true" aria-labelledby="sale-dialog-title" onMouseDown={(event) => event.stopPropagation()} style={portraitStyle(pendingSaleMember)}>
+        <span className={styles.saleDialogEyebrow}>MEMBER SALE CONFIRMATION</span>
+        <div className={styles.saleDialogMember}>
+          <span className={styles.saleDialogPortrait}><Image className={styles.portraitImage} src={portraitSource(pendingSaleMember.id)} alt={`${pendingSaleMember.name} 판매 확인 초상화`} fill sizes="92px" unoptimized draggable={false} /></span>
+          <span><small>{pendingSaleMember.rank} RANK · {pendingSaleMember.job}</small><strong>{pendingSaleMember.name}</strong><em>판매 금액 {formatNumber(MEMBER_SALE_PRICES[pendingSaleMember.rank])} G</em></span>
+        </div>
+        <h4 id="sale-dialog-title">정말 판매하시겠습니까?</h4>
+        <div className={styles.saleDialogActions}>
+          <button type="button" onClick={onCancelSale} autoFocus>취소</button>
+          <button type="button" className={styles.confirmSaleButton} onClick={onConfirmSale}>판매하기</button>
+        </div>
+      </div>
+    </div>}
 
     <div className={styles.collection}>
       <div><span className="eyebrow">GUILD PORTRAIT ARCHIVE</span><h4>길드원 도감</h4><p>현재 보유한 길드원만 등급별 기록에 표시됩니다.</p></div>
