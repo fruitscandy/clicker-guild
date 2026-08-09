@@ -112,7 +112,7 @@ export function TavernHall({ candidates, members, ownedIds, progress, partyIds, 
 
     <div className={styles.partySection}>
       <div className={styles.partyHeading}>
-        <div><span>GUILD PASSIVE ARSENAL</span><strong>편성 길드원 패시브</strong><small>최대 4명을 편성합니다. 필드에는 본체 없이 각자의 무기 공격과 스킬만 자동 발동합니다.</small></div>
+        <div><span>GUILD PASSIVE ARSENAL</span><strong>편성 길드원</strong><small>최대 4명을 편성합니다. 필드에는 본체 없이 각자의 무기 공격과 스킬만 자동 발동합니다.</small></div>
         <b>{partyIds.length}/4 EQUIPPED</b>
       </div>
       <div className={styles.partySlots} aria-label="현재 토벌 파티">
@@ -128,7 +128,7 @@ export function TavernHall({ candidates, members, ownedIds, progress, partyIds, 
         })}
       </div>
 
-      <div className={styles.rosterHeading}><span><small>OWNED PASSIVE MEMBERS</small><strong>보유 길드원 패시브</strong></span><em>초상화를 눌러 자동 전투 슬롯에 편성하거나 해제합니다.</em></div>
+      <div className={styles.rosterHeading}><span><small>OWNED PASSIVE MEMBERS</small><strong>보유 길드원</strong></span><em>초상화를 눌러 자동 전투 슬롯에 편성하거나 해제합니다.</em></div>
       <div className={styles.ownedRoster} role="list" aria-label="보유 길드원 목록">
         {ownedMembers.map((member) => {
           const memberProgress = progress[member.id] ?? fallbackProgress;
