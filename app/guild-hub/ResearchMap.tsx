@@ -20,113 +20,149 @@ type ResearchMapProps = {
   hallLevel: number;
   formatCost: (cost: number) => string;
   onPurchase: (node: ResearchNodeView) => void;
+  readOnly?: boolean;
 };
 
-type Point = { x: number; y: number };
+type BranchFamily = "range" | "crit" | "shockwave" | "combo" | "execute" | "momentum" | "time" | "scout" | "loot" | "guild" | "gold" | "tavern";
 
-const BRANCH_LAYOUT: Record<string, { direction: "north" | "east" | "south" | "west"; lane: number }> = {
-  range: { direction: "north", lane: 35 },
-  crit: { direction: "north", lane: 50 },
-  shockwave: { direction: "north", lane: 65 },
-  combo: { direction: "east", lane: 35 },
-  execute: { direction: "east", lane: 50 },
-  momentum: { direction: "east", lane: 65 },
-  time: { direction: "south", lane: 35 },
-  scout: { direction: "south", lane: 50 },
-  loot: { direction: "south", lane: 65 },
-  guild: { direction: "west", lane: 35 },
-  gold: { direction: "west", lane: 50 },
-  tavern: { direction: "west", lane: 65 },
+const BRANCH_LABELS: Record<BranchFamily, string> = {
+  range: "참격 범위",
+  crit: "치명타",
+  shockwave: "충격파",
+  combo: "연격 리듬",
+  execute: "처형술",
+  momentum: "전투 몰입",
+  time: "원정 보급",
+  scout: "전장 정찰",
+  loot: "전리품 감정",
+  guild: "길드 전술",
+  gold: "행운의 금고",
+  tavern: "여관 증축",
 };
 
-function nodePoint(nodeId: string): Point {
-  if (nodeId === "foundation") return { x: 50, y: 50 };
-  if (nodeId === "citadel") return { x: 86, y: 93 };
+const DIRECTION_GROUPS: Array<{
+  key: string;
+  title: string;
+  subtitle: string;
+  glyph: string;
+  families: BranchFamily[];
+}> = [
+  { key: "offense", title: "길드 공세", subtitle: "플레이어 직접 공격", glyph: "⚔", families: ["range", "crit", "shockwave"] },
+  { key: "tactics", title: "연계 전술", subtitle: "클릭 전투 리듬", glyph: "✦", families: ["combo", "execute", "momentum"] },
+  { key: "support", title: "원정 지원", subtitle: "시간 · 정찰 · 전리품", glyph: "◆", families: ["time", "scout", "loot"] },
+  { key: "management", title: "길드 경영", subtitle: "길드원 · 골드 · 여관", glyph: "♜", families: ["guild", "gold", "tavern"] },
+];
 
-  const [family, rawDepth] = nodeId.split("-");
-  const depth = Math.max(1, Number(rawDepth) || 1);
-  const layout = BRANCH_LAYOUT[family] ?? { direction: "east", lane: 50 };
-
-  switch (layout.direction) {
-    case "north": return { x: layout.lane, y: 47 - depth * 5.8 };
-    case "east": return { x: 52 + depth * 8.2, y: layout.lane };
-    case "south": return { x: layout.lane, y: 52 + depth * 8.2 };
-    case "west": return { x: 48 - depth * 7.8, y: layout.lane };
-  }
+function familyForNode(nodeId: string) {
+  return nodeId.split("-")[0] as BranchFamily;
 }
 
-export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurchase }: ResearchMapProps) {
+function nodeDepth(nodeId: string) {
+  return Number(nodeId.split("-")[1]) || 0;
+}
+
+export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurchase, readOnly = false }: ResearchMapProps) {
   const purchased = new Set(purchasedIds);
-  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const foundation = nodes.find((node) => node.id === "foundation");
+  const citadel = nodes.find((node) => node.id === "citadel");
+
+  function renderNode(node: ResearchNodeView, standalone = false) {
+    const isPurchased = purchased.has(node.id);
+    const prerequisitesMet = node.prerequisites.every((id) => purchased.has(id));
+    const requiredHallLevel = requiredHallLevelForNode(node.id);
+    const hallLocked = requiredHallLevel > hallLevel;
+    const available = !readOnly && !isPurchased && prerequisitesMet && !hallLocked;
+    const icon = upgradeIconForNode(node.id);
+    const status = isPurchased
+      ? "연구 완료"
+      : readOnly
+        ? "DEV 시험대에서 조정"
+        : hallLocked
+        ? `본관 Lv.${requiredHallLevel} 필요`
+        : prerequisitesMet
+          ? `${formatCost(node.cost)} G`
+          : "선행 연구 필요";
+
+    return (
+      <div key={node.id} className={`${styles.nodeWrap} ${standalone ? styles.standalone : ""}`} role={standalone ? undefined : "listitem"}>
+        <button
+          type="button"
+          data-node-id={node.id}
+          className={`${styles.node} ${isPurchased ? styles.purchased : ""} ${available ? styles.available : ""} ${hallLocked ? styles.locked : ""} ${node.id === "foundation" ? styles.foundation : ""} ${node.id === "citadel" ? styles.citadel : ""}`}
+          onClick={() => onPurchase(node)}
+          disabled={readOnly || isPurchased || !prerequisitesMet || hallLocked}
+          aria-label={`${node.title}: ${node.description}. ${status}`}
+        >
+          {nodeDepth(node.id) > 0 && <span className={styles.depth}>단계 {nodeDepth(node.id)}</span>}
+          <span className={`${styles.glyph} ${icon && !hallLocked ? styles.glyphArt : ""}`}>
+            {hallLocked ? "🔒" : icon ? <Image src={icon} alt="" width={54} height={54} aria-hidden="true" /> : node.glyph}
+          </span>
+          <span className={styles.nodeCopy}>
+            <strong>{node.title}</strong>
+            <span className={styles.effect}>{node.description}</span>
+            <small>{status}</small>
+          </span>
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className={styles.viewport}>
-      <div className={styles.map} aria-label="중앙에서 네 방향으로 확장되는 길드 발전 지도">
-        <span className={`${styles.direction} ${styles.north}`}><b>길드 공세</b><small>선봉 · 사격 · 비전</small></span>
-        <span className={`${styles.direction} ${styles.east}`}><b>연계 전술</b><small>협공 · 암살 · 돌파</small></span>
-        <span className={`${styles.direction} ${styles.south}`}><b>원정 지원</b><small>보급 · 정찰 · 전리품</small></span>
-        <span className={`${styles.direction} ${styles.west}`}><b>길드 경영</b><small>길드원 · 골드 · 여관</small></span>
+    <div className={styles.viewport} aria-label="네 방향 계통으로 정리된 길드 발전 지도">
+      <div className={styles.map}>
+        {foundation && (
+          <div className={styles.coreSection}>
+            <span className={styles.coreLabel}>RESEARCH CORE</span>
+            {renderNode(foundation, true)}
+            <p>중앙 기반에서 원하는 계통을 골라 순서대로 연구하세요.</p>
+          </div>
+        )}
 
-        <svg className={styles.connectors} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          {nodes.flatMap((node) => node.id === "citadel" ? [] : node.prerequisites.map((parentId) => {
-            const parent = nodeById.get(parentId);
-            if (!parent) return null;
-            const start = nodePoint(parent.id);
-            const end = nodePoint(node.id);
-            const parentPurchased = purchased.has(parent.id);
-            const nodePurchased = purchased.has(node.id);
-            const hallLocked = requiredHallLevelForNode(node.id) > hallLevel;
+        <div className={styles.directionGrid}>
+          {DIRECTION_GROUPS.map((group) => {
+            const groupNodes = nodes.filter((node) => group.families.includes(familyForNode(node.id)));
+            const completedCount = groupNodes.filter((node) => purchased.has(node.id)).length;
+
             return (
-              <line
-                key={`${parentId}-${node.id}`}
-                x1={start.x}
-                y1={start.y}
-                x2={end.x}
-                y2={end.y}
-                className={`${styles.connector} ${parentPurchased ? styles.reachable : ""} ${nodePurchased ? styles.completed : ""} ${hallLocked ? styles.hallLocked : ""}`}
-              />
+              <section className={styles.directionPanel} key={group.key} aria-labelledby={`research-${group.key}`}>
+                <header className={styles.directionHeading}>
+                  <span className={styles.directionGlyph} aria-hidden="true">{group.glyph}</span>
+                  <span>
+                    <small>{group.subtitle}</small>
+                    <strong id={`research-${group.key}`}>{group.title}</strong>
+                  </span>
+                  <em>{completedCount}/{groupNodes.length}</em>
+                </header>
+
+                <div className={styles.laneList}>
+                  {group.families.map((family) => {
+                    const familyNodes = nodes.filter((node) => familyForNode(node.id) === family).sort((a, b) => nodeDepth(a.id) - nodeDepth(b.id));
+                    const familyCompleted = familyNodes.filter((node) => purchased.has(node.id)).length;
+
+                    return (
+                      <section className={styles.lane} key={family} aria-labelledby={`research-lane-${family}`}>
+                        <div className={styles.laneHeading}>
+                          <strong id={`research-lane-${family}`}>{BRANCH_LABELS[family]}</strong>
+                          <span>{familyCompleted}/{familyNodes.length} 완료</span>
+                        </div>
+                        <div className={styles.laneTrack} role="list" aria-label={`${BRANCH_LABELS[family]} 연구 단계`}>
+                          {familyNodes.map((node) => renderNode(node))}
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              </section>
             );
-          }))}
-        </svg>
+          })}
+        </div>
 
-        {nodes.map((node) => {
-          const point = nodePoint(node.id);
-          const isPurchased = purchased.has(node.id);
-          const prerequisitesMet = node.prerequisites.every((id) => purchased.has(id));
-          const requiredHallLevel = requiredHallLevelForNode(node.id);
-          const hallLocked = requiredHallLevel > hallLevel;
-          const available = !isPurchased && prerequisitesMet && !hallLocked;
-          const isFoundation = node.id === "foundation";
-          const isCitadel = node.id === "citadel";
-          const icon = upgradeIconForNode(node.id);
-          const status = isPurchased
-            ? "연구 완료"
-            : hallLocked
-              ? `본관 Lv.${requiredHallLevel} 필요`
-              : prerequisitesMet
-                ? `${formatCost(node.cost)} G`
-                : "선행 연구 필요";
-
-          return (
-            <button
-              key={node.id}
-              className={`${styles.node} ${isPurchased ? styles.purchased : ""} ${available ? styles.available : ""} ${hallLocked ? styles.locked : ""} ${isFoundation ? styles.foundation : ""} ${isCitadel ? styles.citadel : ""}`}
-              style={{ left: `${point.x}%`, top: `${point.y}%` }}
-              onClick={() => onPurchase(node)}
-              disabled={isPurchased || !prerequisitesMet || hallLocked}
-              aria-label={`${node.title}: ${node.description}. ${status}`}
-            >
-              <span className={`${styles.glyph} ${icon && !hallLocked ? styles.glyphArt : ""}`}>
-                {hallLocked ? "🔒" : icon ? <Image src={icon} alt="" width={54} height={54} aria-hidden="true" /> : node.glyph}
-              </span>
-              <strong>{node.title}</strong>
-              <span className={styles.effect}>{node.description}</span>
-              <small>{status}</small>
-            </button>
-          );
-        })}
-
-        <div className={styles.centerPulse} aria-hidden="true"><i /><i /></div>
+        {citadel && (
+          <div className={styles.citadelSection}>
+            <span>FINAL RESEARCH</span>
+            {renderNode(citadel, true)}
+          </div>
+        )}
       </div>
     </div>
   );
