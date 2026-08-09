@@ -220,7 +220,7 @@ test("keeps developer upgrade experiments temporary and independent from gold", 
   ]);
 
   assert.match(game, /const effectiveUpgrades = developerMode \? developerUpgrades : save\.upgrades/);
-  assert.match(game, /readOnly=\{developerMode\}/);
+  assert.doesNotMatch(game, /readOnly=\{developerMode\}/);
   assert.match(game, /<DeveloperUpgradePanel/);
   assert.doesNotMatch(developerPanel, /setSave|localStorage|gold\s*[<>=]/);
   assert.match(developerPanel, /저장 영향 없음/);
@@ -229,6 +229,54 @@ test("keeps developer upgrade experiments temporary and independent from gold", 
   assert.match(upgradeState, /export const UPGRADE_KEYS/);
   assert.match(upgradeState, /maximumUpgradeLevels/);
   assert.match(upgradeState, /clampUpgradeLevel/);
+});
+
+test("keeps developer resource purchases isolated from the saved game", async () => {
+  const [game, resourceState, resourcePanel, resourceStyles] = await Promise.all([
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/developer-resources.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/DeveloperResourcePanel.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/DeveloperResourcePanel.module.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(game, /const developerEntrySave = useRef<SaveState \| null>\(null\)/);
+  assert.match(game, /developerEntrySave\.current = cloneSaveState\(save\)/);
+  assert.match(game, /setSave\(cloneSaveState\(developerEntrySave\.current\)\)/);
+  assert.match(game, /if \(!hydrated \|\| developerMode\) return/);
+  assert.match(game, /<DeveloperResourcePanel/);
+  assert.match(game, /onChange=\{\(resources\) => setSave/);
+  assert.match(resourcePanel, /DEV RESOURCE LAB/);
+  assert.match(resourcePanel, /MATERIAL_GROUPS/);
+  assert.match(resourcePanel, /type="number"/);
+  assert.match(resourcePanel, /모두 0/);
+  assert.match(resourcePanel, /구매 가능/);
+  assert.match(resourcePanel, /대량 보유/);
+  assert.match(resourceState, /DEVELOPER_RESOURCE_LIMIT/);
+  assert.match(resourceState, /clampDeveloperResourceAmount/);
+  assert.match(resourceState, /developerResourcePreset/);
+  assert.match(resourceStyles, /\.materialGrid/);
+  assert.match(resourceStyles, /@media \(max-width: 760px\)/);
+  assert.doesNotMatch(resourcePanel, /localStorage|SAVE_KEY/);
+  assert.match(resourcePanel, /지역 강화 소재 10종/);
+  assert.match(resourcePanel, /allStageMaterials/);
+});
+
+test("shows one complete material inventory and removes the combat power chip", async () => {
+  const [game, inventory, economy] = await Promise.all([
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/MaterialInventory.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/economy-balance.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(game, /<MaterialInventory materials=\{save\.materials\}/);
+  assert.match(game, /migrateMaterialInventory\(loaded\.materials \?\? \{\}\)/);
+  assert.doesNotMatch(game, /전투력|combatPower/);
+  assert.doesNotMatch(game, /current-material-resource/);
+  assert.match(inventory, /강화 소재 보관함/);
+  assert.match(inventory, /획득 가능한 강화 소재 10종/);
+  assert.match(inventory, /STAGE \{material\.firstStage\}–\{material\.lastStage\}/);
+  assert.match(economy, /NORMAL_BATTLE_SECONDS = 26/);
+  assert.match(economy, /BOSS_BATTLE_SECONDS = 36/);
 });
 
 test("uses expedition state instead of locked navigation tabs", async () => {

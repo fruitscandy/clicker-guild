@@ -10,6 +10,17 @@ let sfxMasterGain: GainNode | null = null;
 let listeningToAudioSettings = false;
 let lastMonsterHitAt = -1;
 let monsterHitVariation = 0;
+let lastCombatProcAt = -1;
+
+export type ProgressionSoundKind = "weapon-craft" | "research-unlock" | "guild-hall" | "special-tactic";
+export type RareRewardSoundKind = "gear" | "first-clear" | "boss-token";
+export type CombatProcSound = {
+  critical?: boolean;
+  combo?: boolean;
+  shockwave?: boolean;
+  execution?: boolean;
+  momentumMaxed?: boolean;
+};
 
 const GOLD_COIN_SAMPLE_URLS = [
   "/assets/audio/loot/gold-coin-clink-01.mp3",
@@ -159,6 +170,12 @@ function playWhenAudioIsReady(play: (context: AudioContext) => void) {
   void context.resume().then(() => play(context)).catch(() => undefined);
 }
 
+function markEventSound(name: string) {
+  if (typeof document === "undefined" || typeof window === "undefined") return;
+  document.documentElement.dataset.lastEventSfx = name;
+  window.dispatchEvent(new CustomEvent("guild:event-sfx", { detail: { name } }));
+}
+
 export function unlockBattleAudio() {
   const context = getAudioContext();
   if (!context) return;
@@ -219,6 +236,34 @@ export function playExpeditionFailSound() {
   });
 }
 
+export function playStageClearSound(boss = false) {
+  playWhenAudioIsReady((context) => {
+    const start = context.currentTime + 0.018;
+    const melody = boss ? [294, 370, 440, 587] : [392, 494, 587, 784];
+    const offsets = [0, 0.09, 0.18, 0.32];
+    const root = boss ? 147 : 196;
+    markEventSound(`stage-clear:${boss ? "boss" : "normal"}`);
+
+    // A soft impact opens space after the last combat hit, then a four-note
+    // major fanfare and a sustained chord make the result read as a victory.
+    noiseBurst(context, start, boss ? 0.32 : 0.19, boss ? 0.025 : 0.015, boss ? 880 : 1850, boss ? 105 : 520);
+    tone(context, boss ? 73 : 98, start, boss ? 0.58 : 0.4, boss ? 0.042 : 0.028, "triangle", boss ? 49 : 73, 0.004);
+    if (boss) tone(context, 110, start + 0.025, 0.5, 0.022, "sine", 73, 0.006);
+
+    melody.forEach((frequency, index) => {
+      const noteStart = start + offsets[index];
+      const duration = index === melody.length - 1 ? (boss ? 0.72 : 0.58) : 0.25;
+      tone(context, frequency, noteStart, duration, boss ? 0.023 : 0.021, "triangle", frequency * 1.012, 0.006);
+      tone(context, frequency * 2, noteStart + 0.012, duration * 0.72, boss ? 0.006 : 0.008, "sine", frequency * 2.025, 0.004);
+    });
+
+    [root, root * 1.25, root * 1.5].forEach((frequency, index) => {
+      tone(context, frequency, start + 0.38, boss ? 0.72 : 0.56, boss ? 0.018 : 0.014, index === 0 ? "triangle" : "sine", frequency * 1.008, 0.018);
+    });
+    noiseBurst(context, start + 0.3, boss ? 0.28 : 0.2, boss ? 0.011 : 0.009, boss ? 3100 : 4600, boss ? 6800 : 7600);
+  });
+}
+
 export function playMonsterHitSound(impactTier = 0, targetCount = 1) {
   const context = getAudioContext();
   if (!context || context.state !== "running") return;
@@ -236,6 +281,122 @@ export function playMonsterHitSound(impactTier = 0, targetCount = 1) {
   if (tier >= 2 || targetCount >= 4) {
     tone(context, 720 + tier * 90 + variation, start + 0.012, 0.065, 0.008 + crowdWeight * 0.003, "square", 360 + tier * 55, 0.0015);
   }
+}
+
+export function playProgressionSound(kind: ProgressionSoundKind, tier = 1) {
+  playWhenAudioIsReady((context) => {
+    const start = context.currentTime;
+    const tierLift = Math.min(5, Math.max(0, tier - 1));
+    markEventSound(`progression:${kind}`);
+
+    if (kind === "weapon-craft") {
+      noiseBurst(context, start, 0.052, 0.019, 2400 + tierLift * 120, 760);
+      tone(context, 132 + tierLift * 7, start, 0.16, 0.03, "square", 84 + tierLift * 5, 0.002);
+      tone(context, 880 + tierLift * 34, start + 0.055, 0.25, 0.018, "triangle", 1320 + tierLift * 48, 0.004);
+      return;
+    }
+
+    if (kind === "guild-hall") {
+      noiseBurst(context, start, 0.16, 0.021, 440, 115);
+      tone(context, 73, start, 0.34, 0.037, "triangle", 49, 0.005);
+      [196, 262, 330].forEach((frequency, index) => {
+        tone(context, frequency, start + 0.08 + index * 0.075, 0.31, 0.017, "sine", frequency * 1.25, 0.01);
+      });
+      return;
+    }
+
+    if (kind === "special-tactic") {
+      tone(context, 220, start, 0.31, 0.026, "sawtooth", 330, 0.012);
+      [659, 880, 1319].forEach((frequency, index) => {
+        tone(context, frequency, start + 0.045 + index * 0.055, 0.32, 0.016, "sine", frequency * 1.08, 0.006);
+      });
+      noiseBurst(context, start + 0.04, 0.13, 0.008, 1900, 5200);
+      return;
+    }
+
+    [523, 659, 784].forEach((frequency, index) => {
+      tone(context, frequency + tierLift * 12, start + index * 0.06, 0.24, 0.018, "triangle", (frequency + tierLift * 12) * 1.06, 0.006);
+    });
+    noiseBurst(context, start + 0.02, 0.075, 0.007, 2400, 5200);
+  });
+}
+
+export function playCombatProcSound(proc: CombatProcSound) {
+  const primary = proc.execution
+    ? "execution"
+    : proc.shockwave
+      ? "shockwave"
+      : proc.critical
+        ? "critical"
+        : proc.combo
+          ? "combo"
+          : proc.momentumMaxed
+            ? "momentum-max"
+            : null;
+  if (!primary) return;
+
+  playWhenAudioIsReady((context) => {
+    const start = context.currentTime;
+    if (start - lastCombatProcAt < 0.075) return;
+    lastCombatProcAt = start;
+    markEventSound(`combat:${primary}`);
+
+    if (primary === "execution") {
+      noiseBurst(context, start, 0.075, 0.022, 6200, 780);
+      tone(context, 1480, start, 0.12, 0.02, "sawtooth", 185, 0.0015);
+      tone(context, 82, start + 0.025, 0.24, 0.031, "triangle", 46, 0.002);
+      return;
+    }
+    if (primary === "shockwave") {
+      noiseBurst(context, start, 0.18, 0.025, 760, 92);
+      tone(context, 128, start, 0.25, 0.034, "sine", 43, 0.002);
+      tone(context, 510, start + 0.018, 0.14, 0.013, "square", 130, 0.0015);
+      return;
+    }
+    if (primary === "critical") {
+      noiseBurst(context, start, 0.045, 0.016, 5400, 2100);
+      tone(context, 1260, start, 0.11, 0.018, "square", 2100, 0.001);
+      tone(context, 2520, start + 0.018, 0.09, 0.009, "triangle", 1380, 0.001);
+      return;
+    }
+    if (primary === "combo") {
+      tone(context, 420, start, 0.085, 0.019, "triangle", 260, 0.002);
+      tone(context, 620, start + 0.055, 0.11, 0.022, "triangle", 360, 0.002);
+      noiseBurst(context, start + 0.052, 0.048, 0.01, 3200, 940);
+      return;
+    }
+    [440, 659, 988].forEach((frequency, index) => {
+      tone(context, frequency, start + index * 0.042, 0.17, 0.014, "sine", frequency * 1.16, 0.004);
+    });
+  });
+}
+
+export function playRareRewardSound(kind: RareRewardSoundKind) {
+  playWhenAudioIsReady((context) => {
+    const start = context.currentTime;
+    markEventSound(`reward:${kind}`);
+
+    if (kind === "boss-token") {
+      tone(context, 98, start, 0.42, 0.032, "triangle", 65, 0.004);
+      noiseBurst(context, start, 0.13, 0.018, 920, 220);
+      [392, 523, 784, 1047].forEach((frequency, index) => {
+        tone(context, frequency, start + 0.06 + index * 0.07, 0.35, 0.018, "sine", frequency * 1.025, 0.008);
+      });
+      return;
+    }
+
+    if (kind === "gear") {
+      noiseBurst(context, start, 0.055, 0.009, 5200, 2800);
+      [740, 1110, 1660].forEach((frequency, index) => {
+        tone(context, frequency, start + index * 0.05, 0.28, 0.017, "triangle", frequency * 1.12, 0.004);
+      });
+      tone(context, 185, start, 0.31, 0.018, "sine", 247, 0.008);
+      return;
+    }
+
+    tone(context, 392, start, 0.2, 0.015, "triangle", 523, 0.006);
+    tone(context, 659, start + 0.07, 0.24, 0.017, "sine", 784, 0.006);
+  });
 }
 
 export function playLootDropSound(profile: LootSoundProfile, dropIndex = 0) {

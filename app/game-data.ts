@@ -1,4 +1,5 @@
 import { beginnerForestMonsterName } from "./monster-assets";
+import { shortRunStageGold } from "./economy-balance";
 
 export type Rank = "F" | "E" | "D" | "C" | "B" | "A" | "S";
 
@@ -123,9 +124,8 @@ export function getStage(stage: number) {
   const region = REGIONS[regionIndex];
   const boss = localStage === STAGES_PER_REGION;
   const phaseMultiplier = localStage === 1 ? 1 : localStage === 2 ? 0.18 : 2.35;
-  const rewardMultiplier = localStage === 1 ? 1 : localStage === 2 ? 0.62 : 2.4;
   const hp = Math.round(4_500 * Math.pow(1.72, regionIndex) * phaseMultiplier);
-  const gold = Math.round(150 * Math.pow(1.82, regionIndex) * rewardMultiplier);
+  const gold = shortRunStageGold(regionIndex, localStage);
   const xp = Math.round(34 * Math.pow(1.62, regionIndex) * (boss ? 2.2 : 1));
   const forestMonsterStage = localStage === 1 ? 1 : localStage === 2 ? 6 : 10;
   return {
