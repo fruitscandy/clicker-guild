@@ -1,0 +1,218 @@
+/* Keep active combat focused on the battlefield and attack feedback. */
+.battle-mode {
+  position: relative;
+  width: 100%;
+  min-height: 100svh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.battle-mode > .developer-banner,
+.battle-mode .battle-sidebar,
+.battle-mode .environment-tag,
+.battle-mode .battle-banner,
+.battle-mode .swarm-hud,
+.battle-mode .field-click-guide,
+.battle-mode .member-weapon-fx > small,
+.battle-mode .loot-drop > em {
+  display: none;
+}
+
+.battle-mode > .topbar {
+  display: flex;
+  min-height: 0;
+  padding: 8px 12px;
+  background: linear-gradient(90deg, #101713, #1c2a22 50%, #101713);
+  border: 0;
+  border-bottom: 1px solid #4d5f51;
+}
+
+.battle-mode > .topbar .brand,
+.battle-mode > .topbar .developer-toggle,
+.battle-mode > .topbar .reset-button,
+.battle-mode > .topbar .resources > span:last-child {
+  display: none;
+}
+
+.battle-mode > .topbar .resources {
+  order: initial;
+  width: 100%;
+  margin: 0;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.battle-mode > .topbar .resources > span,
+.battle-mode > .topbar .resources > button {
+  min-height: 38px;
+}
+
+.battle-mode .field-screen {
+  padding: 0;
+}
+
+.battle-mode .field-toolbar {
+  position: relative;
+  top: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 8px 12px;
+  color: #f7ead0;
+  background: linear-gradient(90deg, rgba(40, 31, 25, .98), rgba(60, 44, 31, .96));
+  border: 0;
+  border-bottom: 1px solid #8a6945;
+  border-radius: 0;
+  box-shadow: 0 5px 15px rgba(10, 7, 5, .28);
+}
+
+.battle-mode .field-toolbar .eyebrow,
+.battle-mode .field-toolbar .permadeath-warning,
+.battle-mode .field-toolbar .retreat-button {
+  display: none;
+}
+
+.battle-mode .field-toolbar h2 {
+  color: #fff1cf;
+  font-size: clamp(20px, 2vw, 28px);
+}
+
+.battle-mode .field-toolbar h2 b {
+  color: #e9b957;
+}
+
+.battle-mode .battle-timer {
+  min-width: 180px;
+  padding: 6px 10px;
+}
+
+.battle-mode .battle-timer strong {
+  font-size: 18px;
+}
+
+.battle-mode .battle-timer > i {
+  height: 4px;
+}
+
+.battle-mode .battle-layout {
+  display: block;
+}
+
+.battle-mode .arena {
+  min-height: max(560px, calc(100svh - 114px));
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Let the boss read through scale and presence instead of a floating badge. */
+.battle-mode .pack-monster.monster-leader .leader-mark {
+  display: none;
+}
+
+.battle-mode .pack-monster.monster-leader::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  z-index: 1;
+  width: 128px;
+  height: 104px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 76%, rgba(224, 75, 48, .38), rgba(106, 22, 38, .22) 46%, rgba(41, 10, 25, 0) 72%);
+  border-radius: 50%;
+  box-shadow: 0 0 18px rgba(181, 42, 48, .36);
+  transform: translateX(-50%);
+  animation: bossPresence 2.2s ease-in-out infinite;
+}
+
+.battle-mode .pack-monster.monster-leader .pack-shadow {
+  z-index: 0;
+  width: 78px;
+  height: 20px;
+  background: rgba(56, 8, 19, .58);
+  box-shadow: 0 0 16px rgba(195, 45, 48, .42);
+}
+
+.battle-mode .mass-swarm .pack-monster.monster-leader .pack-monster-art-frame {
+  bottom: 0;
+  z-index: 2;
+  width: 124px;
+  height: 124px;
+}
+
+.battle-mode .pack-monster.monster-leader:not(.is-struck):not(.is-defeated) .pack-monster-art {
+  filter: sepia(.2) saturate(1.32) contrast(1.1) hue-rotate(-9deg) drop-shadow(0 7px 3px rgba(25, 5, 11, .58)) drop-shadow(0 0 9px rgba(220, 69, 50, .58));
+}
+
+.battle-mode .pack-monster.monster-leader .monster-sprite {
+  z-index: 2;
+  width: 255px;
+  height: 350px;
+  filter: saturate(1.18) contrast(1.08) drop-shadow(0 0 8px rgba(220, 69, 50, .5));
+}
+
+@keyframes bossPresence {
+  0%, 100% {
+    opacity: .68;
+    transform: translateX(-50%) scale(.96);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.04);
+  }
+}
+
+@supports (height: 100dvh) {
+  .battle-mode {
+    min-height: 100dvh;
+  }
+
+  .battle-mode .arena {
+    min-height: max(560px, calc(100dvh - 114px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battle-mode .pack-monster.monster-leader::before {
+    animation: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .battle-mode > .topbar {
+    padding: 6px;
+  }
+
+  .battle-mode > .topbar .resources {
+    gap: 6px;
+  }
+
+  .battle-mode > .topbar .resources > span:first-child {
+    flex: 0 0 auto;
+  }
+
+  .battle-mode > .topbar .resources > button {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .battle-mode .field-toolbar {
+    align-items: center;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .battle-mode .battle-controls {
+    width: auto;
+    margin-left: auto;
+  }
+
+  .battle-mode .battle-timer {
+    width: auto;
+    min-width: 138px;
+  }
+}
