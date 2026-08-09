@@ -87,3 +87,18 @@ test("a meaningful failed first attempt salvages the first weapon recipe", async
   assert.ok(salvage.material >= 3);
   assert.deepEqual(balance.failureSalvageFor(1, 150, 3, 0, 42), { gold: 0, material: 0 });
 });
+
+test("the live combat and forge use the shared dopamine balance", async () => {
+  const [game, forge] = await Promise.all([
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/ForgeWorkshop.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(game, /BASE_CLICK_DAMAGE \* activeClickPattern\.damageScale/);
+  assert.match(game, /BASE_ATTACK_RANGE \+ effectiveUpgrades\.range/);
+  assert.equal((game.match(/\.\.\.PLAYER_WEAPON_BALANCE\[/g) ?? []).length, 15);
+  assert.match(game, /failureSalvageFor/);
+  assert.match(game, /회수 전리품/);
+  assert.match(forge, /BASE_CLICK_DAMAGE \* preview\.damageScale/);
+  assert.match(forge, /BASE_CLICK_DAMAGE \* current\.damageScale/);
+});
