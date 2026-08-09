@@ -194,3 +194,39 @@ test("consolidates recruitment and party formation inside the portrait-driven ta
   assert.match(tavernStyles, /\.ownedRoster/);
   assert.match(tavernStyles, /--portrait-scale/);
 });
+
+test("lays research branches out in non-overlapping responsive lanes", async () => {
+  const [researchMap, researchStyles] = await Promise.all([
+    readFile(new URL("../app/guild-hub/ResearchMap.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/ResearchMap.module.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(researchMap, /DIRECTION_GROUPS/);
+  assert.match(researchMap, /className=\{styles\.laneTrack\}/);
+  assert.match(researchMap, /data-node-id=\{node\.id\}/);
+  assert.doesNotMatch(researchMap, /nodePoint|<svg|className=\{styles\.connectors\}/);
+  assert.match(researchStyles, /\.laneTrack\s*\{/);
+  assert.match(researchStyles, /flex:\s*0 0 144px/);
+  assert.match(researchStyles, /overflow-x:\s*auto/);
+  assert.match(researchStyles, /@media \(max-width: 820px\)/);
+  assert.match(researchStyles, /grid-template-columns:\s*minmax\(0, 1fr\)/);
+});
+
+test("keeps developer upgrade experiments temporary and independent from gold", async () => {
+  const [game, upgradeState, developerPanel] = await Promise.all([
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/developer-upgrades.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/DeveloperUpgradePanel.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(game, /const effectiveUpgrades = developerMode \? developerUpgrades : save\.upgrades/);
+  assert.match(game, /readOnly=\{developerMode\}/);
+  assert.match(game, /<DeveloperUpgradePanel/);
+  assert.doesNotMatch(developerPanel, /setSave|localStorage|gold\s*[<>=]/);
+  assert.match(developerPanel, /저장 영향 없음/);
+  assert.match(developerPanel, /모두 0/);
+  assert.match(developerPanel, /모두 최대/);
+  assert.match(upgradeState, /export const UPGRADE_KEYS/);
+  assert.match(upgradeState, /maximumUpgradeLevels/);
+  assert.match(upgradeState, /clampUpgradeLevel/);
+});

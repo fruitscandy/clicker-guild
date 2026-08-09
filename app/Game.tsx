@@ -23,6 +23,8 @@ import {
 } from "./battle-loot";
 import { fieldAssetForRegion } from "./field-assets";
 import { combatTraitFor, compactNumber, getStage, MEMBERS, RANK_ORDER, STAGE_COUNT, STAGES_PER_REGION, type CombatStyle, type MemberDefinition } from "./game-data";
+import { maximumUpgradeLevels, UPGRADE_CAPS, UPGRADE_KEYS, type UpgradeKey, type UpgradeLevels } from "./developer-upgrades";
+import { DeveloperUpgradePanel } from "./guild-hub/DeveloperUpgradePanel";
 import { ForgeWorkshop } from "./guild-hub/ForgeWorkshop";
 import { GuildBuildingHub } from "./guild-hub/GuildBuildingHub";
 import { ResearchMap, type ResearchNodeView } from "./guild-hub/ResearchMap";
@@ -37,7 +39,6 @@ import { UPGRADE_ICON_BY_KEY } from "./upgrade-icons";
 type Tab = "guild" | "field";
 type LootPhase = "idle" | "fighting" | "collecting" | "complete";
 type MemberProgress = { level: number; xp: number; gear: number };
-type UpgradeKey = "range" | "critical" | "combo" | "execution" | "shockwave" | "momentum" | "time" | "scout" | "guild" | "gold" | "tavern" | "loot";
 type CombatProcKey = "range" | "critical" | "combo" | "execution" | "shockwave" | "momentum";
 type SpecialKey = "double" | "command" | "auto";
 type ClickAttackPattern = {
@@ -196,7 +197,10 @@ const upgradeInfo: Record<UpgradeKey, { title: string; description: string; base
   loot: { title: "전리품 감정", description: "장비 획득 확률 +3%", base: 260, accent: "보" },
 };
 
-const UPGRADE_CAPS: Record<UpgradeKey, number> = { range: 7, critical: 4, combo: 4, execution: 3, shockwave: 3, momentum: 3, time: 4, scout: 3, guild: 5, gold: 4, tavern: 3, loot: 3 };
+const UPGRADE_LABELS = UPGRADE_KEYS.reduce((labels, key) => {
+  labels[key] = upgradeInfo[key].title;
+  return labels;
+}, {} as Record<UpgradeKey, string>);
 
 type UpgradeNode = {
   id: string;
@@ -412,6 +416,7 @@ export default function Game() {
   const [developerToolsAvailable, setDeveloperToolsAvailable] = useState(false);
   const [developerStage, setDeveloperStage] = useState<number | null>(null);
   const [developerClickLevel, setDeveloperClickLevel] = useState(CLICK_ATTACK_PATTERNS.length - 1);
+  const [developerUpgrades, setDeveloperUpgrades] = useState<UpgradeLevels>(() => maximumUpgradeLevels());
   const [clicks, setClicks] = useState(0);
   const [momentumStacks, setMomentumStacks] = useState(0);
   const [hitFx, setHitFx] = useState<ClickAttackFx | null>(null);
@@ -439,6 +444,7 @@ export default function Game() {
   const lootTimers = useRef<number[]>([]);
 
   const stageNumber = developerMode && developerStage ? developerStage : save.selectedStage;
+  const effectiveUpgrades = developerMode ? developerUpgrades : save.upgrades;
   const stage = useMemo(() => getStage(stageNumber), [stageNumber]);
   const stageMaterial = useMemo(() => stageMaterialFor(stageNumber), [stageNumber]);
   const fieldAsset = useMemo(() => fieldAssetForRegion(stage.region.hue), [stage.region.hue]);
@@ -450,17 +456,17 @@ export default function Game() {
   const clickVisualLevel = developerMode ? developerClickLevel : save.weaponLevel;
   const activeClickPattern = clickAttackPattern(clickVisualLevel);
   const clickDamage = Math.round(12 * activeClickPattern.damageScale * developerPower);
-  const attackRange = developerMode ? 31 : 10 + save.upgrades.range * 2.75;
-  const criticalChance = developerMode ? .35 : Math.min(.45, save.upgrades.critical * .05);
-  const executionThreshold = developerMode ? .13 : save.upgrades.execution ? .05 + save.upgrades.execution * .02 : 0;
-  const comboLevel = developerMode ? UPGRADE_CAPS.combo : save.upgrades.combo;
-  const shockwaveLevel = developerMode ? UPGRADE_CAPS.shockwave : save.upgrades.shockwave;
-  const momentumLevel = developerMode ? UPGRADE_CAPS.momentum : save.upgrades.momentum;
+  const attackRange = 10 + effectiveUpgrades.range * 2.75;
+  const criticalChance = Math.min(.45, effectiveUpgrades.critical * .05);
+  const executionThreshold = effectiveUpgrades.execution ? .05 + effectiveUpgrades.execution * .02 : 0;
+  const comboLevel = effectiveUpgrades.combo;
+  const shockwaveLevel = effectiveUpgrades.shockwave;
+  const momentumLevel = effectiveUpgrades.momentum;
   const momentumMaxStacks = momentumLevel ? 3 + momentumLevel * 2 : 0;
-  const guildMultiplier = Math.pow(1.15, save.upgrades.guild);
+  const guildMultiplier = Math.pow(1.15, effectiveUpgrades.guild);
   const assistMultiplier = 1 + traitCounts.support * .12 + traitCounts.vanguard * .08;
-  const goldMultiplier = Math.pow(1.1, save.upgrades.gold);
-  const battleSeconds = developerMode ? DEV_BATTLE_SECONDS : (stage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + save.upgrades.time * 5 + traitCounts.support * 3;
+  const goldMultiplier = Math.pow(1.1, effectiveUpgrades.gold);
+  const battleSeconds = (developerMode ? DEV_BATTLE_SECONDS : stage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + effectiveUpgrades.time * 5 + traitCounts.support * 3;
   const battleTimeLeft = battleDeadline ? Math.max(0, Math.ceil((battleDeadline - now) / 1000)) : battleSeconds;
   const lootCollecting = lootPhase === "collecting";
   const combatLocked = battleActive || lootCollecting || victory || defeat;
@@ -470,13 +476,13 @@ export default function Game() {
   const droppedMaterial = useMemo(() => lootDrops.reduce((sum, drop) => sum + (drop.kind === "material" ? drop.amount : 0), 0), [lootDrops]);
   const lootSweepProgress = ((plannedGold ? collectedGold / plannedGold : 1) + (plannedMaterial ? collectedMaterial / plannedMaterial : 1)) / 2 * 100;
   const autoAttackPoint = useMemo(() => bestAttackPoint(aliveMonsters, attackRange), [aliveMonsters, attackRange]);
-  const intelReport = battlefieldIntel(aliveMonsters.length, fieldMonsters.length, developerMode ? 3 : save.upgrades.scout);
+  const intelReport = battlefieldIntel(aliveMonsters.length, fieldMonsters.length, effectiveUpgrades.scout);
   const shockwaveInterval = shockwaveLevel ? 9 - shockwaveLevel : 0;
   const shockwaveClicksRemaining = shockwaveInterval ? shockwaveInterval - clicks % shockwaveInterval : 0;
   const shockwaveCharge = shockwaveInterval ? clicks % shockwaveInterval / shockwaveInterval * 100 : 0;
   const comboClicksRemaining = comboLevel ? 5 - clicks % 5 : 0;
   const comboCharge = comboLevel ? clicks % 5 / 5 * 100 : 0;
-  const combatUpgradeLevel = (key: CombatProcKey) => developerMode ? UPGRADE_CAPS[key] : save.upgrades[key];
+  const combatUpgradeLevel = (key: CombatProcKey) => effectiveUpgrades[key];
   const activeCombatProcs: Array<{ key: CombatProcKey; title: string; level: number; detail: string }> = [];
   if (hitFx && !hitFx.automatic) {
     if (combatUpgradeLevel("range")) activeCombatProcs.push({ key: "range", title: "공격 범위", level: combatUpgradeLevel("range"), detail: `직접 공격 반경 ${attackRange.toFixed(1)}` });
@@ -559,7 +565,7 @@ export default function Game() {
     const firstClear = !save.cleared.includes(stage.stage);
     const earnedGold = Math.round(stage.gold * goldMultiplier);
     const earnedMaterial = stageMaterial.rewardAmount;
-    const gotGear = Math.random() < Math.min(0.45, 0.07 + save.upgrades.loot * 0.03);
+    const gotGear = Math.random() < Math.min(0.45, 0.07 + effectiveUpgrades.loot * 0.03);
     const gearTarget = gotGear && save.party.length ? save.party[Math.floor(Math.random() * save.party.length)] : null;
 
     setSave((current) => {
@@ -587,7 +593,7 @@ export default function Game() {
     });
 
     setToast(`토벌 성공! 골드 ${compactNumber(earnedGold)} · ${stageMaterial.name} ${earnedMaterial}개${gearTarget ? ` · ${memberById(gearTarget).name} 장비 획득` : ""}${stage.boss && firstClear ? " · 보스 증표 +1" : ""}`);
-  }, [developerMode, save.cleared, save.party, save.upgrades.loot, stage, stageMaterial, goldMultiplier]);
+  }, [developerMode, save.cleared, save.party, effectiveUpgrades.loot, stage, stageMaterial, goldMultiplier]);
 
   const beginLootSweep = useCallback((drops: BattleLootDrop[]) => {
     if (victoryLock.current) return;
@@ -738,12 +744,12 @@ export default function Game() {
       }
       if (now - lastSkill.current[member.id] >= skillMs) {
         lastSkill.current[member.id] = now;
-        const skillTargets = aliveMonsters.slice(index % aliveMonsters.length).concat(aliveMonsters).slice(0, Math.min(aliveMonsters.length, 2 + Math.floor(save.upgrades.guild / 2)));
+        const skillTargets = aliveMonsters.slice(index % aliveMonsters.length).concat(aliveMonsters).slice(0, Math.min(aliveMonsters.length, 2 + Math.floor(effectiveUpgrades.guild / 2)));
         damageMonsters(skillTargets.map((monster) => monster.id), attackFor(member, progressFor(member)) * guildMultiplier * member.skillMultiplier * developerPower * MEMBER_ASSIST_FACTOR * assistMultiplier);
         emitMemberWeaponFx(member, bestAttackPoint(skillTargets, attackRange), true, index);
       }
     });
-  }, [now, battleActive, tab, aliveMonsters, partyMembers, progressFor, developerPower, guildMultiplier, save.upgrades.guild, damageMonsters, traitCounts.support, assistMultiplier, emitMemberWeaponFx, attackRange]);
+  }, [now, battleActive, tab, aliveMonsters, partyMembers, progressFor, developerPower, guildMultiplier, effectiveUpgrades.guild, damageMonsters, traitCounts.support, assistMultiplier, emitMemberWeaponFx, attackRange]);
 
   const directAttackAt = useCallback((x: number, y: number, automatic = false) => {
     if (!battleActive || !aliveMonsters.length) return;
@@ -835,7 +841,7 @@ export default function Game() {
     const nextStage = getStage(stageNumber);
     playExpeditionStartSound(nextStage.boss);
     const nextMaterial = stageMaterialFor(stageNumber);
-    const durationSeconds = developerMode ? DEV_BATTLE_SECONDS : (nextStage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + save.upgrades.time * 5 + traitCounts.support * 3;
+    const durationSeconds = (developerMode ? DEV_BATTLE_SECONDS : nextStage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + effectiveUpgrades.time * 5 + traitCounts.support * 3;
     const monsters = spawnMonsterPack(nextStage);
     const rewardGold = Math.round(nextStage.gold * goldMultiplier);
     clearLootTimers();
@@ -907,7 +913,7 @@ export default function Game() {
     setDeveloperMode(next);
     setDeveloperStage(next ? save.selectedStage : null);
     if (next) setDeveloperClickLevel(CLICK_ATTACK_PATTERNS.length - 1);
-    setToast(next ? `개발자 모드 ON · 30개 웨이브, 최대 길드 화력, 무기 15종이 임시 해금됩니다. 결과는 저장되지 않습니다.` : "개발자 모드 OFF · 원래 저장 진행도로 돌아왔습니다.");
+    setToast(next ? "개발자 모드 ON · 업그레이드 시험값과 전체 웨이브가 임시 해금됩니다. 결과는 저장되지 않습니다." : "개발자 모드 OFF · 원래 저장 진행도로 돌아왔습니다.");
   }
 
   function previewClickPattern(level: number) {
@@ -984,7 +990,7 @@ export default function Game() {
   }
 
   function refreshCandidates() {
-    const cost = Math.max(20, 60 - save.upgrades.tavern * 5);
+    const cost = Math.max(20, 60 - effectiveUpgrades.tavern * 5);
     if (save.gold < cost) return setToast("여관 후보를 갱신할 골드가 부족합니다.");
     setSave((current) => {
       const next = { ...current, gold: current.gold - cost };
@@ -996,7 +1002,7 @@ export default function Game() {
   function randomHire() {
     const cost = 260;
     if (save.gold < cost) return setToast("랜덤 고용에 필요한 골드가 부족합니다.");
-    const available = MEMBERS.filter((member) => !save.owned.includes(member.id) && RANK_ORDER.indexOf(member.rank) <= Math.min(6, 1 + save.upgrades.tavern));
+    const available = MEMBERS.filter((member) => !save.owned.includes(member.id) && RANK_ORDER.indexOf(member.rank) <= Math.min(6, 1 + effectiveUpgrades.tavern));
     if (!available.length) return setToast("현재 등급에서 고용 가능한 길드원을 모두 모았습니다.");
     const roll = available[Math.floor(Math.random() * available.length)];
     setSave((current) => {
@@ -1124,7 +1130,7 @@ export default function Game() {
       </nav>
 
       <div className="toast" role="status"><span aria-hidden="true">✦</span>{toast}</div>
-      {developerMode && <div className="developer-banner" role="status"><strong>개발자 모드</strong><span>30개 웨이브 임시 해금 · 길드원 패시브 최대 화력 · 플레이어 무기 15종 비교 · 전투 결과 저장 안 됨</span></div>}
+      {developerMode && <div className="developer-banner" role="status"><strong>개발자 모드</strong><span>30개 웨이브 임시 해금 · 업그레이드 단계 자유 조정 · 플레이어 무기 15종 비교 · 시험값 저장 안 됨</span></div>}
 
       {tab === "guild" && (
         <section className="screen guild-screen" aria-label="길드 관리">
@@ -1175,16 +1181,23 @@ export default function Game() {
           />}
 
           {activeFacility === "research" && <>
+            {developerMode && <DeveloperUpgradePanel
+              levels={developerUpgrades}
+              savedLevels={save.upgrades}
+              labels={UPGRADE_LABELS}
+              effectText={upgradeEffectText}
+              onChange={setDeveloperUpgrades}
+            />}
             <div className="upgrade-panel research-overview panel facility-first-panel">
               <div className="panel-title"><div><span className="eyebrow">GROWTH OVERVIEW</span><h3>길드 강화 현황</h3></div><span className="level-chip">본관 Lv.{hallStage.level} · 깊이 {hallStage.researchDepth}</span></div>
               <div className="growth-progress"><i style={{ width: `${save.nodes.length / UPGRADE_NODES.length * 100}%` }} /></div>
               <div className="growth-stats">
-                {(Object.keys(upgradeInfo) as UpgradeKey[]).map((key) => <div key={key}><span className="upgrade-icon"><Image src={UPGRADE_ICON_BY_KEY[key]} alt="" width={48} height={48} aria-hidden="true" /></span><span><strong>{upgradeInfo[key].title} · Lv.{save.upgrades[key]}</strong><small>{upgradeEffectText(key, save.upgrades[key])}</small></span></div>)}
+                {UPGRADE_KEYS.map((key) => <div key={key}><span className="upgrade-icon"><Image src={UPGRADE_ICON_BY_KEY[key]} alt="" width={48} height={48} aria-hidden="true" /></span><span><strong>{upgradeInfo[key].title} · Lv.{effectiveUpgrades[key]}</strong><small>{upgradeEffectText(key, effectiveUpgrades[key])}</small></span></div>)}
               </div>
             </div>
             <div className="upgrade-tree-panel panel">
               <div className="panel-title"><div><span className="eyebrow">GUILD DEVELOPMENT MAP</span><h3>플레이어·길드 발전 노드</h3><p className="panel-description">플레이어의 클릭 전투와 길드원 패시브 화력을 각각 성장시킵니다. 무기 공격력과 외형은 불꽃 대장간에서 강화됩니다.</p></div><span className="level-chip">보유 골드 {compactNumber(save.gold)}</span></div>
-              <ResearchMap nodes={UPGRADE_NODES} purchasedIds={save.nodes} hallLevel={save.guildHallLevel} formatCost={compactNumber} onPurchase={(node: ResearchNodeView) => { const fullNode = UPGRADE_NODES.find((item) => item.id === node.id); if (fullNode) purchaseNode(fullNode); }} />
+              <ResearchMap nodes={UPGRADE_NODES} purchasedIds={save.nodes} hallLevel={save.guildHallLevel} formatCost={compactNumber} readOnly={developerMode} onPurchase={(node: ResearchNodeView) => { const fullNode = UPGRADE_NODES.find((item) => item.id === node.id); if (fullNode) purchaseNode(fullNode); }} />
             </div>
           </>}
 
@@ -1195,9 +1208,9 @@ export default function Game() {
             ownedIds={save.owned}
             progress={save.progress}
             partyIds={save.party}
-            tavernLevel={save.upgrades.tavern}
+            tavernLevel={effectiveUpgrades.tavern}
             gold={save.gold}
-            refreshCost={Math.max(20, 60 - save.upgrades.tavern * 5)}
+            refreshCost={Math.max(20, 60 - effectiveUpgrades.tavern * 5)}
             formatNumber={compactNumber}
             getAttack={(member, progress) => attackFor(member, progress)}
             onRefresh={refreshCandidates}
