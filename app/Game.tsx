@@ -17,8 +17,6 @@ import { GuildBuildingHub } from "./guild-hub/GuildBuildingHub";
 import { ResearchMap, type ResearchNodeView } from "./guild-hub/ResearchMap";
 import { TavernHall } from "./guild-hub/TavernHall";
 import { GUILD_HALL_STAGES, guildHallStage, inferHallLevelFromNodes, requiredHallLevelForNode, type GuildFacility } from "./guild-hub/guild-progression";
-import { WeaponCursor } from "./guild-hub/WeaponArt";
-import { memberAnimationSource, type MemberMotion } from "./member-animations";
 import { monsterAssetForStage } from "./monster-assets";
 import { StageMap } from "./stage-map";
 import { materialIconVars, stageMaterialById, stageMaterialFor } from "./stage-materials";
@@ -28,23 +26,8 @@ type LootPhase = "idle" | "fighting" | "collecting" | "complete";
 type MemberProgress = { level: number; xp: number; gear: number };
 type UpgradeKey = "range" | "critical" | "combo" | "execution" | "shockwave" | "momentum" | "time" | "scout" | "guild" | "gold" | "tavern" | "loot";
 type SpecialKey = "double" | "command" | "auto";
-type ClickAttackPattern = {
-  key: string;
-  weaponName: string;
-  title: string;
-  subtitle: string;
-  glyph: string;
-  tier: number;
-  visualHits: number;
-  variants: number;
-  duration: number;
-  cost: number;
-  damageScale: number;
-};
 type ClickAttackFx = {
   id: number;
-  tier: number;
-  variant: number;
   damage: number;
   automatic: boolean;
   doubled: boolean;
@@ -57,6 +40,17 @@ type ClickAttackFx = {
   x: number;
   y: number;
   radius: number;
+};
+
+type MemberWeaponFx = {
+  id: number;
+  memberId: string;
+  style: CombatStyle;
+  glyph: string;
+  color: string;
+  x: number;
+  y: number;
+  skill: boolean;
 };
 
 type FieldMonster = {
@@ -100,20 +94,6 @@ const DEV_POWER_MULTIPLIER = 500;
 const MEMBER_ASSIST_FACTOR = .32;
 const AUTO_ATTACK_FACTOR = .35;
 
-const GUILD_COMMAND_STRIKE: ClickAttackPattern = {
-  key: "guild-command-strike",
-  weaponName: "길드 지휘진",
-  title: "총공세",
-  subtitle: "고용한 길드원의 전투 개입이 한 번의 클릭에 합쳐집니다",
-  glyph: "G",
-  tier: 8,
-  visualHits: 9,
-  variants: 4,
-  duration: 980,
-  cost: 0,
-  damageScale: 1,
-};
-
 const COMBAT_STYLE_LABELS: Record<CombatStyle, { name: string; glyph: string; effect: string }> = {
   vanguard: { name: "선봉", glyph: "盾", effect: "공격 범위 확장" },
   marksman: { name: "사격", glyph: "➶", effect: "4타마다 연쇄 사격" },
@@ -123,9 +103,6 @@ const COMBAT_STYLE_LABELS: Record<CombatStyle, { name: string; glyph: string; ef
   breaker: { name: "돌파", glyph: "拳", effect: "직접 공격·연타 강화" },
 };
 
-const CLICK_EFFECT_SPARKS = Array.from({ length: 12 }, (_, index) => index);
-const CLICK_EFFECT_PARTICLES = Array.from({ length: 10 }, (_, index) => index);
-const CLICK_EFFECT_BLADES = Array.from({ length: 9 }, (_, index) => index);
 const initialState: SaveState = {
   gold: 160,
   materials: {},
@@ -377,9 +354,7 @@ export default function Game() {
   const [clicks, setClicks] = useState(0);
   const [momentumStacks, setMomentumStacks] = useState(0);
   const [hitFx, setHitFx] = useState<ClickAttackFx | null>(null);
-  const [memberFx, setMemberFx] = useState<Record<string, number>>({});
-  const [memberSkillFx, setMemberSkillFx] = useState<Record<string, number>>({});
-  const [skillFx, setSkillFx] = useState<string | null>(null);
+  const [memberWeaponFx, setMemberWeaponFx] = useState<MemberWeaponFx[]>([]);
   const [lostMembers, setLostMembers] = useState<string[]>([]);
   const [territoryPulse, setTerritoryPulse] = useState(0);
   const [lootDrops, setLootDrops] = useState<BattleLootDrop[]>([]);
@@ -388,10 +363,10 @@ export default function Game() {
   const [collectedMaterial, setCollectedMaterial] = useState(0);
   const [plannedGold, setPlannedGold] = useState(0);
   const [plannedMaterial, setPlannedMaterial] = useState(0);
-  const [weaponCursor, setWeaponCursor] = useState({ x: 50, y: 50, visible: false });
   const lastAttack = useRef<Record<string, number>>({});
   const lastSkill = useRef<Record<string, number>>({});
   const clickFxCounter = useRef(0);
+  const memberWeaponFxCounter = useRef(0);
   const clickCount = useRef(0);
   const momentumState = useRef({ lastAt: 0, stacks: 0 });
   const victoryLock = useRef(false);
@@ -411,11 +386,6 @@ export default function Game() {
   const developerPower = developerMode ? DEV_POWER_MULTIPLIER : 1;
   const traitCounts = useMemo(() => combatStyleCounts(partyMembers), [partyMembers]);
   const partyRawPower = useMemo(() => partyMembers.reduce((sum, member) => sum + attackFor(member, progressFor(member)), 0), [partyMembers, progressFor]);
-  const activeClickPattern = useMemo(() => ({
-    ...GUILD_COMMAND_STRIKE,
-    tier: Math.min(14, 4 + partyMembers.length * 2 + traitCounts.arcane),
-    visualHits: 3 + partyMembers.length * 3 + traitCounts.marksman,
-  }), [partyMembers.length, traitCounts.arcane, traitCounts.marksman]);
   const clickDamage = Math.round((18 + partyRawPower * .42) * (1 + traitCounts.breaker * .18) * developerPower);
   const attackRange = developerMode ? 34 : 13 + save.upgrades.range * 2.75 + traitCounts.vanguard * 3.25;
   const criticalChance = developerMode ? .4 : Math.min(.5, save.upgrades.critical * .05 + traitCounts.marksman * .04);
@@ -645,6 +615,24 @@ export default function Game() {
     });
   }, [awardVictory, executionThreshold]);
 
+  const emitMemberWeaponFx = useCallback((member: MemberDefinition, point: { x: number; y: number }, skill = false, slot = 0) => {
+    const id = memberWeaponFxCounter.current + 1;
+    memberWeaponFxCounter.current = id;
+    const angle = slot * Math.PI / 2 - Math.PI / 4;
+    const fx: MemberWeaponFx = {
+      id,
+      memberId: member.id,
+      style: combatTraitFor(member).style,
+      glyph: member.glyph,
+      color: member.hue,
+      x: Math.max(5, Math.min(95, point.x + Math.cos(angle) * (skill ? 4 : 2))),
+      y: Math.max(8, Math.min(92, point.y + Math.sin(angle) * (skill ? 4 : 2))),
+      skill,
+    };
+    setMemberWeaponFx((current) => [...current.slice(-18), fx]);
+    window.setTimeout(() => setMemberWeaponFx((current) => current.filter((effect) => effect.id !== id)), skill ? 1050 : 720);
+  }, []);
+
   useEffect(() => {
     if (!battleActive || tab !== "field" || !aliveMonsters.length) return;
     partyMembers.forEach((member, index) => {
@@ -656,18 +644,16 @@ export default function Game() {
         lastAttack.current[member.id] = now;
         const target = aliveMonsters[(index + Math.floor(now / Math.max(1, attackMs))) % aliveMonsters.length];
         damageMonsters([target.id], attackFor(member, progressFor(member)) * guildMultiplier * developerPower * MEMBER_ASSIST_FACTOR * assistMultiplier);
-        setMemberFx((current) => ({ ...current, [member.id]: now }));
+        emitMemberWeaponFx(member, target, false, index);
       }
       if (now - lastSkill.current[member.id] >= skillMs) {
         lastSkill.current[member.id] = now;
         const skillTargets = aliveMonsters.slice(index % aliveMonsters.length).concat(aliveMonsters).slice(0, Math.min(aliveMonsters.length, 2 + Math.floor(save.upgrades.guild / 2)));
         damageMonsters(skillTargets.map((monster) => monster.id), attackFor(member, progressFor(member)) * guildMultiplier * member.skillMultiplier * developerPower * MEMBER_ASSIST_FACTOR * assistMultiplier);
-        setMemberSkillFx((current) => ({ ...current, [member.id]: now }));
-        setSkillFx(member.id);
-        window.setTimeout(() => setSkillFx((current) => current === member.id ? null : current), 1100);
+        emitMemberWeaponFx(member, bestAttackPoint(skillTargets, attackRange), true, index);
       }
     });
-  }, [now, battleActive, tab, aliveMonsters, partyMembers, progressFor, developerPower, guildMultiplier, save.upgrades.guild, damageMonsters, traitCounts.support, assistMultiplier]);
+  }, [now, battleActive, tab, aliveMonsters, partyMembers, progressFor, developerPower, guildMultiplier, save.upgrades.guild, damageMonsters, traitCounts.support, assistMultiplier, emitMemberWeaponFx, attackRange]);
 
   const directAttackAt = useCallback((x: number, y: number, automatic = false) => {
     if (!battleActive || !aliveMonsters.length) return;
@@ -702,8 +688,6 @@ export default function Game() {
     clickFxCounter.current = effectId;
     setHitFx({
       id: effectId,
-      tier: activeClickPattern.tier,
-      variant: effectId % activeClickPattern.variants,
       damage,
       automatic,
       doubled: strikes > 1,
@@ -717,14 +701,20 @@ export default function Game() {
       y,
       radius: effectiveRange,
     });
-    window.setTimeout(() => setHitFx((current) => current?.id === effectId ? null : current), activeClickPattern.duration);
-    damageMonsters(targets.map((monster) => monster.id), damage, true, activeClickPattern.tier);
+    partyMembers.forEach((member, index) => {
+      const style = combatTraitFor(member).style;
+      const proc = combo || shockwave || (style === "marksman" && marksmanVolley) || (style === "arcane" && arcaneBurst);
+      emitMemberWeaponFx(member, { x, y }, proc, index);
+    });
+    const impactTier = Math.min(4, Math.max(1, partyMembers.length));
+    window.setTimeout(() => setHitFx((current) => current?.id === effectId ? null : current), 720);
+    damageMonsters(targets.map((monster) => monster.id), damage, true, impactTier);
     if (marksmanVolley) {
-      damageMonsters(volleyTargets.map((monster) => monster.id), damage * (.42 + traitCounts.marksman * .16), true, activeClickPattern.tier);
+      damageMonsters(volleyTargets.map((monster) => monster.id), damage * (.42 + traitCounts.marksman * .16), true, impactTier);
       setToast(`연쇄 사격! 살아남은 적 ${volleyTargets.length}체에 도탄했습니다.`);
     }
     if (arcaneBurst) {
-      damageMonsters(aliveMonsters.map((monster) => monster.id), damage * (.22 + traitCounts.arcane * .16), true, activeClickPattern.tier);
+      damageMonsters(aliveMonsters.map((monster) => monster.id), damage * (.22 + traitCounts.arcane * .16), true, impactTier);
       setToast(`비전 대폭발! 전장의 ${aliveMonsters.length}체를 동시에 휩쓸었습니다.`);
     }
     if (!automatic) {
@@ -736,7 +726,7 @@ export default function Game() {
         setToast("지휘관의 명령! 모든 길드원이 즉시 공격합니다.");
       }
     }
-  }, [battleActive, aliveMonsters, save.specials, save.upgrades.combo, clickDamage, activeClickPattern, criticalChance, attackRange, momentumLevel, shockwaveLevel, damageMonsters, partyMembers, progressFor, guildMultiplier, developerPower, traitCounts]);
+  }, [battleActive, aliveMonsters, save.specials, save.upgrades.combo, clickDamage, criticalChance, attackRange, momentumLevel, shockwaveLevel, damageMonsters, partyMembers, progressFor, guildMultiplier, developerPower, traitCounts, emitMemberWeaponFx]);
 
   useEffect(() => {
     if (!save.specials.auto || !battleActive || tab !== "field") return;
@@ -773,8 +763,7 @@ export default function Game() {
     revealedLootIds.current.clear();
     lastAttack.current = {};
     lastSkill.current = {};
-    setMemberFx({});
-    setMemberSkillFx({});
+    setMemberWeaponFx([]);
     setHitFx(null);
     clickCount.current = 0;
     momentumState.current = { lastAt: 0, stacks: 0 };
@@ -808,6 +797,7 @@ export default function Game() {
     setVictory(false);
     setDefeat(false);
     setFieldMonsters([]);
+    setMemberWeaponFx([]);
     setLootDrops([]);
     setLootPhase("idle");
     setCollectedGold(0);
@@ -967,18 +957,7 @@ export default function Game() {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = Math.max(0, Math.min(100, (event.clientX - rect.left) / rect.width * 100));
     const y = Math.max(0, Math.min(100, (event.clientY - rect.top) / rect.height * 100));
-    if (event.pointerType === "mouse") setWeaponCursor({ x, y, visible: true });
     directAttackAt(x, y, false);
-  }
-
-  function trackWeaponCursor(event: React.PointerEvent<HTMLDivElement>) {
-    if (event.pointerType !== "mouse") return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    setWeaponCursor({
-      x: Math.max(0, Math.min(100, (event.clientX - rect.left) / rect.width * 100)),
-      y: Math.max(0, Math.min(100, (event.clientY - rect.top) / rect.height * 100)),
-      visible: true,
-    });
   }
 
   return (
@@ -1107,7 +1086,7 @@ export default function Game() {
           </div>
 
           <div className="battle-layout">
-            <div className={`arena hack-arena has-command-cursor mass-swarm panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier} loot-phase-${lootPhase}`} style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties} onPointerDown={attackField} onPointerMove={trackWeaponCursor} onPointerLeave={() => setWeaponCursor((cursor) => ({ ...cursor, visible: false }))} role="application" aria-label="길드 지휘 커서로 클릭한 위치를 중심으로 대규모 범위 공격하는 몬스터 전장">
+            <div className={`arena hack-arena mass-swarm panel field-tone-${fieldAsset.tone} loot-phase-${lootPhase}`} style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties} onPointerDown={attackField} role="application" aria-label="클릭한 위치로 현재 장착한 모든 길드원의 무기 공격을 발사하는 몬스터 전장">
               <Image className="field-background-art" src={fieldAsset.source} alt="" fill sizes="(max-width: 1180px) 100vw, 900px" priority={stage.stage <= 10} unoptimized draggable={false} />
               <div className="environment-tag"><span>{BIOME_DETAILS[stage.region.hue].label}</span><small>{BIOME_DETAILS[stage.region.hue].description}</small></div>
               <div className="battle-banner"><span>{stage.boss ? "BOSS SWARM" : `STAGE ${stage.stage}`}</span><strong>{stage.name} 무리</strong></div>
@@ -1119,47 +1098,7 @@ export default function Game() {
                 <div className="loot-tally-icons"><i className="loot-tally-coin">G</i><i className="stage-material-icon loot-tally-material" style={materialIconVars(stageMaterial) as React.CSSProperties} /></div>
                 <span><small>{lootCollecting ? "촤라락 회수 중" : stageMaterial.name}</small><strong>+{compactNumber(lootCollecting ? collectedGold : droppedGold)} G</strong><em>+{lootCollecting ? collectedMaterial : droppedMaterial} 재료</em></span>
               </div>
-              <div className="field-click-guide"><b>군세 한가운데를 연타하세요</b><span>길드원 조합이 범위·도탄·처형·폭발을 자동으로 더합니다</span></div>
-              <WeaponCursor weapon={activeClickPattern} point={weaponCursor} />
-
-              <div className="fighters" aria-label="출전 길드원">
-                {partyMembers.map((member, index) => {
-                  const progress = progressFor(member) ?? { level: 1, xp: 0, gear: 0 };
-                  const battleStartedAt = battleDeadline ? battleDeadline - battleSeconds * 1000 : now;
-                  const attackElapsed = now - (memberFx[member.id] || now);
-                  const skillElapsed = now - (memberSkillFx[member.id] || battleStartedAt);
-                  const skillReady = Math.min(1, skillElapsed / (member.skillCooldown * 1000));
-                  const motion: MemberMotion = skillFx === member.id
-                    ? "skill"
-                    : memberFx[member.id] && attackElapsed < 850
-                      ? "attack"
-                      : "idle";
-                  const motionEvent = motion === "skill"
-                    ? memberSkillFx[member.id]
-                    : motion === "attack"
-                      ? memberFx[member.id]
-                      : "idle";
-                  return <div className={`fighter fighter-${index + 1} ${skillFx === member.id ? "casting" : ""}`} key={member.id} style={{ "--member-hue": member.hue } as React.CSSProperties}>
-                    <div className="fighter-name"><strong>{member.name.split(" ").at(-1)}</strong><span>Lv.{progress.level}</span></div>
-                    <div className="sprite">
-                      <Image
-                        key={`${member.id}-${motion}-${motionEvent}`}
-                        className="fighter-animation"
-                        src={memberAnimationSource(member.id, motion)}
-                        alt=""
-                        fill
-                        sizes="152px"
-                        unoptimized
-                        draggable={false}
-                      />
-                    </div>
-                    <div className="fighter-shadow" />
-                    <div className="skill-meter" title={`${member.skill} 쿨타임`}><i style={{ width: `${skillReady * 100}%` }} /><span>{skillReady >= 1 ? member.skill : `${Math.max(0, member.skillCooldown - skillElapsed / 1000).toFixed(1)}초`}</span></div>
-                    {memberFx[member.id] ? <i key={memberFx[member.id]} className="attack-trail" /> : null}
-                    {attackElapsed < 260 ? <span className="fighter-burst">✦</span> : null}
-                  </div>;
-                })}
-              </div>
+              <div className="field-click-guide"><b>군세를 클릭해 장착 무기를 모두 발사하세요</b><span>전사는 칼날 · 궁수는 화살 · 도적은 단검 · 마법사는 마력탄으로 공격합니다</span></div>
 
               <div className="monster-pack" aria-hidden="true">
                 {fieldMonsters.map((monster, index) => {
@@ -1179,6 +1118,20 @@ export default function Game() {
                     {monster.kind === "leader" && <b className="leader-mark">♛</b>}
                   </span>;
                 })}
+              </div>
+
+              <div className="member-weapon-layer" aria-hidden="true">
+                {memberWeaponFx.map((effect) => <span
+                  className={`member-weapon-fx weapon-style-${effect.style} ${effect.skill ? "is-skill" : ""}`}
+                  key={effect.id}
+                  style={{ left: `${effect.x}%`, top: `${effect.y}%`, "--weapon-color": effect.color } as React.CSSProperties}
+                >
+                  <i className="member-projectile primary" />
+                  <i className="member-projectile secondary" />
+                  <i className="member-weapon-impact" />
+                  <b>{effect.glyph}</b>
+                  <small>{memberById(effect.memberId).name.split(" ").at(-1)} · {effect.skill ? memberById(effect.memberId).skill : COMBAT_STYLE_LABELS[effect.style].name}</small>
+                </span>)}
               </div>
 
               <div className="gold-loot-layer" aria-hidden="true">
@@ -1202,41 +1155,14 @@ export default function Game() {
               {lootCollecting && <span className="sr-only" role="status">토벌이 끝나 전장의 골드와 재료를 회수하고 있습니다. 골드 {compactNumber(collectedGold)} / {compactNumber(plannedGold)}, {stageMaterial.name} {collectedMaterial} / {plannedMaterial}</span>}
 
               {hitFx && <>
-                <span key={`range-${hitFx.id}`} className={`attack-range-impact click-tier-${hitFx.tier} ${hitFx.hitCount ? "has-targets" : "missed"} ${hitFx.shockwave ? "is-shockwave" : ""}`} style={{ left: `${hitFx.x}%`, top: `${hitFx.y}%`, width: `${hitFx.radius * 2}%` }} aria-hidden="true"><i /></span>
-                <span key={hitFx.id} className={`click-attack-fx field-click-fx click-tier-${hitFx.tier} variant-${hitFx.variant} ${hitFx.doubled ? "is-double" : ""} ${hitFx.automatic ? "is-automatic" : ""} ${hitFx.critical ? "is-critical" : ""} ${hitFx.combo ? "is-combo" : ""} ${hitFx.shockwave ? "is-shockwave" : ""} ${hitFx.momentum ? "has-momentum" : ""}`} style={{ left: `${hitFx.x}%`, top: `${hitFx.y}%` }} aria-hidden="true">
-                  <span className="fx-motion-layer">
-                    <i className="fx-aim-rune" />
-                    <i className="fx-shockwave fx-shockwave-one" />
-                    <i className="fx-shockwave fx-shockwave-two" />
-                    <i className="fx-master-blade" />
-                    <i className="fx-slash fx-slash-one" />
-                    <i className="fx-slash fx-slash-two" />
-                    <i className="fx-slash fx-slash-three" />
-                    <i className="fx-slash fx-slash-four" />
-                    <i className="fx-slash fx-slash-five" />
-                    <i className="fx-double-echo" />
-                    <i className="fx-asset fx-asset-slash" />
-                    <i className="fx-asset fx-asset-rune" />
-                    <i className="fx-asset fx-asset-light" />
-                    <span className="fx-vivid-stage">
-                      <i className="fx-vivid fx-vivid-primary" />
-                      <i className="fx-vivid fx-vivid-secondary" />
-                      <i className="fx-vivid fx-vivid-impact" />
-                      <span className="fx-signature-mark"><i /><i /><i /><b>{activeClickPattern.glyph}</b></span>
-                      <span className="fx-blade-rain">{CLICK_EFFECT_BLADES.map((index) => <i key={index} style={{ "--blade-x": `${(index - 4) * 42}px`, "--blade-delay": `${index * 45}ms`, "--blade-tilt": `${-18 + index * 5}deg` } as React.CSSProperties} />)}</span>
-                      <span className="fx-orbit-motes">{CLICK_EFFECT_SPARKS.map((index) => <i key={index} style={{ "--mote-angle": `${index * 30}deg`, "--mote-distance": `${105 + index % 3 * 34}px`, "--mote-delay": `${index * 32}ms` } as React.CSSProperties} />)}</span>
-                    </span>
-                    <span className="fx-asset-particles">{CLICK_EFFECT_PARTICLES.map((index) => <i key={index} style={{ "--particle-angle": `${index * 36 + hitFx.variant * 11}deg`, "--particle-distance": `${115 + index % 4 * 30 + hitFx.tier * 5}px`, "--particle-delay": `${index % 5 * 45}ms` } as React.CSSProperties} />)}</span>
-                    <span className="fx-sparks">{CLICK_EFFECT_SPARKS.map((index) => <i key={index} className="fx-spark" style={{ "--spark-angle": `${index * 30 + hitFx.variant * 7}deg`, "--spark-distance": `${82 + index % 3 * 18 + hitFx.tier * 9}px`, "--spark-delay": `${index % 4 * 35}ms` } as React.CSSProperties} />)}</span>
-                  </span>
-                  <span className="fx-pattern-label">{hitFx.automatic ? "자동 · " : ""}{hitFx.shockwave ? "충격파 · " : ""}{hitFx.combo ? "연격 · " : ""}{activeClickPattern.title}</span>
-                  <strong className="fx-damage">{hitFx.hitCount ? <>−{compactNumber(hitFx.damage)}<small>{hitFx.critical ? "치명타" : `${hitFx.hitCount}체 타격`}</small></> : <>빗나감</>}</strong>
+                <span key={`range-${hitFx.id}`} className={`attack-range-impact guild-command-range ${hitFx.hitCount ? "has-targets" : "missed"} ${hitFx.shockwave ? "is-shockwave" : ""}`} style={{ left: `${hitFx.x}%`, top: `${hitFx.y}%`, width: `${hitFx.radius * 2}%` }} aria-hidden="true"><i /></span>
+                <span key={hitFx.id} className={`guild-command-feedback ${hitFx.critical ? "is-critical" : ""} ${hitFx.combo ? "is-combo" : ""}`} style={{ left: `${hitFx.x}%`, top: `${hitFx.y}%` }} aria-hidden="true">
+                  <strong>{hitFx.hitCount ? `−${compactNumber(hitFx.damage)}` : "빗나감"}</strong>
+                  <small>{hitFx.automatic ? "자동 발동" : `${partyMembers.length}개 길드원 무기 · ${hitFx.hitCount}체 타격`}</small>
                 </span>
               </>}
 
-              {hitFx && !hitFx.automatic && <span className="sr-only" role="status">{activeClickPattern.title}, 범위 안의 몬스터 {hitFx.hitCount}체 타격</span>}
-
-              {skillFx && <div className="skill-flash" key={`${skillFx}-${now}`}><span>{memberById(skillFx).skill}!</span></div>}
+              {hitFx && !hitFx.automatic && <span className="sr-only" role="status">장착 길드원 무기 {partyMembers.length}개 발사, 범위 안의 몬스터 {hitFx.hitCount}체 타격</span>}
             </div>
 
             <aside className="battle-sidebar">
@@ -1245,18 +1171,20 @@ export default function Game() {
                 <div className="intel-report"><span>정찰 보고</span><strong>{intelReport}</strong><small>적의 체력과 정확한 잔여 수는 알 수 없습니다. 화면의 움직임을 보고 후퇴를 결정하세요.</small></div>
                 <div className="reward-preview"><span>예상 보상</span><strong>골드 {compactNumber(stage.gold * goldMultiplier)}</strong><strong className="material-reward-preview"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} />{stageMaterial.name} {stageMaterial.rewardAmount}</strong><strong>경험치 {compactNumber(stage.xp)}</strong>{stage.boss && <strong>증표 1</strong>}</div>
               </div>
-              <div className="party-status panel"><div className="panel-title"><h3>전투 개입 조합</h3><span className="level-chip">{partyMembers.length}/4</span></div>{partyMembers.map((member) => { const trait = combatTraitFor(member); return <div className="party-row" key={member.id}><span className="mini-portrait" style={{ "--member-hue": member.hue } as React.CSSProperties}>{member.glyph}</span><span><strong>{member.name}</strong><small>{trait.description}</small></span><b>{trait.title}</b></div>; })}</div>
-              <div className={`click-power panel click-power-tier-${activeClickPattern.tier}`}>
-                <span>길드 조합 총공세</span>
+              <div className="party-status panel"><div className="panel-title"><h3>장착 길드원 무기</h3><span className="level-chip">{partyMembers.length}/4</span></div>{partyMembers.map((member) => { const trait = combatTraitFor(member); return <div className="party-row" key={member.id}><span className="mini-portrait" style={{ "--member-hue": member.hue } as React.CSSProperties}>{member.glyph}</span><span><strong>{member.name}</strong><small>{member.job} 무기 · {member.interval}초마다 자동 발동 · 클릭 시 동시 발사</small></span><b>{trait.title}</b></div>; })}</div>
+              <div className="click-power panel guild-arsenal-panel">
+                <span>현재 장착 무기 · 길드원 = 무기</span>
+                <div className="equipped-member-weapons" aria-label="클릭할 때 동시에 발사되는 길드원 무기">
+                  {partyMembers.map((member) => { const trait = combatTraitFor(member); return <span className={`equipped-member-weapon weapon-slot-${trait.style}`} key={member.id} style={{ "--weapon-color": member.hue } as React.CSSProperties}><b>{member.glyph}</b><small>{member.job}</small><strong>{member.skill}</strong></span>; })}
+                </div>
                 <div className="combat-trait-grid" aria-label="현재 파티 전투 개입 효과">
                   {(Object.keys(COMBAT_STYLE_LABELS) as CombatStyle[]).map((style) => { const info = COMBAT_STYLE_LABELS[style]; const count = traitCounts[style]; return <span key={style} className={`combat-trait-chip trait-${style} ${count ? "active" : ""}`}><b>{info.glyph}</b><small>{info.name}</small><strong>{count || "–"}</strong><em>{info.effect}</em></span>; })}
                 </div>
-                <div className="click-pattern-card"><b>{activeClickPattern.glyph}</b><span><strong>{activeClickPattern.weaponName} · {activeClickPattern.title}</strong><small>파티 {partyMembers.length}/4 연계 · {activeClickPattern.subtitle}</small></span><em>{activeClickPattern.visualHits} HIT</em></div>
-                <strong>{compactNumber(clickDamage)} 피해</strong>
+                <strong>{compactNumber(clickDamage)} 합산 피해</strong>
                 <div className="click-combat-stats"><span><b>공격 반경</b><em>{attackRange.toFixed(1)}</em></span><span><b>치명타</b><em>{Math.round(criticalChance * 100)}%</em></span><span><b>처형선</b><em>{executionThreshold ? `${Math.round(executionThreshold * 100)}%` : "없음"}</em></span></div>
                 <div className="combat-proc-strip"><span className={traitCounts.marksman ? "active" : ""}><b>연쇄 사격</b><em>{traitCounts.marksman ? "4타마다" : "미편성"}</em></span><span className={traitCounts.arcane ? "active" : ""}><b>전장 폭발</b><em>{traitCounts.arcane ? `${Math.max(4, 8 - traitCounts.arcane)}타마다` : "미편성"}</em></span><span className={momentumStacks ? "active" : ""}><b>킬 템포</b><em>{clicks}타 · {momentumStacks}/{momentumMaxStacks || 0}</em></span></div>
-                <small>{save.specials.double ? "쌍격 적용 · 범위 내 모든 적에게 2배" : "클릭 위치와 공격 반경이 손맛을 결정합니다"}</small>
-                <button className="attack-button" onClick={() => directAttackAt(autoAttackPoint.x, autoAttackPoint.y, false)} disabled={!battleActive}>{activeClickPattern.glyph} 가장 밀집한 곳 베기</button>
+                <small>{save.specials.double ? "쌍격 적용 · 장착한 모든 길드원 무기가 두 번 적중" : "필드를 클릭하면 장착 길드원 무기가 전부 같은 위치로 발사됩니다"}</small>
+                <button className="attack-button" onClick={() => directAttackAt(autoAttackPoint.x, autoAttackPoint.y, false)} disabled={!battleActive}>장착 무기 {partyMembers.length}개 동시 발사</button>
               </div>
             </aside>
           </div>

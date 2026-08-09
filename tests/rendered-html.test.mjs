@@ -85,12 +85,12 @@ test("routes guild management through buildings and gates four-way research", as
   assert.match(researchMap, /본관 Lv\.\$\{requiredHallLevel\} 필요/);
 });
 
-test("replaces weapon upgrades with party-driven guild survivor rules", async () => {
-  const [game, hub, gameData, weaponArt] = await Promise.all([
+test("turns equipped guild members into the weapons without field character bodies", async () => {
+  const [game, hub, gameData, css] = await Promise.all([
     readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/guild-hub/GuildBuildingHub.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/game-data.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/guild-hub/WeaponArt.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
 
   assert.doesNotMatch(hub, /forgeBuildingArt/);
@@ -100,10 +100,16 @@ test("replaces weapon upgrades with party-driven guild survivor rules", async ()
   assert.match(game, /marksmanVolley/);
   assert.match(game, /arcaneBurst/);
   assert.match(game, /combat-trait-grid/);
-  assert.match(game, /<WeaponCursor weapon=\{activeClickPattern\}/);
-  assert.match(game, /onPointerMove=\{trackWeaponCursor\}/);
-  assert.match(weaponArt, /WEAPON_PALETTES/);
-  assert.match(weaponArt, /cursorVisible/);
+  assert.match(game, /emitMemberWeaponFx/);
+  assert.match(game, /member-weapon-layer/);
+  assert.match(game, /equipped-member-weapons/);
+  assert.doesNotMatch(game, /<WeaponCursor/);
+  assert.doesNotMatch(game, /click-attack-fx/);
+  assert.doesNotMatch(game, /className="fighters"/);
+  assert.doesNotMatch(game, /memberAnimationSource/);
+  assert.match(css, /weapon-style-vanguard/);
+  assert.match(css, /weapon-style-marksman/);
+  assert.match(css, /weapon-style-arcane/);
 });
 
 test("consolidates recruitment and party formation inside the portrait-driven tavern", async () => {
@@ -128,8 +134,9 @@ test("consolidates recruitment and party formation inside the portrait-driven ta
   assert.doesNotMatch(progression, /"training"/);
   assert.match(hub, /tavernBuildingArt/);
   assert.match(tavern, /BUILD YOUR SWARM/);
-  assert.match(tavern, /전투 개입 조합/);
-  assert.match(tavern, /보유 길드원 명부/);
+  assert.match(tavern, /장착 길드원 무기/);
+  assert.match(tavern, /필드에는 본체 없이/);
+  assert.match(tavern, /보유 길드원 무기/);
   assert.match(tavern, /onToggleParty/);
   assert.match(tavern, /finnCorrection/);
   assert.match(tavern, /-idle-preview\.webp/);
