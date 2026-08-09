@@ -1,0 +1,57 @@
+name: 플레이테스트 피드백
+description: 버그, 개선점, 추가 아이디어와 밸런스 의견을 빠르게 기록합니다.
+title: "[FEEDBACK] "
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: 종류
+      options:
+        - 버그
+        - 개선
+        - 기능 아이디어
+        - 밸런스
+        - 그래픽
+        - 조작
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 버전 또는 브랜치
+      placeholder: main 또는 codex/<작업명>
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: 현재 상황
+      description: 어디서 무엇을 했고 어떻게 동작했는지 적어 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 원하는 동작 또는 개선 방향
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 재현 방법
+      description: 버그가 아니면 생략할 수 있습니다.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 체감 중요도
+      options:
+        - P0 - 플레이 또는 진행을 막음
+        - P1 - MVP 품질에 중요
+        - P2 - 있으면 좋은 개선
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 스크린샷, 영상, 로그
+      description: 파일을 끌어다 놓거나 링크를 붙여 주세요.
