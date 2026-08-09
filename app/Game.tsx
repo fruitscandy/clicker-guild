@@ -196,6 +196,20 @@ const UPGRADE_NODES: UpgradeNode[] = [
   { id: "citadel", title: "전설의 길드 성채", description: "모든 성장 계통을 완성한 증표", glyph: "♛", cost: 6200, prerequisites: ["sword-6", "range-7", "crit-4", "combo-4", "execute-3", "time-4", "scout-3", "guild-5", "gold-4", "loot-3", "tavern-3"], x: 94, y: 720 },
 ];
 
+const GUILD_GROWTH_STAGES = [
+  { level: 0, min: 0, target: 3, name: "개척 야영지", description: "작은 천막과 목조 회관에서 첫 의뢰를 받는 단계" },
+  { level: 1, min: 3, target: 9, name: "새싹 길드", description: "정식 간판과 작업장이 생기고 모험가가 모이기 시작한 영지" },
+  { level: 2, min: 9, target: 18, name: "성장 길드촌", description: "본관이 증축되고 여관과 훈련장이 자리를 잡은 길드촌" },
+  { level: 3, min: 18, target: 30, name: "번영 길드타운", description: "상단과 연구 시설이 모여 밤에도 불이 꺼지지 않는 거점" },
+  { level: 4, min: 30, target: 47, name: "명문 길드 요새", description: "석조 성벽과 감시탑으로 원정대를 지키는 대형 본부" },
+  { level: 5, min: 47, target: 47, name: "전설의 길드 성채", description: "모든 성장 계통을 완성한 대륙 최고의 모험가 성채" },
+] as const;
+
+function guildGrowthStage(growth: number, hasCitadel: boolean) {
+  if (hasCitadel) return GUILD_GROWTH_STAGES[5];
+  return [...GUILD_GROWTH_STAGES].reverse().find((stage) => growth >= stage.min) ?? GUILD_GROWTH_STAGES[0];
+}
+
 const TERRAIN_POSITIONS = [
   [8, 22, .8], [18, 68, .7], [29, 18, .65], [40, 78, .82], [54, 14, .72], [66, 68, .68], [79, 22, .8], [90, 65, .72],
   [13, 44, .55], [34, 54, .5], [58, 46, .6], [73, 83, .58], [87, 40, .52], [24, 87, .55], [48, 91, .48], [96, 31, .5],
@@ -331,6 +345,7 @@ export default function Game() {
   const [memberSkillFx, setMemberSkillFx] = useState<Record<string, number>>({});
   const [skillFx, setSkillFx] = useState<string | null>(null);
   const [lostMembers, setLostMembers] = useState<string[]>([]);
+  const [territoryPulse, setTerritoryPulse] = useState(0);
   const lastAttack = useRef<Record<string, number>>({});
   const lastSkill = useRef<Record<string, number>>({});
   const clickFxCounter = useRef(0);
@@ -356,6 +371,20 @@ export default function Game() {
   const aliveMonsters = useMemo(() => fieldMonsters.filter((monster) => monster.hp > 0), [fieldMonsters]);
   const autoAttackPoint = useMemo(() => bestAttackPoint(aliveMonsters, attackRange), [aliveMonsters, attackRange]);
   const intelReport = battlefieldIntel(aliveMonsters.length, fieldMonsters.length, developerMode ? 3 : save.upgrades.scout);
+  const guildGrowth = Math.max(0, save.nodes.length - 1);
+  const hasCitadel = save.nodes.includes("citadel");
+  const guildStage = guildGrowthStage(guildGrowth, hasCitadel);
+  const nextGuildStage = GUILD_GROWTH_STAGES[Math.min(GUILD_GROWTH_STAGES.length - 1, guildStage.level + 1)];
+  const stageRange = Math.max(1, guildStage.target - guildStage.min);
+  const guildStageProgress = hasCitadel ? 100 : Math.min(100, Math.round((guildGrowth - guildStage.min) / stageRange * 100));
+  const spriteColumn = guildStage.level % 3;
+  const spriteRow = Math.floor(guildStage.level / 3);
+  const territoryStyle = {
+    "--guild-growth": guildGrowth,
+    "--guild-sprite-x": `${spriteColumn * 50}%`,
+    "--guild-sprite-y": `${spriteRow * 100}%`,
+    "--guild-minor-scale": `${1 + guildStageProgress * .00035}`,
+  } as React.CSSProperties;
 
   const combatPower = useMemo(() => {
     const partyPower = partyMembers.reduce((sum, member) => sum + attackFor(member, progressFor(member)) * developerPower, 0) * guildMultiplier;
@@ -632,6 +661,7 @@ export default function Game() {
       nodes: [...current.nodes, node.id],
       upgrades: node.target ? { ...current.upgrades, [node.target]: current.upgrades[node.target] + 1 } : current.upgrades,
     }));
+    setTerritoryPulse((current) => current + 1);
     setToast(`${node.title} 노드를 해금했습니다. 새로운 성장 경로가 발견됩니다!`);
   }
 
@@ -761,13 +791,33 @@ export default function Game() {
           </div>
 
           <div className="guild-layout">
-            <div className={`territory territory-level-${Math.min(5, Math.floor((save.upgrades.click + save.upgrades.range + save.upgrades.guild + save.upgrades.gold) / 5))}`}>
-              <div className="sun" /><div className="cloud cloud-one" /><div className="cloud cloud-two" />
-              <div className="building guild-hall"><span>길드 회관</span><i /></div>
-              <div className="building tavern-building"><span>여관</span><i /></div>
-              <div className="building training-building"><span>훈련장</span><i /></div>
-              <div className="flag">G</div>
-              <div className="territory-caption"><strong>새싹 길드 영지</strong><span>업그레이드할수록 영지가 발전합니다.</span></div>
+            <div
+              className={`territory guild-territory territory-stage-${guildStage.level} ${hasCitadel ? "has-citadel" : ""}`}
+              style={territoryStyle}
+              aria-label={`${guildStage.name}, 연구 ${guildGrowth}/47 완료`}
+            >
+              <div className="guild-sky" aria-hidden="true"><i /><i /><i /></div>
+              <div className="sun" aria-hidden="true" />
+              <div className="territory-ridge ridge-back" aria-hidden="true" />
+              <div className="territory-ridge ridge-front" aria-hidden="true" />
+              <div className="territory-road" aria-hidden="true" />
+              <div className="territory-stage-badge"><small>TERRITORY {guildStage.level + 1}/6</small><strong>{guildStage.name}</strong></div>
+
+              <div className="guild-sprite-platform" aria-hidden="true">
+                <div key={`${guildStage.level}-${territoryPulse}`} className={`guild-sprite-frame ${territoryPulse ? "is-upgrading" : ""}`}>
+                  <span className="guild-build-sweep" />
+                  <span className="guild-build-ring ring-one" /><span className="guild-build-ring ring-two" />
+                  <span className="guild-build-particles">{Array.from({ length: 10 }, (_, index) => <i key={index} />)}</span>
+                </div>
+              </div>
+              <div key={territoryPulse} className={`territory-growth-flare ${territoryPulse ? "is-active" : ""}`} aria-hidden="true"><span>영지 성장!</span></div>
+
+              <div className="territory-caption">
+                <div><strong>{guildStage.name}</strong><span>{guildStage.description}</span></div>
+                <div className="territory-growth-copy"><small>길드 성장도</small><b>{guildGrowth}/47</b></div>
+                <div className="territory-growth-meter"><i style={{ width: `${guildStageProgress}%` }} /></div>
+                <small className="next-territory-stage">{hasCitadel ? "최종 성채 완성" : `다음 외형 · ${nextGuildStage.name}까지 연구 ${Math.max(0, guildStage.target - guildGrowth)}개`}</small>
+              </div>
             </div>
 
             <div className="upgrade-panel panel">
