@@ -514,9 +514,22 @@ body {
 .stage-grid button { background: #faf0dc; border: 1px solid #9c8060; border-radius: 5px; box-shadow: 0 2px 0 rgba(74,49,34,.2); }
 .stage-grid button.current { background: #f5dda0; box-shadow: inset 0 0 0 2px #b57a2f; }
 .stage-grid button.boss-stage { color: #7b2d20; background: #edc6ad; }
-.victory-overlay { background: rgba(8,14,11,.8); }
-.victory-card { background: #f8efdc; border: 1px solid #b99d70; border-radius: 11px; box-shadow: 0 16px 50px rgba(0,0,0,.45); }
-.victory-star { color: #6e2a1f; background: #f0c767; border: 2px solid #6e2a1f; box-shadow: 0 4px 0 #6e2a1f; }
+.victory-overlay { background: radial-gradient(circle at 50% 42%,rgba(78,101,72,.28),transparent 42%),rgba(8,14,11,.86); }
+.victory-card { position: relative; width: min(520px,100%); padding: 54px 38px 30px; color: #38271f; background: linear-gradient(145deg,#fff8e8,#efe0c3); border: 1px solid #a98a5b; border-radius: 13px; box-shadow: 0 24px 75px rgba(0,0,0,.58),inset 0 0 0 5px #f8e9cc,inset 0 0 0 6px rgba(129,92,48,.35); overflow: visible; isolation: isolate; }
+.victory-card::before,.victory-card::after { content: ""; position: absolute; top: 13px; width: 70px; height: 70px; border-top: 2px solid #b68a45; opacity: .65; pointer-events: none; }
+.victory-card::before { left: 13px; border-left: 2px solid #b68a45; }
+.victory-card::after { right: 13px; border-right: 2px solid #b68a45; }
+.victory-crest { position: absolute; left: 50%; top: -45px; display: grid; place-items: center; width: 90px; height: 90px; color: #ffe9a7; background: linear-gradient(145deg,#9d3f2d,#64251d); border: 3px solid #e2b85f; box-shadow: 0 0 0 5px #39251d,0 10px 26px rgba(0,0,0,.42); transform: translateX(-50%) rotate(45deg); }
+.victory-crest::before { content: ""; position: absolute; inset: 8px; border: 1px solid rgba(255,230,164,.45); }
+.victory-crest span { position: relative; font-size: 38px; text-shadow: 0 2px #512016; transform: rotate(-45deg); }
+.victory-heading { display: block !important; margin-bottom: 23px !important; }
+.victory-heading > p { color: #8b3a2b; font-family: Georgia,"Times New Roman",serif; font-size: 10px; letter-spacing: .28em; }
+.victory-heading h2 { margin: 5px 0 4px; color: #38271f; font-size: clamp(31px,7vw,42px); line-height: 1.08; }
+.victory-heading > small { color: #806855; font-size: 11px; font-weight: 800; }
+.victory-heading .victory-divider { display: flex; align-items: center; gap: 9px; width: 175px; margin: 10px auto 7px; padding: 0; color: #b07b34; background: transparent; border-radius: 0; }
+.victory-divider::before,.victory-divider::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg,transparent,#b07b34); }
+.victory-divider::after { transform: scaleX(-1); }
+.victory-divider i { font-size: 8px; font-style: normal; }
 .game-footer { display: flex; justify-content: space-between; gap: 20px; padding: 18px 4px 4px; color: #799083; border-top: 1px solid #29382f; font-size: 8px; font-weight: 800; letter-spacing: .16em; }
 
 @media (max-width: 820px) {
@@ -543,6 +556,7 @@ body {
 .battle-mode > .toast,
 .battle-mode > .game-footer { display: none; }
 .battle-mode .field-screen { padding-top: 14px; }
+.battle-mode .field-screen:has(.victory-overlay) { animation: none; }
 .battle-mode .field-toolbar { position: sticky; top: 8px; z-index: 20; }
 .battle-controls { flex-wrap: nowrap; }
 .battle-timer { display: grid; grid-template-columns: auto auto; align-items: center; gap: 2px 14px; min-width: 210px; padding: 8px 12px; color: #f8ecd3; background: #26382f; border: 1px solid #657768; border-radius: 7px; box-shadow: inset 0 1px rgba(255,255,255,.06); }
@@ -556,10 +570,27 @@ body {
 .retreat-button { min-height: 48px; padding: 10px 15px; color: #ead9bf; background: #49352d; border: 1px solid #8f6652; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 900; }
 .retreat-button:hover { color: #fff1dc; background: #653d31; }
 
-.outcome-rewards { display: flex !important; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 17px !important; }
-.outcome-rewards .material-victory-reward { display: inline-flex; align-items: center; gap: 6px; color: #f3e6cb; background: #2d2921; border: 1px solid var(--material-accent,#b79555); }
-.outcome-actions { display: grid !important; grid-template-columns: 1fr 1fr; gap: 9px !important; margin: 0 !important; }
-.outcome-actions .text-button { grid-column: 1 / -1; margin-top: 4px; }
+.outcome-rewards { display: grid !important; grid-template-columns: repeat(auto-fit,minmax(92px,1fr)); gap: 8px !important; margin-bottom: 22px !important; padding: 11px; background: rgba(104,73,43,.08); border: 1px solid rgba(130,91,49,.28); border-radius: 8px; }
+.victory-card .outcome-rewards > span { display: grid; grid-template-columns: 30px 1fr; grid-template-rows: auto auto; align-items: center; gap: 0 8px; min-height: 61px; padding: 8px 9px; color: #4d382a; background: rgba(255,250,238,.72); border: 1px solid #d5bd92; border-radius: 6px; box-shadow: 0 2px 0 rgba(91,61,35,.1); text-align: left; }
+.outcome-rewards > span > i { grid-row: 1 / 3; color: #b67f23; font-size: 23px; font-style: normal; text-align: center; }
+.outcome-rewards > span > small { align-self: end; color: #806b58; font-size: 8px; font-weight: 900; letter-spacing: .04em; }
+.outcome-rewards > span > b { align-self: start; color: #573b25; font-family: Georgia,"Times New Roman",serif; font-size: 15px; }
+.outcome-rewards .material-victory-reward { display: grid; color: #f3e6cb; background: #302820; border-color: var(--material-accent,#b79555); }
+.outcome-rewards .material-victory-reward small,.outcome-rewards .material-victory-reward b { color: #f3e6cb; }
+.outcome-rewards .reward-material-icon { grid-row: 1 / 3; width: 30px; height: 30px; }
+.outcome-rewards .reward-xp { color: #576e96; }
+.outcome-rewards .boss-clear-reward { background: #f3dfb2; border-color: #bd8535; }
+.outcome-actions { display: grid !important; grid-template-columns: 1.3fr 1fr; gap: 10px !important; margin: 0 !important; }
+.outcome-actions button { min-height: 58px; }
+.outcome-actions .primary-button { position: relative; display: grid; justify-items: start; align-content: center; padding: 10px 45px 10px 18px; color: #fff3d3; background: linear-gradient(180deg,#a94631,#7f2f22); border: 1px solid #5e2119; border-radius: 6px; box-shadow: 0 4px 0 #4d211a,0 8px 15px rgba(77,33,26,.22); text-align: left; }
+.outcome-actions .primary-button:hover { background: linear-gradient(180deg,#bc5139,#913326); box-shadow: 0 6px 0 #4d211a,0 10px 18px rgba(77,33,26,.2); }
+.outcome-actions button small { color: rgba(255,240,209,.7); font-size: 8px; letter-spacing: .08em; }
+.outcome-actions button span { padding: 0; background: transparent; border-radius: 0; font-size: 15px; font-weight: 1000; }
+.outcome-actions .primary-button > b { position: absolute; right: 17px; top: 50%; font-family: Georgia,serif; font-size: 31px; transform: translateY(-54%); }
+.outcome-actions .secondary-button { display: grid; justify-items: center; align-content: center; color: #4e382b; background: #f7ecd5; border: 1px solid #9f815c; border-radius: 6px; box-shadow: 0 3px 0 #806446; }
+.outcome-actions .secondary-button:hover { background: #fff5df; }
+.outcome-actions .secondary-button small { color: #8b735e; }
+.outcome-actions .text-button { grid-column: 1 / -1; min-height: auto; margin-top: 3px; padding: 6px; color: #735e4d; font-size: 10px; text-underline-offset: 3px; }
 .defeat-overlay { background: rgba(31,8,8,.84); }
 .defeat-card { border-top: 6px solid #7d2e26; }
 .defeat-card .victory-star { color: #f3dfc5; background: #6b2925; border-color: #321412; box-shadow: 0 4px 0 #321412; }
@@ -578,6 +609,8 @@ body {
   .expedition-actions { width: 100%; min-width: 0; }
   .battle-controls { align-items: stretch; flex-direction: column; }
   .battle-timer, .retreat-button { width: 100%; }
+  .victory-card { padding: 48px 20px 22px; }.victory-crest { width: 78px; height: 78px; top: -39px; }.victory-crest span { font-size: 32px; }
+  .outcome-rewards { grid-template-columns: 1fr 1fr; padding: 8px; }.victory-card .outcome-rewards > span { min-height: 56px; }
   .outcome-actions { grid-template-columns: 1fr; }.outcome-actions .text-button { grid-column: auto; }
 }
 
