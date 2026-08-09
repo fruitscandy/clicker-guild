@@ -16,7 +16,7 @@ type SpecialResearchPanelProps = {
   gold: number;
   formatCost: (cost: number) => string;
   onPurchase: (node: SpecialResearchNode) => void;
-  readOnly?: boolean;
+  developerMode?: boolean;
 };
 
 function SpellPreview({ kind }: { kind: SpecialAttackKind }) {
@@ -40,7 +40,7 @@ export function SpecialResearchPanel({
   gold,
   formatCost,
   onPurchase,
-  readOnly = false,
+  developerMode = false,
 }: SpecialResearchPanelProps) {
   const purchased = new Set(purchasedIds);
   const completed = SPECIAL_ATTACK_ORDER.filter((kind) => purchased.has(SPECIAL_ATTACKS[kind].nodeId)).length;
@@ -65,10 +65,10 @@ export function SpecialResearchPanel({
           const hallLocked = hallLevel < attack.hallLevel;
           const prerequisitesMet = node.prerequisites.every((id) => purchased.has(id));
           const affordable = gold >= node.cost;
-          const available = !readOnly && !isPurchased && !hallLocked && prerequisitesMet && affordable;
+          const available = !developerMode && !isPurchased && !hallLocked && prerequisitesMet && affordable;
           const status = isPurchased
             ? "자동 발동 활성화"
-            : readOnly
+            : developerMode
               ? "DEV 시험대에서는 전체 활성"
               : hallLocked
                 ? `길드 본관 Lv.${attack.hallLevel} 필요`

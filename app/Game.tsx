@@ -1292,7 +1292,7 @@ export default function Game() {
               hallLevel={save.guildHallLevel}
               gold={save.gold}
               formatCost={compactNumber}
-              readOnly={developerMode}
+              developerMode={developerMode}
               onPurchase={purchaseNode}
             />
           </>}
