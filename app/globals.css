@@ -759,6 +759,11 @@ body {
 
 .permadeath-warning { display: block; margin-top: 5px; color: #a93227; font-size: 9px; font-weight: 1000; letter-spacing: .03em; }
 .hack-arena { --click-primary: #d46a48; --click-secondary: #ffe0a0; --click-glow: rgba(255,190,103,.55); position: relative; cursor: crosshair; touch-action: manipulation; user-select: none; }
+.field-background-art { z-index: 0; object-fit: cover; object-position: var(--field-art-position, 50% 50%); filter: saturate(.92) contrast(1.035) brightness(.94); pointer-events: none; user-select: none; }
+.hack-arena::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at 53% 49%, transparent 34%, rgba(12,18,17,.08) 70%, rgba(8,13,13,.24) 100%), linear-gradient(90deg, rgba(13,20,18,.08), transparent 31%, transparent 72%, rgba(13,17,18,.08)); box-shadow: inset 0 0 72px rgba(10,16,15,.2); pointer-events: none; }
+.field-tone-bright .field-background-art { filter: saturate(.88) contrast(1.04) brightness(.91); }
+.field-tone-dark .field-background-art { filter: saturate(.98) contrast(1.06) brightness(.97); }
+.field-tone-vivid .field-background-art { filter: saturate(.86) contrast(1.04) brightness(.9); }
 .hack-arena.click-style-1 { --click-primary: #f2c65d; --click-secondary: #fff5c5; --click-glow: rgba(255,220,112,.7); }
 .hack-arena.click-style-2 { --click-primary: #73d4e8; --click-secondary: #fff0a7; --click-glow: rgba(88,210,239,.75); }
 .hack-arena.click-style-3 { --click-primary: #b68cff; --click-secondary: #e7f7ff; --click-glow: rgba(166,123,255,.8); }
