@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  createBattleLootPlan,
   createGoldDropPlan,
+  createMaterialDropPlan,
   goldLootStaggerMs,
   goldLootSweepDuration,
   revealedGoldDrops,
 } from "../app/battle-loot.ts";
+import { stageMaterialFor } from "../app/stage-materials.ts";
 
 const monsters = [
   { id: "swarm-a", x: 30, y: 25, kind: "swarm" },
@@ -39,4 +42,14 @@ test("keeps a brisk but bounded collection cadence for large packs", () => {
   assert.equal(goldLootStaggerMs(1), 0);
   assert.equal(goldLootStaggerMs(24), 42);
   assert.ok(goldLootSweepDuration(24) < 2_100);
+});
+
+test("adds a stage material without changing the complete gold reward", () => {
+  const material = stageMaterialFor(37);
+  const materialPlan = createMaterialDropPlan(monsters, material);
+  const fullPlan = createBattleLootPlan(monsters, 137, material);
+  assert.equal(materialPlan.reduce((sum, drop) => sum + drop.amount, 0), material.rewardAmount);
+  assert.equal(fullPlan.filter((drop) => drop.kind === "gold").reduce((sum, drop) => sum + drop.amount, 0), 137);
+  assert.equal(fullPlan.filter((drop) => drop.kind === "material").reduce((sum, drop) => sum + drop.amount, 0), material.rewardAmount);
+  assert.ok(materialPlan.every((drop) => drop.resourceId === material.id));
 });
