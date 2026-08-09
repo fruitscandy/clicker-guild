@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { fieldAssetForRegion } from "./field-assets";
 import { compactNumber, getStage, MEMBERS, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "./game-data";
 import { memberAnimationSource, type MemberMotion } from "./member-animations";
 import { monsterAssetForStage } from "./monster-assets";
@@ -210,22 +211,17 @@ function guildGrowthStage(growth: number, hasCitadel: boolean) {
   return [...GUILD_GROWTH_STAGES].reverse().find((stage) => growth >= stage.min) ?? GUILD_GROWTH_STAGES[0];
 }
 
-const TERRAIN_POSITIONS = [
-  [8, 22, .8], [18, 68, .7], [29, 18, .65], [40, 78, .82], [54, 14, .72], [66, 68, .68], [79, 22, .8], [90, 65, .72],
-  [13, 44, .55], [34, 54, .5], [58, 46, .6], [73, 83, .58], [87, 40, .52], [24, 87, .55], [48, 91, .48], [96, 31, .5],
-] as const;
-
-const BIOME_DETAILS: Record<string, { label: string; description: string; objects: string[] }> = {
-  forest: { label: "이끼 숲길", description: "수풀과 고목 사이로 햇살이 드는 초록 전장", objects: ["tree", "bush", "rock", "flower"] },
-  desert: { label: "붉은 모래벌", description: "선인장과 바위가 흩어진 뜨거운 황야", objects: ["cactus", "dune", "rock", "bone"] },
-  swamp: { label: "독안개 수렁", description: "버섯과 웅덩이에서 보랏빛 안개가 피어나는 늪", objects: ["mushroom", "pool", "reed", "stump"] },
-  mine: { label: "수정 채굴장", description: "광차와 광맥이 남은 어두운 갱도", objects: ["ore", "rail", "rock", "torch"] },
-  ice: { label: "서리 빙판", description: "눈 덮인 침엽수와 얼음 결정이 빛나는 협곡", objects: ["ice", "pine", "snow", "crystal"] },
-  volcano: { label: "용암 분지", description: "갈라진 지면 사이로 불꽃과 용암이 솟는 산맥", objects: ["lava", "basalt", "ember", "rock"] },
-  grave: { label: "망자의 묘역", description: "비석과 마른 나무 너머로 안개가 흐르는 묘지", objects: ["tomb", "bone", "dead-tree", "fog"] },
-  storm: { label: "마력 폭풍핵", description: "룬과 마력 수정이 공중에 떠오르는 불안정 지대", objects: ["crystal", "rune", "storm-cloud", "rock"] },
-  fort: { label: "마왕군 전초선", description: "부서진 성벽과 보급 상자가 남은 요새 앞마당", objects: ["wall", "banner", "crate", "spike"] },
-  dragon: { label: "고룡의 제단", description: "용의 뼈와 고대 수정이 잠든 성역", objects: ["dragon-bone", "crystal", "ruin", "ember"] },
+const BIOME_DETAILS: Record<string, { label: string; description: string }> = {
+  forest: { label: "이끼 숲길", description: "수풀과 고목 사이로 햇살이 드는 초록 전장" },
+  desert: { label: "붉은 모래벌", description: "선인장과 바위가 흩어진 뜨거운 황야" },
+  swamp: { label: "독안개 수렁", description: "버섯과 웅덩이에서 보랏빛 안개가 피어나는 늪" },
+  mine: { label: "수정 채굴장", description: "광차와 광맥이 남은 어두운 갱도" },
+  ice: { label: "서리 빙판", description: "눈 덮인 침엽수와 얼음 결정이 빛나는 협곡" },
+  volcano: { label: "용암 분지", description: "갈라진 지면 사이로 불꽃과 용암이 솟는 산맥" },
+  grave: { label: "망자의 묘역", description: "비석과 마른 나무 너머로 안개가 흐르는 묘지" },
+  storm: { label: "마력 폭풍핵", description: "룬과 마력 수정이 공중에 떠오르는 불안정 지대" },
+  fort: { label: "마왕군 전초선", description: "부서진 성벽과 보급 상자가 남은 요새 앞마당" },
+  dragon: { label: "고룡의 제단", description: "용의 뼈와 고대 수정이 잠든 성역" },
 };
 
 const specialInfo: Record<SpecialKey, { title: string; description: string }> = {
@@ -353,6 +349,7 @@ export default function Game() {
 
   const stageNumber = developerMode && developerStage ? developerStage : save.selectedStage;
   const stage = useMemo(() => getStage(stageNumber), [stageNumber]);
+  const fieldAsset = useMemo(() => fieldAssetForRegion(stage.region.hue), [stage.region.hue]);
   const monsterAsset = useMemo(() => monsterAssetForStage(stageNumber), [stageNumber]);
   const partyMembers = useMemo(() => save.party.map(memberById), [save.party]);
   const progressFor = useCallback((member: MemberDefinition) => developerMode ? { level: member.maxLevel, xp: 0, gear: DEV_GEAR_LEVEL } : save.progress[member.id], [developerMode, save.progress]);
@@ -890,15 +887,8 @@ export default function Game() {
           </div>
 
           <div className="battle-layout">
-            <div className={`arena hack-arena panel click-style-${activeClickPattern.tier}`} onPointerDown={attackField} role="application" aria-label="클릭한 위치를 중심으로 범위 공격하는 몬스터 전장">
-              <div className={`board-ground board-${stage.region.hue}`} aria-hidden="true" />
-              <div className="terrain-layer" aria-hidden="true">
-                {TERRAIN_POSITIONS.slice(0, Math.min(TERRAIN_POSITIONS.length, 10 + Math.floor(stage.localStage / 2) + (stage.boss ? 3 : 0))).map(([x, y, scale], index) => {
-                  const details = BIOME_DETAILS[stage.region.hue];
-                  const type = details.objects[index % details.objects.length];
-                  return <i key={`${stage.stage}-${index}`} className={`terrain-object terrain-${type}`} style={{ left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) scale(${scale})` }}><span /></i>;
-                })}
-              </div>
+            <div className={`arena hack-arena panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier}`} style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties} onPointerDown={attackField} role="application" aria-label="클릭한 위치를 중심으로 범위 공격하는 몬스터 전장">
+              <Image className="field-background-art" src={fieldAsset.source} alt="" fill sizes="(max-width: 1180px) 100vw, 900px" priority={stage.stage <= 10} unoptimized draggable={false} />
               <div className="environment-tag"><span>{BIOME_DETAILS[stage.region.hue].label}</span><small>{BIOME_DETAILS[stage.region.hue].description}</small></div>
               <div className="battle-banner"><span>{stage.boss ? "BOSS SWARM" : `STAGE ${stage.stage}`}</span><strong>{stage.name} 무리</strong></div>
               <div className="field-click-guide"><b>필드를 직접 누르세요</b><span>원 안의 모든 몬스터가 함께 베입니다</span></div>
