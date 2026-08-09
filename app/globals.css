@@ -556,6 +556,7 @@ body {
 .battle-mode > .toast,
 .battle-mode > .game-footer { display: none; }
 .battle-mode .field-screen { padding-top: 14px; }
+.battle-mode .field-screen:has(.victory-overlay) { animation: none; }
 .battle-mode .field-toolbar { position: sticky; top: 8px; z-index: 20; }
 .battle-controls { flex-wrap: nowrap; }
 .battle-timer { display: grid; grid-template-columns: auto auto; align-items: center; gap: 2px 14px; min-width: 210px; padding: 8px 12px; color: #f8ecd3; background: #26382f; border: 1px solid #657768; border-radius: 7px; box-shadow: inset 0 1px rgba(255,255,255,.06); }
