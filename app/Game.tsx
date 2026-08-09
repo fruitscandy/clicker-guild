@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { compactNumber, getStage, MEMBERS, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "./game-data";
 import { memberAnimationSource, type MemberMotion } from "./member-animations";
+import { monsterAssetForStage } from "./monster-assets";
 
 type Tab = "guild" | "field" | "tavern";
 type MemberProgress = { level: number; xp: number; gear: number };
@@ -42,6 +43,10 @@ type FieldMonster = {
   scale: number;
   hp: number;
   maxHp: number;
+  hitId: number;
+  lastHitAt: number;
+  lastHitTier: number;
+  defeatedAt: number | null;
   kind: "swarm" | "brute" | "mystic" | "leader";
 };
 
@@ -247,6 +252,10 @@ function spawnMonsterPack(stage: ReturnType<typeof getStage>): FieldMonster[] {
       scale: kind === "leader" ? 1.28 : kind === "brute" ? 1.05 : .72 + index % 4 * .08,
       hp: maxHp,
       maxHp,
+      hitId: 0,
+      lastHitAt: 0,
+      lastHitTier: 0,
+      defeatedAt: null,
       kind,
     };
   });
@@ -329,6 +338,7 @@ export default function Game() {
 
   const stageNumber = developerMode && developerStage ? developerStage : save.selectedStage;
   const stage = useMemo(() => getStage(stageNumber), [stageNumber]);
+  const monsterAsset = useMemo(() => monsterAssetForStage(stageNumber), [stageNumber]);
   const partyMembers = useMemo(() => save.party.map(memberById), [save.party]);
   const progressFor = useCallback((member: MemberDefinition) => developerMode ? { level: member.maxLevel, xp: 0, gear: DEV_GEAR_LEVEL } : save.progress[member.id], [developerMode, save.progress]);
   const developerPower = developerMode ? DEV_POWER_MULTIPLIER : 1;
@@ -450,18 +460,26 @@ export default function Game() {
     return () => window.clearTimeout(timer);
   }, [battleActive, battleDeadline, aliveMonsters.length, failBattle]);
 
-  const damageMonsters = useCallback((targetIds: string[], damage: number, allowExecution = false) => {
+  const damageMonsters = useCallback((targetIds: string[], damage: number, allowExecution = false, impactTier = 0) => {
     if (!targetIds.length) return;
     const targets = new Set(targetIds);
+    const hitAt = Date.now();
     setFieldMonsters((current) => {
       const hadLivingTargets = current.some((monster) => monster.hp > 0 && targets.has(monster.id));
       const next = current.map((monster) => {
         if (monster.hp <= 0 || !targets.has(monster.id)) return monster;
         let hp = Math.max(0, monster.hp - Math.max(1, Math.round(damage)));
         if (allowExecution && executionThreshold > 0 && hp / monster.maxHp <= executionThreshold) hp = 0;
-        return { ...monster, hp };
+        return {
+          ...monster,
+          hp,
+          hitId: monster.hitId + 1,
+          lastHitAt: hitAt,
+          lastHitTier: impactTier,
+          defeatedAt: hp === 0 ? hitAt : monster.defeatedAt,
+        };
       });
-      if (hadLivingTargets && !next.some((monster) => monster.hp > 0)) window.setTimeout(awardVictory, 0);
+      if (hadLivingTargets && !next.some((monster) => monster.hp > 0)) window.setTimeout(awardVictory, 900);
       return next;
     });
   }, [awardVictory, executionThreshold]);
@@ -517,7 +535,7 @@ export default function Game() {
       radius: attackRange,
     });
     window.setTimeout(() => setHitFx((current) => current?.id === effectId ? null : current), activeClickPattern.duration);
-    damageMonsters(targets.map((monster) => monster.id), damage, true);
+    damageMonsters(targets.map((monster) => monster.id), damage, true, activeClickPattern.tier);
     if (!automatic) {
       setClicks(nextClicks);
       if (save.specials.command && nextClicks % 10 === 0) {
@@ -875,11 +893,20 @@ export default function Game() {
               </div>
 
               <div className="monster-pack" aria-hidden="true">
-                {fieldMonsters.map((monster) => {
-                  const struck = Boolean(hitFx?.targets.includes(monster.id));
-                  return <span key={monster.id} className={`pack-monster monster-${monster.kind} ${monster.hp <= 0 ? "is-defeated" : ""} ${struck ? `is-struck click-recoil-tier-${hitFx?.tier ?? 0}` : ""}`} style={{ left: `${monster.x}%`, top: `${monster.y}%`, "--monster-scale": monster.scale, zIndex: Math.round(monster.y) } as React.CSSProperties}>
+                {fieldMonsters.map((monster, index) => {
+                  const hitDuration = monster.lastHitTier >= 4 ? 940 : monster.lastHitTier >= 3 ? 700 : 500;
+                  const struck = monster.hp > 0 && monster.lastHitAt > 0 && now - monster.lastHitAt < hitDuration;
+                  const artScale = (monsterAsset?.scale ?? 1) * (monster.kind === "leader" ? 1.08 : 1);
+                  return <span key={`${monster.id}-${monster.hitId}`} className={`pack-monster monster-${monster.kind} ${monsterAsset ? "has-pack-art" : ""} ${monster.hp <= 0 ? "is-defeated" : ""} ${struck ? `is-struck click-recoil-tier-${monster.lastHitTier}` : ""}`} style={{ left: `${monster.x}%`, top: `${monster.y}%`, "--monster-scale": monster.scale, "--monster-art-scale": artScale, zIndex: Math.round(monster.y) } as React.CSSProperties}>
                     <i className="pack-shadow" />
-                    <span className={`monster-sprite ${monster.kind === "leader" ? "boss" : ""}`}><i className="monster-horn left" /><i className="monster-horn right" /><i className="monster-body"><span className="monster-eye left" /><span className="monster-eye right" /><span className="monster-core" /></i><i className="monster-arm left" /><i className="monster-arm right" /><i className="monster-foot left" /><i className="monster-foot right" /></span>
+                    {monsterAsset ? (
+                      <span className="pack-monster-art-frame">
+                        <Image className="pack-monster-art" src={monsterAsset.source} alt="" fill sizes="128px" priority={stage.stage === 1 && index < 4} unoptimized draggable={false} />
+                      </span>
+                    ) : (
+                      <span className={`monster-sprite ${monster.kind === "leader" ? "boss" : ""}`}><i className="monster-horn left" /><i className="monster-horn right" /><i className="monster-body"><span className="monster-eye left" /><span className="monster-eye right" /><span className="monster-core" /></i><i className="monster-arm left" /><i className="monster-arm right" /><i className="monster-foot left" /><i className="monster-foot right" /></span>
+                    )}
+                    <i className="pack-monster-soul" aria-hidden="true">✦</i>
                     {monster.kind === "leader" && <b className="leader-mark">♛</b>}
                   </span>;
                 })}

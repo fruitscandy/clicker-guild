@@ -772,6 +772,9 @@ body {
 .monster-pack { position: absolute; inset: 0; z-index: 4; overflow: hidden; pointer-events: none; }
 .pack-monster { --monster-scale: 1; position: absolute; width: 88px; height: 116px; transform: translate(-50%,-50%) scale(var(--monster-scale)); transform-origin: center bottom; transition: filter .12s ease; }
 .pack-monster .pack-shadow { position: absolute; left: 50%; bottom: 8px; width: 58px; height: 15px; background: rgba(19,31,27,.32); border-radius: 50%; transform: translateX(-50%); }
+.pack-monster-art-frame { position: absolute; left: 50%; bottom: 2px; width: 126px; height: 126px; transform: translateX(-50%); }
+.pack-monster-art { object-fit: contain; object-position: center bottom; filter: drop-shadow(0 5px 2px rgba(15,25,20,.36)); transform: scale(var(--monster-art-scale)); transform-origin: center bottom; animation: packMonsterArtIdle 1.8s ease-in-out infinite; user-select: none; }
+.pack-monster:nth-child(3n) .pack-monster-art { animation-delay: -.6s; }.pack-monster:nth-child(4n) .pack-monster-art { animation-delay: -1.1s; }
 .pack-monster .monster-sprite { position: absolute; left: 50%; bottom: 4px; width: 230px; height: 315px; margin: 0; transform: translateX(-50%) scale(.28); transform-origin: center bottom; animation: packMonsterIdle 1.8s ease-in-out infinite; }
 .pack-monster:nth-child(3n) .monster-sprite { animation-delay: -.6s; }.pack-monster:nth-child(4n) .monster-sprite { animation-delay: -1.1s; }
 .pack-monster.monster-brute .monster-body { background: #8b624f; }.pack-monster.monster-brute .monster-body::before { background: #a7664f; }
@@ -779,12 +782,22 @@ body {
 .pack-monster.monster-leader .monster-body { background: #8f4d43; }.pack-monster.monster-leader .monster-body::before { background: #b14940; }
 .leader-mark { position: absolute; left: 50%; top: -4px; z-index: 5; display: grid; place-items: center; width: 24px; height: 24px; color: #5a261c; background: #ffe17b; border: 2px solid #5a261c; border-radius: 50%; box-shadow: 0 0 12px rgba(255,218,103,.65); transform: translateX(-50%); font-size: 11px; }
 @keyframes packMonsterIdle { 50% { transform: translateX(-50%) translateY(-9px) scale(.28) rotate(-2deg); } }
+.pack-monster-soul { position: absolute; left: 50%; top: 22%; z-index: 6; display: none; color: #fff1bd; font-size: 24px; font-style: normal; text-shadow: 0 0 6px #fff, 0 0 15px #bd8aff; }
 .pack-monster.is-struck { animation: packMonsterHit .46s ease-out both; filter: brightness(1.55) saturate(.65); }
 .pack-monster.is-struck.click-recoil-tier-2, .pack-monster.is-struck.click-recoil-tier-3, .pack-monster.is-struck.click-recoil-tier-4 { animation-name: packMonsterHeavyHit; }
-.pack-monster.is-defeated { animation: packMonsterDefeat .62s cubic-bezier(.2,.75,.25,1) both; }
-@keyframes packMonsterHit { 30% { transform: translate(calc(-50% + 8px),-50%) scale(calc(var(--monster-scale) * .91)) rotate(7deg); } }
-@keyframes packMonsterHeavyHit { 18% { transform: translate(-50%,-50%) scale(calc(var(--monster-scale) * 1.12)); } 48% { transform: translate(calc(-50% + 12px),-50%) scale(calc(var(--monster-scale) * .84)) rotate(11deg); filter: brightness(2); } }
-@keyframes packMonsterDefeat { 0% { opacity: 1; filter: brightness(2); } 42% { opacity: .9; transform: translate(-50%,calc(-50% - 18px)) scale(calc(var(--monster-scale) * 1.08)) rotate(9deg); } 100% { opacity: 0; transform: translate(-50%,calc(-50% + 24px)) scale(calc(var(--monster-scale) * .35)) rotate(34deg); filter: grayscale(1) brightness(.55); } }
+.pack-monster.is-struck .pack-monster-art { animation: packMonsterArtHit .46s cubic-bezier(.2,.9,.35,1) both; }
+.pack-monster.is-defeated { animation: packMonsterDefeat .9s cubic-bezier(.2,.75,.25,1) both; }
+.pack-monster.is-defeated .pack-monster-art { animation: packMonsterArtDefeat .9s cubic-bezier(.15,.7,.2,1) both; }
+.pack-monster.is-defeated .pack-monster-soul { display: block; animation: packMonsterSoul .9s ease-out both; }
+.pack-monster.is-defeated .pack-shadow { animation: packMonsterShadowDefeat .9s ease-in both; }
+@keyframes packMonsterArtIdle { 0%,100% { transform: scale(var(--monster-art-scale)) translateY(0) rotate(-.6deg); } 50% { transform: scale(var(--monster-art-scale)) translateY(-7px) rotate(1deg); } }
+@keyframes packMonsterArtHit { 0%,100% { transform: scale(var(--monster-art-scale)); filter: drop-shadow(0 5px 2px rgba(15,25,20,.36)); } 24% { transform: scale(var(--monster-art-scale)) scale(.88,1.08) translateX(9px) rotate(6deg); filter: brightness(1.9) saturate(.35) sepia(.18) drop-shadow(0 0 9px #fff0a6); } 58% { transform: scale(var(--monster-art-scale)) scale(1.05,.94) translateX(-5px) rotate(-3deg); } }
+@keyframes packMonsterArtDefeat { 0% { opacity: 1; transform: scale(var(--monster-art-scale)); } 20% { transform: scale(var(--monster-art-scale)) scale(1.08,.9) rotate(-5deg); filter: brightness(2) saturate(.3); } 48% { opacity: 1; transform: scale(var(--monster-art-scale)) translateY(-16px) rotate(9deg); filter: grayscale(.35) drop-shadow(0 0 12px #f6d378); } 100% { opacity: 0; transform: scale(var(--monster-art-scale)) scale(.68,.25) translateY(75px) rotate(24deg); filter: grayscale(1) sepia(.45) blur(1px); } }
+@keyframes packMonsterHit { 0%,100% { transform: translate(-50%,-50%) scale(var(--monster-scale)); } 30% { transform: translate(calc(-50% + 8px),-50%) scale(var(--monster-scale)) scale(.91) rotate(7deg); } }
+@keyframes packMonsterHeavyHit { 0%,100% { transform: translate(-50%,-50%) scale(var(--monster-scale)); } 18% { transform: translate(-50%,-50%) scale(var(--monster-scale)) scale(1.12); } 48% { transform: translate(calc(-50% + 12px),-50%) scale(var(--monster-scale)) scale(.84) rotate(11deg); filter: brightness(2); } }
+@keyframes packMonsterDefeat { 0% { opacity: 1; transform: translate(-50%,-50%) scale(var(--monster-scale)); filter: brightness(2); } 42% { opacity: .9; transform: translate(-50%,calc(-50% - 18px)) scale(var(--monster-scale)) scale(1.08) rotate(9deg); } 100% { opacity: 0; transform: translate(-50%,calc(-50% + 24px)) scale(var(--monster-scale)) scale(.35) rotate(34deg); filter: grayscale(1) brightness(.55); } }
+@keyframes packMonsterSoul { 0%,24% { opacity: 0; transform: translate(-50%,8px) scale(.35); } 48% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%,-70px) scale(1.35) rotate(80deg); } }
+@keyframes packMonsterShadowDefeat { to { width: 18px; height: 5px; opacity: 0; } }
 
 .attack-range-impact { position: absolute; z-index: 13; aspect-ratio: 1; border: 3px solid var(--click-primary); border-radius: 50%; box-shadow: inset 0 0 25px var(--click-glow),0 0 20px var(--click-glow); background: radial-gradient(circle,rgba(255,255,255,.2),transparent 62%); transform: translate(-50%,-50%); pointer-events: none; animation: rangeImpact .65s ease-out both; }
 .attack-range-impact::before, .attack-range-impact::after { content: ""; position: absolute; inset: 12%; border: 1px dashed var(--click-secondary); border-radius: 50%; }.attack-range-impact::after { inset: 44%; background: var(--click-secondary); box-shadow: 0 0 18px var(--click-glow); }
