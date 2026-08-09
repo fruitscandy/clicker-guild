@@ -8,7 +8,8 @@ test("victory actions use player-friendly region and combat terms", async () => 
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
 
-  assert.match(game, /체 처치 완료!/);
+  assert.match(game, /마리 처치 완료!/);
+  assert.doesNotMatch(game, /체 처치 완료!/);
   assert.match(game, />다음 지역</);
   assert.match(game, />재전투</);
   assert.doesNotMatch(game, /도륙|다음 웨이브 즉시 진입|반복 도륙/);
