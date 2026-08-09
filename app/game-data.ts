@@ -1,3 +1,5 @@
+import { beginnerForestMonsterName } from "./monster-assets";
+
 export type Rank = "F" | "E" | "D" | "C" | "B" | "A" | "S";
 
 export type MemberDefinition = {
@@ -89,7 +91,7 @@ export function getStage(stage: number) {
     hp,
     gold,
     xp,
-    name: boss ? region.boss : region.monster,
+    name: regionIndex === 0 ? beginnerForestMonsterName(localStage) : boss ? region.boss : region.monster,
   };
 }
 
