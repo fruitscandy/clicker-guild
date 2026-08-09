@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState, type CSSProperties } from "react";
+import { BASE_CLICK_DAMAGE } from "../game-balance";
 import { allStageMaterials, canAffordWeaponRecipe, materialIconVars, weaponMaterialRecipe } from "../stage-materials";
 import { WeaponArt, type WeaponView } from "./WeaponArt";
 import styles from "./ForgeWorkshop.module.css";
@@ -82,7 +83,7 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materia
         <h4>{previewUnlocked || previewCraftable ? preview.weaponName : "미확인 무기 도면"}</h4>
         <p>{previewUnlocked || previewCraftable ? preview.subtitle : "앞 단계 무기를 완성해야 이 도면을 해독할 수 있습니다."}</p>
         <dl>
-          <div><dt>클릭 공격력</dt><dd>{previewUnlocked || previewCraftable ? formatNumber(Math.round(12 * preview.damageScale)) : "???"}</dd></div>
+          <div><dt>클릭 공격력</dt><dd>{previewUnlocked || previewCraftable ? formatNumber(Math.round(BASE_CLICK_DAMAGE * preview.damageScale)) : "???"}</dd></div>
           <div><dt>공격 연출</dt><dd>{previewUnlocked || previewCraftable ? `${preview.visualHits} HIT` : "???"}</dd></div>
           <div><dt>강화 효과</dt><dd>공격력만 상승</dd></div>
         </dl>
@@ -102,7 +103,7 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, bossTokens, materia
     <div className={styles.craftBar}>
       <div className={styles.equippedSummary}>
         <WeaponArt tier={current.tier} glyph={current.glyph} label={current.weaponName} className={styles.equippedWeapon} />
-        <span><small>PLAYER WEAPON · +{current.tier}</small><strong>{current.weaponName}</strong><em>{current.title} · 클릭 공격력 {formatNumber(Math.round(12 * current.damageScale))}</em></span>
+        <span><small>PLAYER WEAPON · +{current.tier}</small><strong>{current.weaponName}</strong><em>{current.title} · 클릭 공격력 {formatNumber(Math.round(BASE_CLICK_DAMAGE * current.damageScale))}</em></span>
       </div>
       {next ? <button className={styles.craftButton} onClick={craftNextWeapon} disabled={!canAffordNext}>
         <span>다음 무기 제작</span>
