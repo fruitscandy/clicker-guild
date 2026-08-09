@@ -28,13 +28,21 @@ test("the battle field mounts only the restrained weapon effect component", () =
   }
 });
 
-test("all 15 weapon tiers share one material language with clear prestige steps", () => {
-  assert.equal(effectSource.match(/\{ primary:/g)?.length, 15);
+test("all 15 weapons select one unique effect motif without tier accumulation", () => {
+  const motifNames = [...effectSource.matchAll(/motif: "(motif[A-Za-z]+)"/g)].map((match) => match[1]);
+
+  assert.equal(effectSource.match(/\{ key:/g)?.length, 15);
+  assert.equal(motifNames.length, 15);
+  assert.equal(new Set(motifNames).size, 15);
   assert.match(effectSource, /data-weapon-tier/);
-  assert.match(effectSource, /data-effect-grade/);
-  assert.match(effectSource, /tier >= 5.*forgeStamp/);
-  assert.match(effectSource, /tier >= 10.*masterworkCrest/);
-  assert.match(effectSource, /tier >= 13.*legendaryArc/);
+  assert.match(effectSource, /data-effect-motif/);
+  assert.match(effectSource, /styles\[weaponEffect\.motif\]/);
+  assert.doesNotMatch(effectSource, /tier\s*>=/);
+  assert.doesNotMatch(effectSource, /masterworkCrest|legendaryArc|forgeStamp/);
+
+  for (const motifName of motifNames) {
+    assert.match(effectStyles, new RegExp(`\\.${motifName}\\b`));
+  }
 
   for (const combatState of ["combo", "critical", "execution", "shockwave", "momentum"]) {
     assert.match(effectSource, new RegExp(combatState, "i"));

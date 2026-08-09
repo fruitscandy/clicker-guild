@@ -76,12 +76,14 @@ test("distinguishes direct attacks from triggered guild upgrade effects", async 
   assert.match(game, /<WeaponAttackEffect/);
   assert.match(weaponEffect, /shockwavePulse/);
   assert.match(weaponEffect, /criticalNotch/);
-  assert.match(weaponEffect, /secondarySlash/);
+  assert.match(weaponEffect, /data-effect-motif/);
   assert.match(weaponEffect, /executionCut/);
   assert.match(game, /execution-finisher/);
   assert.match(weaponEffect, /comboDamage/);
-  assert.match(weaponEffectCss, /masterworkCrest/);
-  assert.match(weaponEffectCss, /legendaryArc/);
+  assert.match(weaponEffectCss, /motifCrosscut/);
+  assert.match(weaponEffectCss, /motifAbyss/);
+  assert.match(weaponEffectCss, /motifMyriad/);
+  assert.doesNotMatch(weaponEffect, /tier\s*>=/);
   assert.doesNotMatch(game, /fx-pattern-label/);
   assert.doesNotMatch(game, /combat-proc-popover/);
   assert.match(game, /UPGRADE_ICON_BY_KEY\[upgrade\.key\]/);

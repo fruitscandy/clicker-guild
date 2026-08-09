@@ -2,13 +2,13 @@
   position: absolute;
   z-index: 13;
   aspect-ratio: 1;
-  border: 2px dashed color-mix(in srgb, var(--effect-shadow), transparent 26%);
+  border: 2px dashed color-mix(in srgb, var(--effect-shadow), transparent 32%);
   border-radius: 46% 54% 49% 51%;
-  background: radial-gradient(circle, transparent 0 58%, color-mix(in srgb, var(--effect-secondary), transparent 88%) 70%, transparent 73%);
+  background: radial-gradient(circle, transparent 0 60%, color-mix(in srgb, var(--effect-secondary), transparent 91%) 71%, transparent 74%);
   opacity: 0;
   transform: translate(-50%, -50%) scale(.35) rotate(var(--effect-counter-rotation));
   pointer-events: none;
-  animation: rangeSettle .62s ease-out both;
+  animation: rangeSettle .58s ease-out both;
 }
 
 .range::before,
@@ -19,9 +19,8 @@
 }
 
 .range::before {
-  inset: 7%;
-  border-top: 3px solid color-mix(in srgb, var(--effect-primary), transparent 46%);
-  border-right: 1px solid transparent;
+  inset: 8%;
+  border-top: 3px solid color-mix(in srgb, var(--effect-primary), transparent 52%);
   border-radius: 48% 52% 45% 55%;
   transform: rotate(17deg);
 }
@@ -37,19 +36,16 @@
   transform: translate(-50%, -50%) rotate(23deg);
 }
 
-.rangeMiss { filter: grayscale(.85); opacity: .2; }
-.rangeShockwave { border-width: 3px; animation-duration: .82s; }
+.rangeMiss { filter: grayscale(.85); }
+.rangeShockwave { border-width: 3px; animation-duration: .76s; }
 .rangeShockwave > i {
   position: absolute;
   inset: 18%;
-  border: 2px solid color-mix(in srgb, var(--effect-secondary), transparent 46%);
+  border: 2px solid color-mix(in srgb, var(--effect-secondary), transparent 56%);
   border-radius: 52% 48% 55% 45%;
 }
 
 .effect {
-  --effect-scale: .76;
-  --slash-alpha: .76;
-  --impact-scale: .72;
   position: absolute;
   z-index: 16;
   width: 1px;
@@ -58,15 +54,11 @@
 }
 
 .groundScar,
-.slash,
-.secondarySlash,
-.momentumEcho,
+.signature,
 .impact,
 .criticalNotch,
 .executionCut,
-.masterworkCrest,
-.legendaryArc,
-.forgeStamp,
+.momentumMark,
 .shockwavePulse,
 .fragments,
 .dust {
@@ -79,36 +71,52 @@
 
 .groundScar {
   z-index: 1;
-  width: 330px;
-  height: 165px;
-  margin: -54px 0 0 -165px;
+  width: 300px;
+  height: 150px;
+  margin: -48px 0 0 -150px;
   background: url("/assets/vfx/weapon/ground-scar.webp") center / contain no-repeat;
-  filter: saturate(.7) brightness(.68);
+  filter: saturate(.62) brightness(.65);
   opacity: 0;
-  transform: rotate(var(--effect-counter-rotation)) scale(.42);
+  transform: rotate(var(--scar-rotation)) scale(.42);
   transform-origin: center;
   mix-blend-mode: multiply;
-  animation: scarSettle .88s ease-out both;
+  animation: scarSettle .78s ease-out both;
 }
 
-.slash,
-.secondarySlash,
-.momentumEcho {
+.signature {
   z-index: 5;
-  width: 350px;
-  height: 350px;
-  margin: -175px;
-  background: url("/assets/vfx/weapon/steel-slash.webp") center / contain no-repeat;
-  filter: sepia(.12) saturate(.66) brightness(.78) drop-shadow(0 4px 2px color-mix(in srgb, var(--effect-shadow), transparent 24%));
-  opacity: 0;
-  transform: rotate(var(--effect-rotation)) scale(.18, .58);
-  transform-origin: center;
-  animation: bladeSweep .56s cubic-bezier(.14, .72, .18, 1) both;
+  width: 1px;
+  height: 1px;
 }
 
-.slash::after,
-.secondarySlash::after,
-.momentumEcho::after {
+.signature > i,
+.signature > b {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: none;
+  pointer-events: none;
+}
+
+.signature > i {
+  --stroke-alpha: .76;
+  --stroke-delay: 0ms;
+  --stroke-rotate: var(--effect-rotation);
+  --stroke-x: 0px;
+  --stroke-y: 0px;
+  --stroke-end-x: .94;
+  --stroke-end-y: .82;
+  width: 320px;
+  height: 320px;
+  margin: -160px;
+  background: url("/assets/vfx/weapon/steel-slash.webp") center / contain no-repeat;
+  filter: sepia(.1) saturate(.62) brightness(.76) drop-shadow(0 4px 2px color-mix(in srgb, var(--effect-shadow), transparent 25%));
+  opacity: 0;
+  transform-origin: center;
+  animation: physicalBrush .58s var(--stroke-delay) cubic-bezier(.14, .72, .18, 1) both;
+}
+
+.signature > i::after {
   position: absolute;
   inset: 0;
   content: "";
@@ -118,34 +126,258 @@
   mask: url("/assets/vfx/weapon/steel-slash.webp") center / contain no-repeat;
 }
 
-.secondarySlash {
-  z-index: 4;
-  filter: sepia(.18) saturate(.58) brightness(.66) drop-shadow(0 3px 2px color-mix(in srgb, var(--effect-shadow), transparent 28%));
-  transform: rotate(calc(var(--effect-rotation) + 67deg)) scale(.15, .48);
-  animation: secondBladeSweep .62s .1s cubic-bezier(.14, .72, .18, 1) both;
+.signature > b {
+  z-index: 7;
+  width: 52px;
+  height: 52px;
+  margin: -26px;
+  place-items: center;
+  color: color-mix(in srgb, var(--effect-primary), #ead8af 32%);
+  background: color-mix(in srgb, var(--effect-shadow), transparent 22%);
+  border: 2px solid color-mix(in srgb, var(--effect-secondary), transparent 22%);
+  border-radius: 34% 66% 42% 58%;
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--effect-shadow), transparent 20%);
+  font-family: Georgia, "Noto Serif KR", serif;
+  font-size: 20px;
+  font-weight: 900;
+  opacity: 0;
+  transform: rotate(var(--effect-counter-rotation)) scale(1.35);
+  animation: stampStrike .5s .1s ease-out both;
 }
 
-.secondarySlash::after { background: var(--effect-secondary); opacity: .18; }
-
-.momentumEcho {
-  z-index: 3;
-  filter: sepia(.3) saturate(.45) brightness(.54);
-  transform: translate(-24px, 17px) rotate(var(--effect-rotation)) scale(.42, .72);
-  animation: momentumTrail .68s .04s ease-out both;
+/* 01 · 훈련용 장검: 짧고 무거운 단일 베기 */
+.motifTraining > i:first-child {
+  display: block;
+  width: 244px;
+  height: 244px;
+  margin: -122px;
+  --stroke-rotate: calc(var(--effect-rotation) - 4deg);
+  --stroke-alpha: .7;
+  --stroke-end-x: .82;
+  --stroke-end-y: .62;
 }
 
-.momentumEcho::after { background: var(--effect-secondary); opacity: .12; }
+/* 02 · 초승달 도: 넓은 반월 하나 */
+.motifCrescent > i:first-child {
+  display: block;
+  width: 390px;
+  height: 390px;
+  margin: -195px;
+  --stroke-rotate: calc(var(--effect-rotation) + 8deg);
+  --stroke-alpha: .82;
+  --stroke-end-x: 1.02;
+  --stroke-end-y: .78;
+}
+
+/* 03 · 쌍날검: 동시에 닫히는 X자 교차참 */
+.motifCrosscut > i:nth-child(1),
+.motifCrosscut > i:nth-child(2) { display: block; width: 300px; height: 300px; margin: -150px; }
+.motifCrosscut > i:nth-child(1) { --stroke-rotate: calc(var(--effect-rotation) - 18deg); --stroke-end-x: .9; --stroke-end-y: .7; }
+.motifCrosscut > i:nth-child(2) { --stroke-rotate: calc(var(--effect-rotation) + 76deg); --stroke-delay: 70ms; --stroke-alpha: .68; --stroke-end-x: .88; --stroke-end-y: .68; }
+
+/* 04 · 룬 파쇄검: 좁은 관통선과 깨지는 표식 */
+.motifRuneBreak > i:nth-child(1) { display: block; width: 310px; height: 310px; margin: -155px; --stroke-rotate: calc(var(--effect-rotation) + 4deg); --stroke-end-x: .98; --stroke-end-y: .46; }
+.motifRuneBreak > i:nth-child(2) {
+  display: block;
+  width: 106px;
+  height: 106px;
+  margin: -53px;
+  background: transparent;
+  border: 3px dashed color-mix(in srgb, var(--effect-primary), transparent 24%);
+  border-radius: 28% 72% 34% 66%;
+  filter: drop-shadow(3px 3px 0 var(--effect-shadow));
+  animation: sealBreak .54s .08s ease-out both;
+}
+.motifRuneBreak > i:nth-child(2)::after { display: none; }
+.motifRuneBreak > b { display: grid; }
+
+/* 05 · 천공검: 세 자루가 서로 다른 위치에 낙하 */
+.motifSkyArray > i:nth-child(-n + 3) {
+  display: block;
+  width: 17px;
+  height: 250px;
+  margin: -150px 0 0 -8px;
+  background: linear-gradient(transparent 2%, #eee3c6 15%, var(--effect-primary) 45% 62%, var(--effect-shadow) 88%, transparent);
+  clip-path: polygon(38% 0, 66% 0, 100% 77%, 56% 100%, 18% 78%);
+  filter: drop-shadow(5px 4px 0 color-mix(in srgb, var(--effect-shadow), transparent 20%));
+  animation: fallingBlade .62s var(--stroke-delay) ease-out both;
+}
+.motifSkyArray > i::after { display: none; }
+.motifSkyArray > i:nth-child(1) { --stroke-x: -58px; --stroke-delay: 0ms; }
+.motifSkyArray > i:nth-child(2) { --stroke-x: 4px; --stroke-delay: 70ms; height: 286px; margin-top: -171px; }
+.motifSkyArray > i:nth-child(3) { --stroke-x: 62px; --stroke-delay: 130ms; }
+
+/* 06 · 성운도: 비대칭으로 감기는 두 호와 먼지 궤도 */
+.motifNebula > i:nth-child(1),
+.motifNebula > i:nth-child(2),
+.motifNebula > i:nth-child(3) { display: block; }
+.motifNebula > i:nth-child(1) { width: 330px; height: 330px; margin: -165px; --stroke-rotate: calc(var(--effect-rotation) - 18deg); --stroke-end-x: .92; --stroke-end-y: .72; }
+.motifNebula > i:nth-child(2) { width: 250px; height: 250px; margin: -125px; --stroke-rotate: calc(var(--effect-rotation) + 142deg); --stroke-delay: 90ms; --stroke-alpha: .52; --stroke-end-x: .84; --stroke-end-y: .6; }
+.motifNebula > i:nth-child(3) {
+  width: 220px;
+  height: 92px;
+  margin: -46px 0 0 -110px;
+  background: transparent;
+  border-top: 4px dashed color-mix(in srgb, var(--effect-secondary), transparent 35%);
+  border-radius: 50%;
+  filter: none;
+  animation: orbitDust .7s .08s ease-out both;
+}
+.motifNebula > i:nth-child(3)::after { display: none; }
+
+/* 07 · 용맥검: 큰 절단면에서 두 갈래 균열이 뻗음 */
+.motifDragonVein > i:nth-child(-n + 3) { display: block; }
+.motifDragonVein > i:nth-child(1) { width: 360px; height: 360px; margin: -180px; --stroke-rotate: calc(var(--effect-rotation) + 10deg); --stroke-end-x: 1; --stroke-end-y: .62; }
+.motifDragonVein > i:nth-child(2),
+.motifDragonVein > i:nth-child(3) {
+  width: 180px;
+  height: 18px;
+  margin: -9px 0 0 -12px;
+  background: linear-gradient(90deg, var(--effect-primary), var(--effect-shadow));
+  clip-path: polygon(0 40%, 20% 0, 36% 65%, 54% 18%, 70% 82%, 100% 44%, 100% 66%, 72% 100%, 53% 48%, 35% 88%, 18% 34%, 0 66%);
+  filter: drop-shadow(0 3px 0 var(--effect-shadow));
+  animation: veinCrack .54s var(--stroke-delay) ease-out both;
+}
+.motifDragonVein > i:nth-child(2)::after,
+.motifDragonVein > i:nth-child(3)::after { display: none; }
+.motifDragonVein > i:nth-child(2) { --stroke-rotate: 22deg; --stroke-delay: 80ms; }
+.motifDragonVein > i:nth-child(3) { --stroke-rotate: -36deg; --stroke-delay: 120ms; }
+
+/* 08 · 천상검: 중앙 낙검과 양쪽으로 갈라지는 지면 검풍 */
+.motifCelestial > i:nth-child(-n + 3) { display: block; }
+.motifCelestial > i:nth-child(1) {
+  width: 22px;
+  height: 330px;
+  margin: -205px 0 0 -11px;
+  background: linear-gradient(transparent, #f0e5c8 16%, var(--effect-primary) 48% 66%, var(--effect-shadow) 88%, transparent);
+  clip-path: polygon(40% 0, 64% 0, 100% 79%, 54% 100%, 15% 78%);
+  filter: drop-shadow(6px 4px 0 color-mix(in srgb, var(--effect-shadow), transparent 18%));
+  animation: fallingBlade .68s ease-out both;
+}
+.motifCelestial > i:nth-child(1)::after { display: none; }
+.motifCelestial > i:nth-child(2),
+.motifCelestial > i:nth-child(3) { width: 250px; height: 250px; margin: -92px 0 0 -125px; --stroke-alpha: .58; --stroke-end-x: .82; --stroke-end-y: .52; }
+.motifCelestial > i:nth-child(2) { --stroke-rotate: 12deg; --stroke-x: -54px; --stroke-delay: 90ms; }
+.motifCelestial > i:nth-child(3) { --stroke-rotate: 168deg; --stroke-x: 54px; --stroke-delay: 120ms; }
+.motifCelestial > b { display: grid; margin-top: 48px; }
+
+/* 09 · 혈월도: 붉은 한 쌍의 초승달과 아래로 흐르는 칼끝 */
+.motifBloodMoon > i:nth-child(-n + 3) { display: block; }
+.motifBloodMoon > i:nth-child(1),
+.motifBloodMoon > i:nth-child(2) { filter: saturate(.88) brightness(.62) drop-shadow(0 5px 2px var(--effect-shadow)); }
+.motifBloodMoon > i:nth-child(1) { width: 390px; height: 390px; margin: -195px; --stroke-rotate: calc(var(--effect-rotation) - 8deg); --stroke-alpha: .82; --stroke-end-x: 1; --stroke-end-y: .8; }
+.motifBloodMoon > i:nth-child(2) { width: 300px; height: 300px; margin: -150px; --stroke-rotate: calc(var(--effect-rotation) + 24deg); --stroke-delay: 95ms; --stroke-alpha: .46; --stroke-end-x: .86; --stroke-end-y: .52; }
+.motifBloodMoon > i:nth-child(3) {
+  width: 13px;
+  height: 92px;
+  margin: 4px 0 0 -6px;
+  background: linear-gradient(#b44750, #3a171c 72%, transparent);
+  clip-path: polygon(45% 0, 72% 0, 100% 72%, 53% 100%, 8% 72%);
+  filter: drop-shadow(3px 2px 0 var(--effect-shadow));
+  animation: bloodTip .64s .12s ease-out both;
+}
+.motifBloodMoon > i:nth-child(3)::after { display: none; }
+
+/* 10 · 폭풍쌍검: 좌우에서 맞물리는 청철 쌍검 */
+.motifStormTwin > i:nth-child(-n + 3) { display: block; }
+.motifStormTwin > i:nth-child(1),
+.motifStormTwin > i:nth-child(2) { width: 310px; height: 310px; margin: -155px; --stroke-end-x: .9; --stroke-end-y: .68; }
+.motifStormTwin > i:nth-child(1) { --stroke-rotate: calc(var(--effect-rotation) - 20deg); --stroke-x: -26px; }
+.motifStormTwin > i:nth-child(2) { --stroke-rotate: calc(var(--effect-rotation) + 158deg); --stroke-x: 26px; --stroke-delay: 65ms; }
+.motifStormTwin > i:nth-child(3) {
+  width: 18px;
+  height: 130px;
+  margin: -65px 0 0 -9px;
+  background: linear-gradient(var(--effect-primary), #e4dfc8, var(--effect-shadow));
+  clip-path: polygon(45% 0, 80% 0, 54% 35%, 100% 39%, 28% 100%, 46% 53%, 0 49%);
+  filter: drop-shadow(4px 3px 0 var(--effect-shadow));
+  animation: twinSnap .48s .12s ease-out both;
+}
+.motifStormTwin > i:nth-child(3)::after { display: none; }
+
+/* 11 · 성휘 대검: 한 자루의 넓은 수직 심판검 */
+.motifRadiant > i:nth-child(1),
+.motifRadiant > i:nth-child(2) { display: block; }
+.motifRadiant > i:nth-child(1) {
+  width: 34px;
+  height: 390px;
+  margin: -244px 0 0 -17px;
+  background: linear-gradient(transparent, #f3ead1 12%, var(--effect-primary) 42% 72%, var(--effect-shadow) 92%, transparent);
+  clip-path: polygon(42% 0, 63% 0, 100% 80%, 53% 100%, 8% 80%);
+  filter: drop-shadow(8px 5px 0 color-mix(in srgb, var(--effect-shadow), transparent 14%));
+  animation: greatswordDrop .72s ease-out both;
+}
+.motifRadiant > i:nth-child(1)::after { display: none; }
+.motifRadiant > i:nth-child(2) { width: 320px; height: 320px; margin: -105px 0 0 -160px; --stroke-rotate: 8deg; --stroke-delay: 100ms; --stroke-alpha: .54; --stroke-end-x: .94; --stroke-end-y: .46; }
+.motifRadiant > b { display: grid; margin-top: 68px; }
+
+/* 12 · 심연검: 흰 검광 없이 벌어지는 검은 수평 균열 */
+.motifAbyss > i:nth-child(1),
+.motifAbyss > i:nth-child(2) {
+  display: block;
+  width: 390px;
+  height: 48px;
+  margin: -24px 0 0 -195px;
+  background: linear-gradient(90deg, transparent, #0f0b14 8%, var(--effect-shadow) 30% 68%, #09070b 90%, transparent);
+  clip-path: polygon(0 47%, 12% 24%, 21% 55%, 34% 8%, 48% 58%, 60% 16%, 74% 68%, 88% 28%, 100% 50%, 88% 72%, 73% 48%, 60% 88%, 47% 42%, 34% 78%, 20% 45%, 10% 73%);
+  filter: drop-shadow(0 5px 0 #100b14);
+  animation: abyssOpen .66s var(--stroke-delay) ease-out both;
+}
+.motifAbyss > i::after { display: none; }
+.motifAbyss > i:nth-child(2) { width: 330px; height: 13px; margin: -6px 0 0 -165px; background: color-mix(in srgb, var(--effect-primary), #d7c6df 20%); --stroke-delay: 80ms; opacity: 0; }
+
+/* 13 · 시간절단검: 하나의 궤적이 세 시점으로 끊겨 보임 */
+.motifTimeCollapse > i:nth-child(-n + 3) { display: block; width: 350px; height: 350px; margin: -175px; --stroke-end-x: .96; --stroke-end-y: .7; }
+.motifTimeCollapse > i:nth-child(1) { clip-path: polygon(0 0, 38% 0, 38% 100%, 0 100%); --stroke-rotate: calc(var(--effect-rotation) - 8deg); --stroke-x: -18px; }
+.motifTimeCollapse > i:nth-child(2) { clip-path: polygon(34% 0, 69% 0, 69% 100%, 34% 100%); --stroke-rotate: var(--effect-rotation); --stroke-delay: 90ms; }
+.motifTimeCollapse > i:nth-child(3) { clip-path: polygon(65% 0, 100% 0, 100% 100%, 65% 100%); --stroke-rotate: calc(var(--effect-rotation) + 8deg); --stroke-x: 18px; --stroke-delay: 180ms; }
+
+/* 14 · 세계수 성검: 중앙 줄기에서 두 갈래 가지가 자라나는 참격 */
+.motifWorldTree > i:nth-child(-n + 3) {
+  display: block;
+  background: linear-gradient(#d8d1a5, var(--effect-primary) 28% 66%, var(--effect-shadow));
+  clip-path: polygon(35% 0, 68% 0, 100% 100%, 16% 100%);
+  filter: drop-shadow(5px 4px 0 color-mix(in srgb, var(--effect-shadow), transparent 16%));
+  animation: branchCleave .66s var(--stroke-delay) ease-out both;
+}
+.motifWorldTree > i::after { display: none; }
+.motifWorldTree > i:nth-child(1) { width: 24px; height: 310px; margin: -190px 0 0 -12px; --stroke-rotate: -3deg; }
+.motifWorldTree > i:nth-child(2),
+.motifWorldTree > i:nth-child(3) { width: 18px; height: 185px; margin: -112px 0 0 -9px; transform-origin: bottom; }
+.motifWorldTree > i:nth-child(2) { --stroke-rotate: -52deg; --stroke-x: -40px; --stroke-y: -22px; --stroke-delay: 90ms; }
+.motifWorldTree > i:nth-child(3) { --stroke-rotate: 51deg; --stroke-x: 42px; --stroke-y: -16px; --stroke-delay: 145ms; }
+.motifWorldTree > b { display: grid; margin-top: 58px; }
+
+/* 15 · 길드마스터 신검: 네 방향 검이 한 점으로 수렴하는 단일 오의 */
+.motifMyriad > i:nth-child(-n + 4) {
+  display: block;
+  width: 17px;
+  height: 270px;
+  margin: -215px 0 0 -8px;
+  background: linear-gradient(transparent, #eee4c7 12%, var(--effect-primary) 42% 74%, var(--effect-shadow) 92%);
+  clip-path: polygon(38% 0, 66% 0, 100% 82%, 52% 100%, 10% 82%);
+  filter: drop-shadow(5px 4px 0 color-mix(in srgb, var(--effect-shadow), transparent 18%));
+  transform-origin: 50% 215px;
+  animation: convergeBlade .72s var(--stroke-delay) ease-out both;
+}
+.motifMyriad > i::after { display: none; }
+.motifMyriad > i:nth-child(1) { --stroke-rotate: -64deg; --stroke-delay: 0ms; }
+.motifMyriad > i:nth-child(2) { --stroke-rotate: -24deg; --stroke-delay: 55ms; }
+.motifMyriad > i:nth-child(3) { --stroke-rotate: 24deg; --stroke-delay: 110ms; }
+.motifMyriad > i:nth-child(4) { --stroke-rotate: 64deg; --stroke-delay: 165ms; }
+.motifMyriad > b { display: grid; width: 62px; height: 62px; margin: -31px; font-size: 24px; animation-delay: 210ms; }
 
 .impact {
-  z-index: 7;
-  width: 180px;
-  height: 180px;
-  margin: -90px;
+  z-index: 8;
+  width: 150px;
+  height: 150px;
+  margin: -75px;
   background: url("/assets/vfx/weapon/impact-chips.webp") center / contain no-repeat;
-  filter: saturate(.68) brightness(.7) drop-shadow(0 5px 3px rgba(30, 22, 16, .52));
+  filter: saturate(.65) brightness(.68) drop-shadow(0 5px 3px rgba(30, 22, 16, .5));
   opacity: 0;
-  transform: scale(.18) rotate(12deg);
-  animation: impactBreak .62s .08s cubic-bezier(.12, .68, .2, 1) both;
+  scale: var(--impact-scale);
+  transform: rotate(var(--impact-rotation));
+  animation: impactBreak .58s .07s cubic-bezier(.12, .68, .2, 1) both;
 }
 
 .impact::after {
@@ -163,16 +395,16 @@
   left: 50%;
   top: 50%;
   z-index: 2;
-  width: 28px;
-  height: 28px;
-  background: radial-gradient(circle, color-mix(in srgb, var(--effect-primary), #efe2c5 48%) 0 12%, var(--effect-shadow) 14% 46%, transparent 50%);
-  border: 1px solid color-mix(in srgb, var(--effect-primary), transparent 35%);
+  width: 24px;
+  height: 24px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--effect-primary), #efe2c5 40%) 0 12%, var(--effect-shadow) 15% 46%, transparent 50%);
+  border: 1px solid color-mix(in srgb, var(--effect-primary), transparent 38%);
   border-radius: 43% 57% 38% 62%;
   transform: translate(-50%, -50%) rotate(18deg);
 }
 
 .fragments,
-.dust { z-index: 8; width: 1px; height: 1px; }
+.dust { z-index: 9; width: 1px; height: 1px; }
 
 .fragments > i {
   position: absolute;
@@ -184,138 +416,72 @@
   border: 1px solid color-mix(in srgb, var(--effect-shadow), #000 22%);
   clip-path: polygon(50% 0, 100% 31%, 72% 100%, 15% 82%, 0 24%);
   opacity: 0;
-  transform: rotate(var(--fragment-angle)) translateY(0) scale(.35);
-  animation: fragmentFly .58s var(--fragment-delay) ease-out both;
+  animation: fragmentFly .56s var(--fragment-delay) ease-out both;
 }
 
 .dust { z-index: 2; }
 .dust > i {
   position: absolute;
-  left: -24px;
-  top: -9px;
-  width: 48px;
-  height: 18px;
-  background: #9a7a54;
+  left: -23px;
+  top: -8px;
+  width: 46px;
+  height: 17px;
+  background: #93744e;
   border-radius: 48%;
   filter: blur(4px);
   opacity: 0;
-  transform: translateX(var(--dust-x)) scale(.35);
-  animation: dustLift .72s var(--dust-delay) ease-out both;
+  animation: dustLift .66s var(--dust-delay) ease-out both;
 }
 
-.forgeStamp {
-  z-index: 9;
-  width: 58px;
-  height: 58px;
-  margin: -29px;
-  display: grid;
-  place-items: center;
-  color: color-mix(in srgb, var(--effect-primary), #ead8af 32%);
-  background: color-mix(in srgb, var(--effect-shadow), transparent 30%);
-  border: 2px solid color-mix(in srgb, var(--effect-secondary), transparent 24%);
-  border-radius: 32% 68% 41% 59%;
-  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--effect-shadow), transparent 24%);
-  font-family: Georgia, "Noto Serif KR", serif;
-  font-size: 22px;
-  font-weight: 900;
-  opacity: 0;
-  transform: rotate(var(--effect-counter-rotation)) scale(1.4);
-  animation: stampStrike .52s .12s ease-out both;
-}
-
-.masterworkCrest {
+.momentumMark {
   z-index: 4;
-  width: 126px;
-  height: 126px;
-  margin: -63px;
-  border: 3px solid color-mix(in srgb, var(--effect-primary), transparent 34%);
-  border-radius: 22% 78% 29% 71%;
-  box-shadow: inset 0 0 0 5px color-mix(in srgb, var(--effect-shadow), transparent 52%);
+  width: 170px;
+  height: 5px;
+  margin: -2px 0 0 -85px;
+  background: repeating-linear-gradient(90deg, transparent 0 13px, color-mix(in srgb, var(--effect-secondary), transparent 30%) 14px 28px);
   opacity: 0;
-  transform: rotate(calc(var(--effect-counter-rotation) + 45deg)) scale(.38);
-  animation: crestTemper .66s .06s ease-out both;
-}
-
-.masterworkCrest::before,
-.masterworkCrest::after {
-  position: absolute;
-  content: "";
-  background: color-mix(in srgb, var(--effect-secondary), #d3b778 22%);
-  box-shadow: 0 2px 0 var(--effect-shadow);
-}
-
-.masterworkCrest::before { left: 14%; right: 14%; top: 50%; height: 4px; }
-.masterworkCrest::after { top: 14%; bottom: 14%; left: 50%; width: 4px; }
-
-.legendaryArc {
-  z-index: 3;
-  width: 430px;
-  height: 430px;
-  margin: -215px;
-  background: color-mix(in srgb, var(--effect-primary), #d9bd75 24%);
-  opacity: 0;
-  -webkit-mask: url("/assets/vfx/weapon/steel-slash.webp") center / contain no-repeat;
-  mask: url("/assets/vfx/weapon/steel-slash.webp") center / contain no-repeat;
-  filter: drop-shadow(0 5px 1px color-mix(in srgb, var(--effect-shadow), transparent 32%));
-  transform: rotate(calc(var(--effect-rotation) - 27deg)) scale(.28, .64);
-  animation: legendaryTemper .78s .14s cubic-bezier(.14, .72, .18, 1) both;
+  transform: translate(-28px, 18px) rotate(var(--effect-rotation));
+  animation: momentumRush .5s ease-out both;
 }
 
 .criticalNotch {
   z-index: 10;
-  width: 220px;
-  height: 8px;
-  margin: -4px 0 0 -110px;
-  background: linear-gradient(90deg, transparent, #efe4c8 24%, var(--effect-primary) 48% 56%, transparent 86%);
+  width: 210px;
+  height: 7px;
+  margin: -3px 0 0 -105px;
+  background: linear-gradient(90deg, transparent, #efe4c8 25%, var(--effect-primary) 48% 56%, transparent 86%);
   box-shadow: 0 3px 0 var(--effect-shadow);
   opacity: 0;
   transform: rotate(calc(var(--effect-rotation) + 83deg)) scaleX(.15);
-  animation: criticalNotch .48s .08s ease-out both;
-}
-
-.criticalNotch::after {
-  position: absolute;
-  left: 48%;
-  top: -16px;
-  width: 6px;
-  height: 40px;
-  content: "";
-  background: var(--effect-shadow);
-  transform: rotate(17deg);
+  animation: criticalNotch .46s .07s ease-out both;
 }
 
 .executionCut {
   z-index: 11;
-  width: 14px;
-  height: 270px;
-  margin: -135px 0 0 -7px;
+  width: 13px;
+  height: 250px;
+  margin: -125px 0 0 -6px;
   background: linear-gradient(transparent, #2c1014 16%, #8d3035 44% 56%, #231016 82%, transparent);
   clip-path: polygon(42% 0, 67% 0, 100% 48%, 61% 100%, 31% 100%, 0 51%);
   filter: drop-shadow(5px 3px 0 rgba(20, 12, 10, .65));
   opacity: 0;
   transform: rotate(calc(var(--effect-rotation) + 8deg)) scaleY(.18);
-  animation: executionDrop .66s ease-out both;
+  animation: executionDrop .62s ease-out both;
 }
 
 .shockwavePulse {
   z-index: 3;
-  width: 190px;
-  height: 190px;
-  margin: -95px;
-  border: 5px double color-mix(in srgb, var(--effect-secondary), transparent 30%);
+  width: 176px;
+  height: 176px;
+  margin: -88px;
+  border: 4px double color-mix(in srgb, var(--effect-secondary), transparent 40%);
   border-radius: 47% 53% 45% 55%;
   opacity: 0;
-  transform: scale(.28) rotate(11deg);
-  animation: shockwaveDust .78s ease-out both;
+  animation: shockwaveDust .72s ease-out both;
 }
 
-.shockwavePulse > i {
-  position: absolute;
-  inset: 17%;
-  border: 2px dashed color-mix(in srgb, var(--effect-shadow), transparent 16%);
-  border-radius: 55% 45% 52% 48%;
-}
-.shockwavePulse > i:last-child { inset: -12%; border-style: solid; opacity: .38; }
+.shockwavePulse > i { position: absolute; inset: 18%; border: 2px dashed color-mix(in srgb, var(--effect-shadow), transparent 20%); border-radius: 55% 45% 52% 48%; }
+.shockwavePulse > i:last-child { inset: -11%; border-style: solid; opacity: .34; }
 
 .damage,
 .comboDamage strong {
@@ -333,124 +499,141 @@
   text-shadow: 0 3px 0 var(--effect-shadow), 0 5px 7px rgba(22, 14, 10, .54);
   opacity: 0;
   transform: translateX(-50%);
-  animation: damageRise .76s .08s ease-out both;
+  animation: damageRise .72s .08s ease-out both;
 }
 
 .comboDamage { position: absolute; z-index: 18; left: 0; top: 0; width: 1px; height: 1px; }
 .comboDamage strong:first-child { left: -42px; top: -43px; font-size: 24px; }
 .comboDamage strong:last-child { left: 48px; top: -68px; color: color-mix(in srgb, var(--effect-primary), #efe3c9 48%); font-size: 27px; animation-delay: .17s; }
 .critical .damage,
-.critical .comboDamage strong { color: #f0d891; font-size: 38px; }
-.execution .damage { color: #d9897d; font-size: 42px; }
-
-.tier0 { --effect-scale: .68; --slash-alpha: .7; --impact-scale: .65; }
-.tier1 { --effect-scale: .72; --slash-alpha: .72; --impact-scale: .68; }
-.tier2 { --effect-scale: .76; --slash-alpha: .74; --impact-scale: .7; }
-.tier3 { --effect-scale: .8; --slash-alpha: .76; --impact-scale: .8; }
-.tier4 { --effect-scale: .84; --slash-alpha: .77; --impact-scale: .76; }
-.tier5 { --effect-scale: .87; --slash-alpha: .78; --impact-scale: .78; }
-.tier6 { --effect-scale: .9; --slash-alpha: .79; --impact-scale: .88; }
-.tier7 { --effect-scale: .93; --slash-alpha: .8; --impact-scale: .82; }
-.tier8 { --effect-scale: .96; --slash-alpha: .81; --impact-scale: .84; }
-.tier9 { --effect-scale: .99; --slash-alpha: .82; --impact-scale: .82; }
-.tier10 { --effect-scale: 1.02; --slash-alpha: .83; --impact-scale: .96; }
-.tier11 { --effect-scale: 1.05; --slash-alpha: .82; --impact-scale: .88; }
-.tier12 { --effect-scale: 1.08; --slash-alpha: .84; --impact-scale: .9; }
-.tier13 { --effect-scale: 1.11; --slash-alpha: .84; --impact-scale: .92; }
-.tier14 { --effect-scale: 1.15; --slash-alpha: .86; --impact-scale: 1; }
-
-.effect .slash,
-.effect .secondarySlash,
-.effect .momentumEcho { scale: var(--effect-scale); }
-.effect .slash { --resolved-alpha: var(--slash-alpha); }
-.effect .impact { scale: var(--impact-scale); }
+.critical .comboDamage strong { color: #f0d891; font-size: 37px; }
+.execution .damage { color: #d9897d; font-size: 41px; }
 
 @keyframes rangeSettle {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(.32) rotate(var(--effect-counter-rotation)); }
-  32% { opacity: .58; }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.04) rotate(calc(var(--effect-counter-rotation) + 8deg)); }
+  32% { opacity: .5; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.03) rotate(calc(var(--effect-counter-rotation) + 8deg)); }
 }
 @keyframes scarSettle {
-  0% { opacity: 0; transform: rotate(var(--effect-counter-rotation)) scale(.38); }
-  25% { opacity: .54; }
-  100% { opacity: 0; transform: rotate(var(--effect-counter-rotation)) scale(.96); }
+  0% { opacity: 0; transform: rotate(var(--scar-rotation)) scale(.38); }
+  25% { opacity: .48; }
+  100% { opacity: 0; transform: rotate(var(--scar-rotation)) scale(.94); }
 }
-@keyframes bladeSweep {
-  0% { opacity: 0; transform: rotate(var(--effect-rotation)) scale(.14, .55); }
-  24% { opacity: var(--resolved-alpha, .76); }
-  70% { opacity: var(--resolved-alpha, .76); transform: rotate(var(--effect-rotation)) scale(.94); }
-  100% { opacity: 0; transform: rotate(calc(var(--effect-rotation) + 7deg)) scale(1.12, .82); }
+@keyframes physicalBrush {
+  0% { opacity: 0; transform: translate(var(--stroke-x), var(--stroke-y)) rotate(var(--stroke-rotate)) scale(.14, .52); }
+  26% { opacity: var(--stroke-alpha); }
+  70% { opacity: var(--stroke-alpha); transform: translate(var(--stroke-x), var(--stroke-y)) rotate(var(--stroke-rotate)) scale(var(--stroke-end-x), var(--stroke-end-y)); }
+  100% { opacity: 0; transform: translate(var(--stroke-x), var(--stroke-y)) rotate(calc(var(--stroke-rotate) + 6deg)) scale(1.08, .76); }
 }
-@keyframes secondBladeSweep {
-  0% { opacity: 0; transform: rotate(calc(var(--effect-rotation) + 67deg)) scale(.12, .45); }
-  28% { opacity: .58; }
-  72% { opacity: .58; transform: rotate(calc(var(--effect-rotation) + 67deg)) scale(.9); }
-  100% { opacity: 0; transform: rotate(calc(var(--effect-rotation) + 73deg)) scale(1.08, .75); }
+@keyframes sealBreak {
+  0% { opacity: 0; transform: rotate(8deg) scale(1.35); }
+  32% { opacity: .66; transform: rotate(2deg) scale(.82); }
+  72% { opacity: .42; border-radius: 38% 62% 27% 73%; }
+  100% { opacity: 0; transform: rotate(18deg) scale(1.06); border-radius: 20% 80% 51% 49%; }
 }
-@keyframes momentumTrail {
-  0% { opacity: 0; transform: translate(-38px, 24px) rotate(var(--effect-rotation)) scale(.28, .62); }
-  30% { opacity: .28; }
-  100% { opacity: 0; transform: translate(18px, -8px) rotate(var(--effect-rotation)) scale(1.08, .72); }
+@keyframes fallingBlade {
+  0% { opacity: 0; transform: translate(var(--stroke-x), -92px) rotate(-3deg) scaleY(.28); }
+  26% { opacity: .82; }
+  68% { opacity: .76; transform: translate(var(--stroke-x), 0) rotate(0) scaleY(1); }
+  100% { opacity: 0; transform: translate(var(--stroke-x), 38px) scale(.72, 1.06); }
+}
+@keyframes orbitDust {
+  0% { opacity: 0; transform: rotate(-16deg) scale(.35); }
+  30% { opacity: .48; }
+  100% { opacity: 0; transform: rotate(28deg) scale(1.12); }
+}
+@keyframes veinCrack {
+  0% { opacity: 0; transform: rotate(var(--stroke-rotate)) scaleX(.08); transform-origin: left; }
+  38% { opacity: .78; }
+  78% { opacity: .66; transform: rotate(var(--stroke-rotate)) scaleX(1); transform-origin: left; }
+  100% { opacity: 0; transform: rotate(var(--stroke-rotate)) scaleX(1.08); transform-origin: left; }
+}
+@keyframes bloodTip {
+  0% { opacity: 0; transform: translateY(-18px) scaleY(.2); }
+  36% { opacity: .72; }
+  100% { opacity: 0; transform: translateY(38px) scaleY(1.12); }
+}
+@keyframes twinSnap {
+  0% { opacity: 0; transform: scale(.22) rotate(-12deg); }
+  32% { opacity: .78; }
+  100% { opacity: 0; transform: scale(1.08) rotate(8deg); }
+}
+@keyframes greatswordDrop {
+  0% { opacity: 0; transform: translateY(-120px) scaleY(.24); }
+  24% { opacity: .88; }
+  68% { opacity: .8; transform: translateY(0) scaleY(1); }
+  100% { opacity: 0; transform: translateY(52px) scale(.82, 1.06); }
+}
+@keyframes abyssOpen {
+  0% { opacity: 0; transform: rotate(var(--effect-rotation)) scaleX(.08); }
+  28% { opacity: .86; }
+  72% { opacity: .78; transform: rotate(var(--effect-rotation)) scaleX(1); }
+  100% { opacity: 0; transform: rotate(var(--effect-rotation)) scale(1.08, .62); }
+}
+@keyframes branchCleave {
+  0% { opacity: 0; transform: translate(var(--stroke-x), calc(var(--stroke-y) + 36px)) rotate(var(--stroke-rotate)) scaleY(.18); transform-origin: bottom; }
+  32% { opacity: .76; }
+  74% { opacity: .68; transform: translate(var(--stroke-x), var(--stroke-y)) rotate(var(--stroke-rotate)) scaleY(1); transform-origin: bottom; }
+  100% { opacity: 0; transform: translate(var(--stroke-x), calc(var(--stroke-y) - 18px)) rotate(var(--stroke-rotate)) scale(.84, 1.08); transform-origin: bottom; }
+}
+@keyframes convergeBlade {
+  0% { opacity: 0; transform: rotate(var(--stroke-rotate)) translateY(-74px) scaleY(.36); }
+  28% { opacity: .82; }
+  72% { opacity: .76; transform: rotate(var(--stroke-rotate)) translateY(0) scaleY(1); }
+  100% { opacity: 0; transform: rotate(var(--stroke-rotate)) translateY(28px) scale(.76, 1.06); }
 }
 @keyframes impactBreak {
-  0% { opacity: 0; transform: scale(.14) rotate(8deg); }
-  28% { opacity: .8; transform: scale(.64) rotate(0); }
-  62% { opacity: .7; transform: scale(.9) rotate(-5deg); }
-  100% { opacity: 0; transform: scale(1.08) rotate(-9deg); }
+  0% { opacity: 0; transform: rotate(var(--impact-rotation)) scale(.14); }
+  28% { opacity: .8; transform: rotate(var(--impact-rotation)) scale(.66); }
+  64% { opacity: .68; transform: rotate(calc(var(--impact-rotation) - 5deg)) scale(.92); }
+  100% { opacity: 0; transform: rotate(calc(var(--impact-rotation) - 9deg)) scale(1.08); }
 }
 @keyframes fragmentFly {
   0% { opacity: 0; transform: rotate(var(--fragment-angle)) translateY(0) scale(.25); }
-  25% { opacity: .78; }
-  100% { opacity: 0; transform: rotate(var(--fragment-angle)) translateY(calc(0px - var(--fragment-distance))) scale(.72) rotate(38deg); }
+  25% { opacity: .74; }
+  100% { opacity: 0; transform: rotate(var(--fragment-angle)) translateY(calc(0px - var(--fragment-distance))) scale(.7) rotate(38deg); }
 }
 @keyframes dustLift {
   0% { opacity: 0; transform: translateX(var(--dust-x)) translateY(10px) scale(.3); }
-  35% { opacity: .22; }
-  100% { opacity: 0; transform: translateX(var(--dust-x)) translateY(-28px) scale(1.18); }
+  35% { opacity: .2; }
+  100% { opacity: 0; transform: translateX(var(--dust-x)) translateY(-27px) scale(1.14); }
 }
 @keyframes stampStrike {
-  0% { opacity: 0; transform: rotate(var(--effect-counter-rotation)) scale(1.45); }
-  34% { opacity: .52; transform: rotate(var(--effect-counter-rotation)) scale(.82); }
-  72% { opacity: .38; }
-  100% { opacity: 0; transform: rotate(calc(var(--effect-counter-rotation) + 6deg)) scale(1.08); }
+  0% { opacity: 0; transform: rotate(var(--effect-counter-rotation)) scale(1.4); }
+  34% { opacity: .52; transform: rotate(var(--effect-counter-rotation)) scale(.84); }
+  72% { opacity: .36; }
+  100% { opacity: 0; transform: rotate(calc(var(--effect-counter-rotation) + 6deg)) scale(1.06); }
 }
-@keyframes crestTemper {
-  0% { opacity: 0; transform: rotate(calc(var(--effect-counter-rotation) + 39deg)) scale(.34); }
-  34% { opacity: .46; transform: rotate(calc(var(--effect-counter-rotation) + 45deg)) scale(.78); }
-  72% { opacity: .3; }
-  100% { opacity: 0; transform: rotate(calc(var(--effect-counter-rotation) + 51deg)) scale(1.04); }
-}
-@keyframes legendaryTemper {
-  0% { opacity: 0; transform: rotate(calc(var(--effect-rotation) - 31deg)) scale(.24, .58); }
-  30% { opacity: .42; }
-  72% { opacity: .34; transform: rotate(calc(var(--effect-rotation) - 27deg)) scale(.94); }
-  100% { opacity: 0; transform: rotate(calc(var(--effect-rotation) - 21deg)) scale(1.09, .8); }
+@keyframes momentumRush {
+  0% { opacity: 0; transform: translate(-46px, 18px) rotate(var(--effect-rotation)) scaleX(.4); }
+  34% { opacity: .4; }
+  100% { opacity: 0; transform: translate(38px, -8px) rotate(var(--effect-rotation)) scaleX(1.08); }
 }
 @keyframes criticalNotch {
   0% { opacity: 0; transform: rotate(calc(var(--effect-rotation) + 83deg)) scaleX(.12); }
-  30% { opacity: .82; }
-  76% { opacity: .7; transform: rotate(calc(var(--effect-rotation) + 83deg)) scaleX(1); }
-  100% { opacity: 0; transform: rotate(calc(var(--effect-rotation) + 83deg)) scaleX(1.18); }
+  30% { opacity: .8; }
+  76% { opacity: .66; transform: rotate(calc(var(--effect-rotation) + 83deg)) scaleX(1); }
+  100% { opacity: 0; transform: rotate(calc(var(--effect-rotation) + 83deg)) scaleX(1.16); }
 }
 @keyframes executionDrop {
   0% { opacity: 0; transform: translateY(-52px) rotate(calc(var(--effect-rotation) + 8deg)) scaleY(.18); }
-  24% { opacity: .86; }
-  68% { opacity: .82; transform: translateY(0) rotate(calc(var(--effect-rotation) + 8deg)) scaleY(1); }
+  24% { opacity: .84; }
+  68% { opacity: .78; transform: translateY(0) rotate(calc(var(--effect-rotation) + 8deg)) scaleY(1); }
   100% { opacity: 0; transform: translateY(42px) rotate(calc(var(--effect-rotation) + 8deg)) scale(.72, 1.08); }
 }
 @keyframes shockwaveDust {
   0% { opacity: 0; transform: scale(.25) rotate(8deg); }
-  28% { opacity: .42; }
-  100% { opacity: 0; transform: scale(2.2) rotate(20deg); }
+  28% { opacity: .38; }
+  100% { opacity: 0; transform: scale(2.05) rotate(20deg); }
 }
 @keyframes damageRise {
   0% { opacity: 0; transform: translate(-50%, 12px) scale(.72); }
   24%, 62% { opacity: 1; transform: translate(-50%, -5px) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -62px) scale(.9); }
+  100% { opacity: 0; transform: translate(-50%, -60px) scale(.9); }
 }
 
 @media (max-width: 560px) {
-  .effect { transform: scale(.76); }
+  .effect { transform: scale(.74); }
   .damage { top: -43px; font-size: 25px; }
   .critical .damage { font-size: 32px; }
   .execution .damage { font-size: 34px; }
@@ -461,17 +644,14 @@
 @media (prefers-reduced-motion: reduce) {
   .range,
   .groundScar,
-  .slash,
-  .secondarySlash,
-  .momentumEcho,
+  .signature > i,
+  .signature > b,
   .impact,
   .fragments > i,
   .dust > i,
-  .forgeStamp,
+  .momentumMark,
   .criticalNotch,
   .executionCut,
-  .masterworkCrest,
-  .legendaryArc,
   .shockwavePulse,
   .damage,
   .comboDamage strong { animation-duration: .01ms !important; animation-delay: 0ms !important; }
