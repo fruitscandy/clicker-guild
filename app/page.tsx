@@ -1,5 +1,10 @@
 import Game from "./Game";
+import BgmController from "./bgm/BgmController";
 
 export default function Home() {
-  return <Game />;
+  return (
+    <BgmController>
+      <Game />
+    </BgmController>
+  );
 }
