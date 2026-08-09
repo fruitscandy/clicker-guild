@@ -47,9 +47,13 @@ $networkPatterns = @(
     "connectex",
     "dial tcp",
     "could not resolve host",
+    "no such host is known",
+    "temporary failure in name resolution",
     "forbidden by its access permissions",
     "network is unreachable",
+    "socket operation was attempted",
     "connection refused",
+    "actively refused",
     "connection timed out",
     "tls handshake timeout",
     "i/o timeout"

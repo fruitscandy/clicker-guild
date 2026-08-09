@@ -18,6 +18,18 @@ Project는 표시 화면이고, 에이전트가 실제로 판단할 때는 Issue
 
 로컬 GitHub CLI와 연결된 GitHub 앱은 별도 인증 경로다. Issue와 PR은 앱을 우선 사용하고, Actions 로그·Discussion·git 원격 작업처럼 CLI가 필요한 경우에만 로컬 인증을 확인한다.
 
+### Windows에서 자주 발생하는 오진
+
+Windows Codex 샌드박스는 명시적으로 승인되지 않은 네트워크 접근을 차단할 수 있다. 이 PC에서는 격리된 명령의 실제 오류가 `dial tcp ... connectex: An attempt was made to access a socket in a way forbidden by its access permissions`였지만, `gh auth status` 일반 출력은 이를 “token invalid”로 표시했다. 같은 Windows 키링 자격 증명을 승인된 네트워크와 일반 PowerShell에서 확인하면 정상 로그인 상태였다.
+
+따라서 일반 출력의 “token invalid” 한 줄은 재로그인 근거가 아니다. 다음 순서를 지킨다.
+
+1. GitHub 앱으로 Issue 또는 PR을 읽을 수 있으면 앱 작업을 계속한다.
+2. 저장소 루트에서는 아래 사전검사를 실행한다. 다른 worktree나 디렉터리라면 `gh auth status --hostname github.com --active --json hosts`로 같은 JSON 상태를 확인한다.
+3. JSON의 실제 오류가 `connectex`, `dial tcp`, DNS, 소켓 권한, 연결 거부, timeout이면 네트워크 차단으로 판정한다. 재로그인하지 않고 필요한 명령만 승인된 네트워크에서 한 번 재시도한다.
+4. 승인된 네트워크에서도 HTTP 401/Bad credentials가 재현되거나 활성 계정이 없을 때만 사용자에게 재로그인을 요청한다.
+5. `gh auth login`, `gh auth logout`, 토큰 삭제·교체는 자동으로 실행하지 않는다.
+
 ```powershell
 & .\scripts\github-auth-preflight.ps1
 ```
@@ -30,7 +42,7 @@ Project는 표시 화면이고, 에이전트가 실제로 판단할 때는 Issue
 | `AUTH_UNKNOWN` | 12 | 알려지지 않은 CLI 오류 | 오류를 Issue #43에 기록하고 앱으로 가능한 작업 계속 |
 | `AUTH_GH_MISSING` | 13 | GitHub CLI가 설치되지 않음 | 앱 우선, CLI가 꼭 필요할 때 설치 요청 |
 
-`gh auth status`의 일반 텍스트는 네트워크 차단도 “token invalid”처럼 요약할 수 있으므로 단독 근거로 재로그인을 요구하지 않는다. 사전검사는 JSON의 실제 오류 원인을 사용하며 토큰을 출력하지 않는다. 최소 48시간 관찰 동안 각 세션은 시작·인계 시 사전검사 결과와 실제 401 발생 여부를 Issue #43에 누적한다.
+GitHub CLI 인증은 Windows 사용자 키링에 저장되므로 현재 작업 폴더와 무관하다. 단, `gh pr list`처럼 저장소 문맥이 필요한 명령을 저장소 밖에서 실행할 때는 `--repo fruitscandy/clicker-guild`를 지정한다. 사전검사는 JSON의 실제 오류 원인을 사용하며 토큰을 출력하지 않는다. 최소 48시간 관찰 동안 각 세션은 시작·인계 시 사전검사 결과와 실제 401 발생 여부를 Issue #43에 누적한다.
 
 ## 상태 흐름
 

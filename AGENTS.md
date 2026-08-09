@@ -27,11 +27,12 @@
 ## GitHub 인증 연속성
 
 - Issue와 PR 조회·댓글·라벨·담당자 변경은 연결된 GitHub 앱을 우선한다. 로컬 `gh` 인증과 앱 연결은 서로 독립적이다.
-- Actions 로그, Discussion, 현재 브랜치의 git 작업처럼 로컬 CLI가 필요한 경우 `scripts/github-auth-preflight.ps1`로 먼저 판정한다.
+- Windows Codex 샌드박스는 승인되지 않은 네트워크 연결을 차단할 수 있다. 이때 `gh auth status` 일반 출력이 `connectex`, DNS, 소켓 권한 오류를 숨기고 “token invalid”로 요약할 수 있으므로 그 문구만으로 재로그인을 판단하지 않는다.
+- Actions 로그, Discussion, 현재 브랜치의 git 작업처럼 로컬 CLI가 필요한 경우 저장소 루트에서 `scripts/github-auth-preflight.ps1`로 먼저 판정한다. 별도 worktree나 다른 디렉터리에서는 사용자 키링 인증이 그대로 공유되므로 `gh auth status --hostname github.com --active --json hosts`를 직접 사용해도 된다.
 - `AUTH_NETWORK_BLOCKED`(종료 코드 10)는 토큰 만료가 아니다. 재로그인을 요구하지 말고 GitHub 앱으로 가능한 작업을 계속한 뒤, 꼭 필요한 CLI 호출만 승인된 네트워크 경로로 재시도한다.
 - `AUTH_RELOGIN_REQUIRED`(종료 코드 11)는 활성 계정이 없거나 GitHub가 HTTP 401/Bad credentials로 자격 증명을 거부한 경우다. 이때만 사용자에게 재로그인을 요청한다.
 - `AUTH_UNKNOWN` 또는 `AUTH_GH_MISSING`은 원인을 보고하고 앱으로 가능한 읽기·쓰기를 계속한다. 토큰 문자열은 명령 출력, Issue, PR, Discussion, 파일에 남기지 않는다.
-- 정상 키링 OAuth 토큰은 세션마다 다시 로그인하지 않는다. `gh auth login`이나 `gh auth logout`은 실제 종료 코드 11이 확인되고 사용자가 승인한 경우에만 실행한다.
+- 정상 키링 OAuth 토큰은 Windows 사용자 단위이며 현재 디렉터리와 무관하다. 세션마다 다시 로그인하지 않는다. `gh auth login`이나 `gh auth logout`은 실제 종료 코드 11이 확인되고 사용자가 승인한 경우에만 실행한다.
 
 ## 병렬 작업 원칙
 
