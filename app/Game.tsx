@@ -432,7 +432,7 @@ export default function Game() {
   const [fieldMonsters, setFieldMonsters] = useState<FieldMonster[]>([]);
   const [now, setNow] = useState(0);
   const [stagePicker, setStagePicker] = useState(false);
-  const [toast, setToast] = useState("첫 몬스터를 눌러 길드의 모험을 시작하세요!");
+  const [toast, setToast] = useState("");
   const [victory, setVictory] = useState(false);
   const [defeat, setDefeat] = useState(false);
   const [battleDeadline, setBattleDeadline] = useState<number | null>(null);
@@ -1185,7 +1185,7 @@ export default function Game() {
         <div className="current-objective"><small>현재 목표</small><strong>{stage.boss ? `${stage.name} 군주전` : `${stage.region.name} ${stage.localStage}웨이브 돌파`}</strong></div>
       </section>
 
-      <div className="toast" role="status"><span aria-hidden="true">✦</span>{toast}</div>
+      {toast && <div className="toast" role="status"><span aria-hidden="true">✦</span>{toast}</div>}
       {developerMode && <div className="developer-banner" role="status"><strong>개발자 모드</strong><span>자원·구매 진행 임시 조정 · 30개 웨이브 해금 · 업그레이드·무기 비교 · DEV 종료 시 원상 복귀</span></div>}
 
       {!combatLocked && (
@@ -1236,7 +1236,6 @@ export default function Game() {
             weapons={CLICK_ATTACK_PATTERNS}
             currentLevel={save.weaponLevel}
             gold={save.gold}
-            bossTokens={save.bossTokens}
             materials={save.materials}
             formatNumber={compactNumber}
             onUpgrade={purchaseWeaponUpgrade}
