@@ -54,7 +54,7 @@ function TornadoEffect() {
       <i className={styles.tornadoAura} />
       <i className={styles.tornadoTextureBack} />
       <span className={styles.tornadoFunnel}>
-        {Array.from({ length: 8 }, (_, index) => <i key={index} style={{ "--vortex-index": index, "--vortex-width": `${46 + index * 17}px`, "--vortex-top": `${9 + index * 10}%`, "--vortex-delay": `${index * -64}ms` } as CSSProperties} />)}
+        {Array.from({ length: 8 }, (_, index) => <i key={index} style={{ "--vortex-width": `${46 + index * 17}px`, "--vortex-height": `${15 + index * 1.8}px`, "--vortex-blur": `${index * 0.12}px`, "--vortex-top": `${9 + index * 10}%`, "--vortex-delay": `${index * -64}ms` } as CSSProperties} />)}
       </span>
       <i className={styles.tornadoTextureFront} />
       <i className={styles.tornadoGroundRing} />
@@ -109,7 +109,7 @@ function EffectVisual({ effect }: { effect: SpecialAttackFx }) {
 
 export function specialMonsterClassName(monsterId: string, effects: readonly SpecialAttackFx[], now: number) {
   return effects
-    .filter((effect) => now < effect.expiresAt && effect.targetIds.includes(monsterId))
+    .filter((effect) => now < effect.expiresAt && (effect.kind === "tornado" || now >= effect.impactAt) && effect.targetIds.includes(monsterId))
     .map((effect) => `special-${effect.kind}-target`)
     .join(" ");
 }

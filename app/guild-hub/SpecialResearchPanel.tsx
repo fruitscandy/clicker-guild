@@ -28,7 +28,7 @@ function SpellPreview({ kind }: { kind: SpecialAttackKind }) {
       <i className={styles.previewRingSecondary} />
       <i className={styles.previewTrail} />
       <span className={styles.previewParticles}>
-        {Array.from({ length: 8 }, (_, index) => <i key={index} style={{ "--particle-index": index } as CSSProperties} />)}
+        {Array.from({ length: 8 }, (_, index) => <i key={index} style={{ "--particle-angle": `${index * 45}deg`, "--particle-distance": `${38 + index * 1.7}px` } as CSSProperties} />)}
       </span>
     </span>
   );

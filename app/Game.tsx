@@ -35,11 +35,15 @@ import { ForgeWorkshop } from "./guild-hub/ForgeWorkshop";
 import { GuildBuildingHub } from "./guild-hub/GuildBuildingHub";
 import { HuntingGroundPanel, TerritoryHuntingGround } from "./guild-hub/HuntingGround";
 import { ResearchMap, type ResearchNodeView } from "./guild-hub/ResearchMap";
+import { SpecialResearchPanel } from "./guild-hub/SpecialResearchPanel";
 import { TavernHall } from "./guild-hub/TavernHall";
 import { GUILD_HALL_STAGES, guildHallStage, inferHallLevelFromNodes, requiredHallLevelForNode, type GuildFacility } from "./guild-hub/guild-progression";
 import { WeaponCursor } from "./guild-hub/WeaponArt";
 import { monsterAssetForStage } from "./monster-assets";
 import { MaterialInventory } from "./MaterialInventory";
+import { SpecialAttackLayer, specialMonsterClassName } from "./SpecialAttackLayer";
+import { useSpecialAttackController } from "./special-attack-controller";
+import { SPECIAL_RESEARCH_NODES } from "./special-attacks";
 import { StageMap } from "./stage-map";
 import { canAffordWeaponRecipe, consumeWeaponRecipe, materialIconVars, migrateMaterialInventory, stageMaterialById, stageMaterialFor, weaponMaterialRecipe } from "./stage-materials";
 import { UPGRADE_ICON_BY_KEY } from "./upgrade-icons";
@@ -295,7 +299,9 @@ const UPGRADE_NODES: UpgradeNode[] = [
   { id: "momentum-2", title: "무아지경", description: "몰입 중 최대 35% 피해 증가", glyph: "無", target: "momentum", cost: 940, prerequisites: ["momentum-1"], x: 59, y: 1500 },
   { id: "momentum-3", title: "찰나의 극의", description: "몰입 중 최대 68% 피해 증가", glyph: "極", target: "momentum", cost: 2150, prerequisites: ["momentum-2"], x: 83, y: 1500 },
 
-  { id: "citadel", title: "전설의 길드 성채", description: "모든 성장 계통을 완성한 증표", glyph: "♛", cost: 6200, prerequisites: ["shockwave-3", "range-7", "crit-4", "combo-4", "execute-3", "time-4", "scout-3", "guild-5", "gold-4", "loot-3", "tavern-3", "momentum-3"], x: 94, y: 720 },
+  ...SPECIAL_RESEARCH_NODES,
+
+  { id: "citadel", title: "전설의 길드 성채", description: "모든 성장 계통과 특수 비술을 완성한 증표", glyph: "♛", cost: 6200, prerequisites: ["shockwave-3", "range-7", "crit-4", "combo-4", "execute-3", "time-4", "scout-3", "guild-5", "gold-4", "loot-3", "tavern-3", "momentum-3", "special-lightning-2", "special-tornado-3", "special-meteor-4"], x: 94, y: 720 },
 ];
 
 const BIOME_DETAILS: Record<string, { label: string; description: string }> = {
@@ -735,6 +741,22 @@ export default function Game() {
     });
   }, [awardVictory, executionThreshold]);
 
+  const {
+    activeKinds: activeSpecialAttacks,
+    effects: specialAttackEffects,
+    lastCastAt: specialLastCastAt,
+  } = useSpecialAttackController({
+    battleActive,
+    now,
+    nodeIds: save.nodes,
+    unlockAll: developerMode,
+    monsters: fieldMonsters,
+    playerDamage: clickDamage,
+    weaponTier: activeClickPattern.tier,
+    damageMonsters,
+    setMonsters: setFieldMonsters,
+  });
+
   const emitMemberWeaponFx = useCallback((member: MemberDefinition, point: { x: number; y: number }, skill = false, slot = 0) => {
     const id = memberWeaponFxCounter.current + 1;
     memberWeaponFxCounter.current = id;
@@ -900,6 +922,7 @@ export default function Game() {
     if (developerMode) setDeveloperStage(stageNumber);
     else setSave((current) => ({ ...current, selectedStage: stageNumber }));
     setStagePicker(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
     setToast(`${nextStage.region.name} ${nextStage.localStage}웨이브 진입 · 몬스터 ${monsters.length}마리가 몰려옵니다! 길드 조합으로 전장을 쓸어내세요.`);
   }
 
@@ -1257,6 +1280,14 @@ export default function Game() {
               <div className="panel-title"><div><span className="eyebrow">GUILD DEVELOPMENT MAP</span><h3>플레이어·길드 발전 노드</h3><p className="panel-description">플레이어의 클릭 전투와 길드원 패시브 화력을 각각 성장시킵니다. 무기 공격력과 외형은 불꽃 대장간에서 강화됩니다.</p></div><span className="level-chip">보유 골드 {compactNumber(save.gold)}</span></div>
               <ResearchMap nodes={UPGRADE_NODES} purchasedIds={save.nodes} hallLevel={save.guildHallLevel} formatCost={compactNumber} onPurchase={(node: ResearchNodeView) => { const fullNode = UPGRADE_NODES.find((item) => item.id === node.id); if (fullNode) purchaseNode(fullNode); }} />
             </div>
+            <SpecialResearchPanel
+              purchasedIds={save.nodes}
+              hallLevel={save.guildHallLevel}
+              gold={save.gold}
+              formatCost={compactNumber}
+              readOnly={developerMode}
+              onPurchase={purchaseNode}
+            />
           </>}
 
           {activeFacility === "tavern" && <>
@@ -1320,8 +1351,9 @@ export default function Game() {
                   const hitDuration = monster.lastHitTier >= 4 ? 940 : monster.lastHitTier >= 3 ? 700 : 500;
                   const struck = monster.hp > 0 && monster.lastHitAt > 0 && now - monster.lastHitAt < hitDuration;
                   const executed = Boolean(hitFx?.executionTargets.includes(monster.id));
+                  const specialClassName = specialMonsterClassName(monster.id, specialAttackEffects, now);
                   const artScale = (monsterAsset?.scale ?? 1) * (monster.kind === "leader" ? 1.08 : 1);
-                  return <span key={`${monster.id}-${monster.hitId}`} className={`pack-monster monster-${monster.kind} ${monsterAsset ? "has-pack-art" : ""} ${monster.hp <= 0 ? "is-defeated" : ""} ${executed ? "is-executed" : ""} ${struck ? `is-struck click-recoil-tier-${monster.lastHitTier}` : ""}`} style={{ left: `${monster.x}%`, top: `${monster.y}%`, "--monster-scale": monster.scale, "--monster-art-scale": artScale, zIndex: Math.round(monster.y) } as React.CSSProperties}>
+                  return <span key={`${monster.id}-${monster.hitId}`} className={`pack-monster monster-${monster.kind} ${monsterAsset ? "has-pack-art" : ""} ${monster.hp <= 0 ? "is-defeated" : ""} ${executed ? "is-executed" : ""} ${struck ? `is-struck click-recoil-tier-${monster.lastHitTier}` : ""} ${specialClassName}`} style={{ left: `${monster.x}%`, top: `${monster.y}%`, "--monster-scale": monster.scale, "--monster-art-scale": artScale, zIndex: Math.round(monster.y) } as React.CSSProperties}>
                     <i className="pack-shadow" />
                     {monsterAsset ? (
                       <span className="pack-monster-art-frame">
@@ -1336,6 +1368,13 @@ export default function Game() {
                   </span>;
                 })}
               </div>
+
+              <SpecialAttackLayer
+                effects={specialAttackEffects}
+                activeKinds={battleActive ? activeSpecialAttacks : []}
+                lastCastAt={specialLastCastAt}
+                now={now}
+              />
 
               <div className="member-weapon-layer" aria-hidden="true">
                 {memberWeaponFx.map((effect) => <span

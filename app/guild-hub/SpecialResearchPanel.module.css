@@ -157,7 +157,6 @@
 .previewParticles { inset: 0; }
 
 .previewParticles i {
-  --angle: calc(var(--particle-index) * 45deg);
   left: 50%;
   top: 61%;
   width: 4px;
@@ -165,7 +164,7 @@
   border-radius: 50%;
   background: color-mix(in srgb, var(--special-accent) 72%, white);
   box-shadow: 0 0 8px var(--special-accent);
-  transform: rotate(var(--angle)) translateX(calc(38px + var(--particle-index) * 1.7px));
+  transform: rotate(var(--particle-angle)) translateX(var(--particle-distance));
   animation: previewParticle 1.8s calc(var(--particle-index) * -110ms) ease-in-out infinite;
 }
 
@@ -289,7 +288,7 @@
 .footnote b { margin-right: 8px; color: #d8c8a8; }
 
 @keyframes sealSpin { to { transform: rotate(360deg); } }
-@keyframes previewParticle { 50% { opacity: .22; transform: rotate(var(--angle)) translateX(27px) scale(.5); } }
+@keyframes previewParticle { 50% { opacity: .22; transform: rotate(var(--particle-angle)) translateX(27px) scale(.5); } }
 @keyframes lightningPreview { 0%, 78%, 100% { opacity: .45; scale: .9 1; } 80%, 88% { opacity: 1; scale: 1.16 1; } 91% { opacity: .2; } }
 @keyframes ringTurn { to { rotate: 360deg; } }
 @keyframes tornadoPreview { 50% { scale: 1.12 .92; rotate: 180deg; } 100% { rotate: 360deg; } }
