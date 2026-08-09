@@ -14,6 +14,7 @@ import {
   playMonsterHitSound,
   playProgressionSound,
   playRareRewardSound,
+  playStageClearSound,
   unlockBattleAudio,
 } from "./battle-audio";
 import {
@@ -572,6 +573,7 @@ export default function Game() {
     rewardLock.current = true;
     setLootPhase("complete");
     setVictory(true);
+    playStageClearSound(stage.boss);
     if (developerMode) {
       setToast("개발자 토벌 성공! 보상과 진행도는 저장되지 않습니다.");
       return;

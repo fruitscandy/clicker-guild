@@ -236,6 +236,34 @@ export function playExpeditionFailSound() {
   });
 }
 
+export function playStageClearSound(boss = false) {
+  playWhenAudioIsReady((context) => {
+    const start = context.currentTime + 0.018;
+    const melody = boss ? [294, 370, 440, 587] : [392, 494, 587, 784];
+    const offsets = [0, 0.09, 0.18, 0.32];
+    const root = boss ? 147 : 196;
+    markEventSound(`stage-clear:${boss ? "boss" : "normal"}`);
+
+    // A soft impact opens space after the last combat hit, then a four-note
+    // major fanfare and a sustained chord make the result read as a victory.
+    noiseBurst(context, start, boss ? 0.32 : 0.19, boss ? 0.025 : 0.015, boss ? 880 : 1850, boss ? 105 : 520);
+    tone(context, boss ? 73 : 98, start, boss ? 0.58 : 0.4, boss ? 0.042 : 0.028, "triangle", boss ? 49 : 73, 0.004);
+    if (boss) tone(context, 110, start + 0.025, 0.5, 0.022, "sine", 73, 0.006);
+
+    melody.forEach((frequency, index) => {
+      const noteStart = start + offsets[index];
+      const duration = index === melody.length - 1 ? (boss ? 0.72 : 0.58) : 0.25;
+      tone(context, frequency, noteStart, duration, boss ? 0.023 : 0.021, "triangle", frequency * 1.012, 0.006);
+      tone(context, frequency * 2, noteStart + 0.012, duration * 0.72, boss ? 0.006 : 0.008, "sine", frequency * 2.025, 0.004);
+    });
+
+    [root, root * 1.25, root * 1.5].forEach((frequency, index) => {
+      tone(context, frequency, start + 0.38, boss ? 0.72 : 0.56, boss ? 0.018 : 0.014, index === 0 ? "triangle" : "sine", frequency * 1.008, 0.018);
+    });
+    noiseBurst(context, start + 0.3, boss ? 0.28 : 0.2, boss ? 0.011 : 0.009, boss ? 3100 : 4600, boss ? 6800 : 7600);
+  });
+}
+
 export function playMonsterHitSound(impactTier = 0, targetCount = 1) {
   const context = getAudioContext();
   if (!context || context.state !== "running") return;
