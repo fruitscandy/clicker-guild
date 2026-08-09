@@ -23,11 +23,13 @@ import { memberAnimationSource, type MemberMotion } from "./member-animations";
 import { monsterAssetForStage } from "./monster-assets";
 import { StageMap } from "./stage-map";
 import { canAffordWeaponRecipe, consumeWeaponRecipe, materialIconVars, stageMaterialById, stageMaterialFor, weaponMaterialRecipe } from "./stage-materials";
+import { UPGRADE_ICON_BY_KEY } from "./upgrade-icons";
 
 type Tab = "guild" | "field";
 type LootPhase = "idle" | "fighting" | "collecting" | "complete";
 type MemberProgress = { level: number; xp: number; gear: number };
 type UpgradeKey = "range" | "critical" | "combo" | "execution" | "shockwave" | "momentum" | "time" | "scout" | "guild" | "gold" | "tavern" | "loot";
+type CombatProcKey = "range" | "critical" | "combo" | "execution" | "shockwave" | "momentum";
 type SpecialKey = "double" | "command" | "auto";
 type ClickAttackPattern = {
   key: string;
@@ -53,6 +55,8 @@ type ClickAttackFx = {
   combo: boolean;
   shockwave: boolean;
   momentum: number;
+  executionCount: number;
+  executionTargets: string[];
   hitCount: number;
   targets: string[];
   x: number;
@@ -408,6 +412,7 @@ export default function Game() {
   const attackRange = developerMode ? 31 : 10 + save.upgrades.range * 2.75;
   const criticalChance = developerMode ? .35 : Math.min(.45, save.upgrades.critical * .05);
   const executionThreshold = developerMode ? .13 : save.upgrades.execution ? .05 + save.upgrades.execution * .02 : 0;
+  const comboLevel = developerMode ? UPGRADE_CAPS.combo : save.upgrades.combo;
   const shockwaveLevel = developerMode ? UPGRADE_CAPS.shockwave : save.upgrades.shockwave;
   const momentumLevel = developerMode ? UPGRADE_CAPS.momentum : save.upgrades.momentum;
   const momentumMaxStacks = momentumLevel ? 3 + momentumLevel * 2 : 0;
@@ -423,6 +428,29 @@ export default function Game() {
   const lootSweepProgress = ((plannedGold ? collectedGold / plannedGold : 1) + (plannedMaterial ? collectedMaterial / plannedMaterial : 1)) / 2 * 100;
   const autoAttackPoint = useMemo(() => bestAttackPoint(aliveMonsters, attackRange), [aliveMonsters, attackRange]);
   const intelReport = battlefieldIntel(aliveMonsters.length, fieldMonsters.length, developerMode ? 3 : save.upgrades.scout);
+  const shockwaveInterval = shockwaveLevel ? 9 - shockwaveLevel : 0;
+  const shockwaveClicksRemaining = shockwaveInterval ? shockwaveInterval - clicks % shockwaveInterval : 0;
+  const shockwaveCharge = shockwaveInterval ? clicks % shockwaveInterval / shockwaveInterval * 100 : 0;
+  const comboClicksRemaining = comboLevel ? 5 - clicks % 5 : 0;
+  const comboCharge = comboLevel ? clicks % 5 / 5 * 100 : 0;
+  const combatUpgradeLevel = (key: CombatProcKey) => developerMode ? UPGRADE_CAPS[key] : save.upgrades[key];
+  const activeCombatProcs: Array<{ key: CombatProcKey; title: string; level: number; detail: string }> = [];
+  if (hitFx && !hitFx.automatic) {
+    if (combatUpgradeLevel("range")) activeCombatProcs.push({ key: "range", title: "공격 범위", level: combatUpgradeLevel("range"), detail: `직접 공격 반경 ${attackRange.toFixed(1)}` });
+    if (hitFx.shockwave) activeCombatProcs.push({ key: "shockwave", title: "충격파", level: shockwaveLevel, detail: `반경 ×1.55 · 피해 ×${(1.3 + shockwaveLevel * .15).toFixed(2)}` });
+    if (hitFx.executionCount) activeCombatProcs.push({ key: "execution", title: "약점 처형", level: combatUpgradeLevel("execution"), detail: `${hitFx.executionCount}체 즉시 처치` });
+    if (hitFx.critical) activeCombatProcs.push({ key: "critical", title: "치명타", level: combatUpgradeLevel("critical"), detail: "직접 공격 피해 ×2.00" });
+    if (hitFx.combo) activeCombatProcs.push({ key: "combo", title: "연격", level: combatUpgradeLevel("combo"), detail: `5번째 공격 · 피해 ×${(1.35 + combatUpgradeLevel("combo") * .1).toFixed(2)}` });
+    if (hitFx.momentum) activeCombatProcs.push({ key: "momentum", title: "전투 몰입", level: momentumLevel, detail: `${hitFx.momentum}/${momentumMaxStacks}중첩 · 피해 +${Math.round(hitFx.momentum * momentumLevel * 2.5)}%` });
+  }
+  const attackUpgradeStatuses: Array<{ key: CombatProcKey; title: string; level: number; status: string; charge: number; active: boolean; ready: boolean }> = [
+    { key: "range", title: "공격 범위", level: combatUpgradeLevel("range"), status: combatUpgradeLevel("range") ? `반경 ${attackRange.toFixed(1)}` : "잠김", charge: combatUpgradeLevel("range") / UPGRADE_CAPS.range * 100, active: Boolean(hitFx && !hitFx.automatic && combatUpgradeLevel("range")), ready: false },
+    { key: "critical", title: "치명타", level: combatUpgradeLevel("critical"), status: combatUpgradeLevel("critical") ? `확률 ${Math.round(criticalChance * 100)}%` : "잠김", charge: combatUpgradeLevel("critical") / UPGRADE_CAPS.critical * 100, active: Boolean(hitFx?.critical && !hitFx.automatic), ready: false },
+    { key: "shockwave", title: "충격파", level: shockwaveLevel, status: shockwaveLevel ? hitFx?.shockwave ? "지금 발동!" : shockwaveClicksRemaining === 1 ? "다음 타격 발동" : `${shockwaveClicksRemaining}타 후 발동` : "잠김", charge: shockwaveCharge, active: Boolean(hitFx?.shockwave), ready: Boolean(shockwaveLevel && shockwaveClicksRemaining === 1) },
+    { key: "combo", title: "연격", level: comboLevel, status: comboLevel ? hitFx?.combo ? "지금 발동!" : comboClicksRemaining === 1 ? "다음 타격 발동" : `${comboClicksRemaining}타 후 발동` : "잠김", charge: comboCharge, active: Boolean(hitFx?.combo), ready: Boolean(comboLevel && comboClicksRemaining === 1) },
+    { key: "execution", title: "약점 처형", level: combatUpgradeLevel("execution"), status: combatUpgradeLevel("execution") ? hitFx?.executionCount ? `${hitFx.executionCount}체 처형!` : `체력 ${Math.round(executionThreshold * 100)}%` : "잠김", charge: combatUpgradeLevel("execution") / UPGRADE_CAPS.execution * 100, active: Boolean(hitFx?.executionCount), ready: false },
+    { key: "momentum", title: "전투 몰입", level: momentumLevel, status: momentumLevel ? `${momentumStacks}/${momentumMaxStacks}중첩` : "잠김", charge: momentumMaxStacks ? momentumStacks / momentumMaxStacks * 100 : 0, active: Boolean(hitFx?.momentum), ready: Boolean(momentumLevel && momentumStacks === momentumMaxStacks) },
+  ];
   const hallStage = guildHallStage(save.guildHallLevel);
   const nextHallStage = GUILD_HALL_STAGES[save.guildHallLevel] ?? null;
 
@@ -667,9 +695,9 @@ export default function Game() {
     if (!battleActive || !aliveMonsters.length) return;
     const strikes = save.specials.double ? 2 : 1;
     const nextClicks = automatic ? clickCount.current : clickCount.current + 1;
-    const combo = !automatic && save.upgrades.combo > 0 && nextClicks % 5 === 0;
+    const combo = !automatic && comboLevel > 0 && nextClicks % 5 === 0;
     const critical = Math.random() < criticalChance;
-    const comboMultiplier = combo ? 1.35 + save.upgrades.combo * .1 : 1;
+    const comboMultiplier = combo ? 1.35 + comboLevel * .1 : 1;
     const timestamp = Date.now();
     let nextMomentum = 0;
     if (!automatic && momentumLevel > 0) {
@@ -685,6 +713,14 @@ export default function Game() {
     const shockwaveMultiplier = shockwave ? 1.3 + shockwaveLevel * .15 : 1;
     const damage = Math.round(clickDamage * strikes * (critical ? 2 : 1) * comboMultiplier * momentumMultiplier * shockwaveMultiplier * (automatic ? AUTO_ATTACK_FACTOR : 1));
     const targets = aliveMonsters.filter((monster) => distanceOnField(monster, { x, y }) <= effectiveRange);
+    const roundedDamage = Math.max(1, Math.round(damage));
+    const executionTargets = !automatic && executionThreshold > 0
+      ? targets.filter((monster) => {
+        const remainingHp = Math.max(0, monster.hp - roundedDamage);
+        return remainingHp > 0 && remainingHp / monster.maxHp <= executionThreshold;
+      }).map((monster) => monster.id)
+      : [];
+    const executionCount = executionTargets.length;
     const effectId = clickFxCounter.current + 1;
     clickFxCounter.current = effectId;
     setHitFx({
@@ -698,13 +734,16 @@ export default function Game() {
       combo,
       shockwave,
       momentum: nextMomentum,
+      executionCount,
+      executionTargets,
       hitCount: targets.length,
       targets: targets.map((monster) => monster.id),
       x,
       y,
       radius: effectiveRange,
     });
-    window.setTimeout(() => setHitFx((current) => current?.id === effectId ? null : current), activeClickPattern.duration);
+    const feedbackDuration = shockwave ? 1750 : !automatic && (executionCount || critical || combo || nextMomentum) ? 1250 : activeClickPattern.duration;
+    window.setTimeout(() => setHitFx((current) => current?.id === effectId ? null : current), Math.max(activeClickPattern.duration, feedbackDuration));
     damageMonsters(targets.map((monster) => monster.id), damage, true, activeClickPattern.tier);
     if (!automatic) {
       clickCount.current = nextClicks;
@@ -715,7 +754,7 @@ export default function Game() {
         setToast("지휘관의 명령! 모든 길드원이 즉시 공격합니다.");
       }
     }
-  }, [battleActive, aliveMonsters, save.specials, save.upgrades.combo, clickDamage, activeClickPattern, criticalChance, attackRange, momentumLevel, shockwaveLevel, damageMonsters, partyMembers, progressFor, guildMultiplier, developerPower]);
+  }, [battleActive, aliveMonsters, save.specials, comboLevel, clickDamage, activeClickPattern, criticalChance, executionThreshold, attackRange, momentumLevel, shockwaveLevel, damageMonsters, partyMembers, progressFor, guildMultiplier, developerPower]);
 
   useEffect(() => {
     if (!save.specials.auto || !battleActive || tab !== "field") return;
@@ -1068,7 +1107,7 @@ export default function Game() {
               <div className="panel-title"><div><span className="eyebrow">GROWTH OVERVIEW</span><h3>길드 강화 현황</h3></div><span className="level-chip">본관 Lv.{hallStage.level} · 깊이 {hallStage.researchDepth}</span></div>
               <div className="growth-progress"><i style={{ width: `${save.nodes.length / UPGRADE_NODES.length * 100}%` }} /></div>
               <div className="growth-stats">
-                {(Object.keys(upgradeInfo) as UpgradeKey[]).map((key) => <div key={key}><span className="upgrade-icon">{upgradeInfo[key].accent}</span><span><strong>{upgradeInfo[key].title} · Lv.{save.upgrades[key]}</strong><small>{upgradeEffectText(key, save.upgrades[key])}</small></span></div>)}
+                {(Object.keys(upgradeInfo) as UpgradeKey[]).map((key) => <div key={key}><span className="upgrade-icon"><Image src={UPGRADE_ICON_BY_KEY[key]} alt="" width={48} height={48} aria-hidden="true" /></span><span><strong>{upgradeInfo[key].title} · Lv.{save.upgrades[key]}</strong><small>{upgradeEffectText(key, save.upgrades[key])}</small></span></div>)}
               </div>
             </div>
             <div className="upgrade-tree-panel panel">
@@ -1172,8 +1211,9 @@ export default function Game() {
                 {fieldMonsters.map((monster, index) => {
                   const hitDuration = monster.lastHitTier >= 4 ? 940 : monster.lastHitTier >= 3 ? 700 : 500;
                   const struck = monster.hp > 0 && monster.lastHitAt > 0 && now - monster.lastHitAt < hitDuration;
+                  const executed = Boolean(hitFx?.executionTargets.includes(monster.id));
                   const artScale = (monsterAsset?.scale ?? 1) * (monster.kind === "leader" ? 1.08 : 1);
-                  return <span key={`${monster.id}-${monster.hitId}`} className={`pack-monster monster-${monster.kind} ${monsterAsset ? "has-pack-art" : ""} ${monster.hp <= 0 ? "is-defeated" : ""} ${struck ? `is-struck click-recoil-tier-${monster.lastHitTier}` : ""}`} style={{ left: `${monster.x}%`, top: `${monster.y}%`, "--monster-scale": monster.scale, "--monster-art-scale": artScale, zIndex: Math.round(monster.y) } as React.CSSProperties}>
+                  return <span key={`${monster.id}-${monster.hitId}`} className={`pack-monster monster-${monster.kind} ${monsterAsset ? "has-pack-art" : ""} ${monster.hp <= 0 ? "is-defeated" : ""} ${executed ? "is-executed" : ""} ${struck ? `is-struck click-recoil-tier-${monster.lastHitTier}` : ""}`} style={{ left: `${monster.x}%`, top: `${monster.y}%`, "--monster-scale": monster.scale, "--monster-art-scale": artScale, zIndex: Math.round(monster.y) } as React.CSSProperties}>
                     <i className="pack-shadow" />
                     {monsterAsset ? (
                       <span className="pack-monster-art-frame">
@@ -1183,6 +1223,7 @@ export default function Game() {
                       <span className={`monster-sprite ${monster.kind === "leader" ? "boss" : ""}`}><i className="monster-horn left" /><i className="monster-horn right" /><i className="monster-body"><span className="monster-eye left" /><span className="monster-eye right" /><span className="monster-core" /></i><i className="monster-arm left" /><i className="monster-arm right" /><i className="monster-foot left" /><i className="monster-foot right" /></span>
                     )}
                     <i className="pack-monster-soul" aria-hidden="true">✦</i>
+                    {executed && <span className="execution-finisher" aria-hidden="true"><i /><i /><i /></span>}
                     {monster.kind === "leader" && <b className="leader-mark">♛</b>}
                   </span>;
                 })}
@@ -1209,6 +1250,10 @@ export default function Game() {
               {lootCollecting && <span className="sr-only" role="status">토벌이 끝나 전장의 골드와 재료를 회수하고 있습니다. 골드 {compactNumber(collectedGold)} / {compactNumber(plannedGold)}, {stageMaterial.name} {collectedMaterial} / {plannedMaterial}</span>}
 
               {hitFx && <>
+                {hitFx.shockwave && <>
+                  <span key={`shockwave-screen-${hitFx.id}`} className="shockwave-screen-impact" style={{ "--proc-x": `${hitFx.x}%`, "--proc-y": `${hitFx.y}%` } as React.CSSProperties} aria-hidden="true"><i /><i /></span>
+                  <span key={`shockwave-emblem-${hitFx.id}`} className="shockwave-activation-emblem" aria-hidden="true"><Image src={UPGRADE_ICON_BY_KEY.shockwave} alt="" width={62} height={62} /><i /><i /></span>
+                </>}
                 <span key={`range-${hitFx.id}`} className={`attack-range-impact click-tier-${hitFx.tier} ${hitFx.hitCount ? "has-targets" : "missed"} ${hitFx.shockwave ? "is-shockwave" : ""}`} style={{ left: `${hitFx.x}%`, top: `${hitFx.y}%`, width: `${hitFx.radius * 2}%` }} aria-hidden="true"><i /></span>
                 <span key={hitFx.id} className={`click-attack-fx field-click-fx click-tier-${hitFx.tier} variant-${hitFx.variant} ${hitFx.doubled ? "is-double" : ""} ${hitFx.automatic ? "is-automatic" : ""} ${hitFx.critical ? "is-critical" : ""} ${hitFx.combo ? "is-combo" : ""} ${hitFx.shockwave ? "is-shockwave" : ""} ${hitFx.momentum ? "has-momentum" : ""}`} style={{ left: `${hitFx.x}%`, top: `${hitFx.y}%` }} aria-hidden="true">
                   <span className="fx-motion-layer">
@@ -1222,6 +1267,9 @@ export default function Game() {
                     <i className="fx-slash fx-slash-four" />
                     <i className="fx-slash fx-slash-five" />
                     <i className="fx-double-echo" />
+                    {hitFx.critical && <span className="critical-impact-burst">{CLICK_EFFECT_BLADES.map((index) => <i key={index} style={{ "--critical-ray": `${index * 45}deg` } as React.CSSProperties} />)}</span>}
+                    {hitFx.combo && <span className="combo-follow-through"><i /><i /><i /></span>}
+                    {hitFx.executionCount > 0 && <span className="execution-impact-cut"><i /><i /><i /></span>}
                     <i className="fx-asset fx-asset-slash" />
                     <i className="fx-asset fx-asset-rune" />
                     <i className="fx-asset fx-asset-light" />
@@ -1236,12 +1284,14 @@ export default function Game() {
                     <span className="fx-asset-particles">{CLICK_EFFECT_PARTICLES.map((index) => <i key={index} style={{ "--particle-angle": `${index * 36 + hitFx.variant * 11}deg`, "--particle-distance": `${115 + index % 4 * 30 + hitFx.tier * 5}px`, "--particle-delay": `${index % 5 * 45}ms` } as React.CSSProperties} />)}</span>
                     <span className="fx-sparks">{CLICK_EFFECT_SPARKS.map((index) => <i key={index} className="fx-spark" style={{ "--spark-angle": `${index * 30 + hitFx.variant * 7}deg`, "--spark-distance": `${82 + index % 3 * 18 + hitFx.tier * 9}px`, "--spark-delay": `${index % 4 * 35}ms` } as React.CSSProperties} />)}</span>
                   </span>
-                  <span className="fx-pattern-label">{hitFx.automatic ? "자동 · " : ""}{hitFx.shockwave ? "충격파 · " : ""}{hitFx.combo ? "연격 · " : ""}{clickAttackPattern(hitFx.tier).title}</span>
-                  <strong className="fx-damage">{hitFx.hitCount ? <>−{compactNumber(hitFx.damage)}<small>{hitFx.critical ? "치명타" : `${hitFx.hitCount}체 타격`}</small></> : <>빗나감</>}</strong>
+                  {hitFx.hitCount > 0 && (hitFx.combo ? <span className="combo-damage-pair">
+                    <strong className="fx-damage combo-damage-first">−{compactNumber(Math.ceil(hitFx.damage / 2))}</strong>
+                    <strong className="fx-damage combo-damage-second">−{compactNumber(Math.floor(hitFx.damage / 2))}</strong>
+                  </span> : <strong className={`fx-damage ${hitFx.executionCount ? "execution-damage" : ""}`}>−{compactNumber(hitFx.damage)}</strong>)}
                 </span>
               </>}
 
-              {hitFx && !hitFx.automatic && <span className="sr-only" role="status">{clickAttackPattern(hitFx.tier).title}, 범위 안의 몬스터 {hitFx.hitCount}체 타격</span>}
+              {hitFx && !hitFx.automatic && <span className="sr-only" role="status">{activeCombatProcs.length ? `${activeCombatProcs.map((proc) => `${proc.title} 레벨 ${proc.level}`).join(", ")} 발동. ` : "일반 직접 공격. "}{clickAttackPattern(hitFx.tier).title}, 범위 안의 몬스터 {hitFx.hitCount}체 타격</span>}
 
               {skillFx && <div className="skill-flash" key={`${skillFx}-${now}`}><span>{memberById(skillFx).skill}!</span></div>}
             </div>
@@ -1264,8 +1314,15 @@ export default function Game() {
                 </div>}
                 <div className="click-pattern-card"><b>{activeClickPattern.glyph}</b><span><strong>{activeClickPattern.weaponName} · {activeClickPattern.title}</strong><small>무기 {activeClickPattern.tier + 1}/15 · {activeClickPattern.subtitle}</small></span><em>{activeClickPattern.visualHits} HIT</em></div>
                 <strong>{compactNumber(clickDamage)} 피해</strong>
-                <div className="click-combat-stats"><span><b>공격 반경</b><em>{attackRange.toFixed(1)}</em></span><span><b>치명타</b><em>{Math.round(criticalChance * 100)}%</em></span><span><b>처형선</b><em>{executionThreshold ? `${Math.round(executionThreshold * 100)}%` : "없음"}</em></span></div>
-                <div className="combat-proc-strip"><span><b>충격파</b><em>{shockwaveLevel ? `${9 - shockwaveLevel}타마다` : "잠김"}</em></span><span className={momentumStacks ? "active" : ""}><b>전투 몰입</b><em>{momentumLevel ? `${momentumStacks}/${momentumMaxStacks}` : "잠김"}</em></span><span><b>전투 클릭</b><em>{clicks}회</em></span></div>
+                <div className="attack-upgrade-monitor" aria-label="직접 공격 강화 현황">
+                  {attackUpgradeStatuses.map((upgrade) => <span key={upgrade.key} className={`${upgrade.level ? "unlocked" : "locked"} ${upgrade.ready ? "ready" : ""} ${upgrade.active ? "triggered" : ""}`}>
+                    <Image src={UPGRADE_ICON_BY_KEY[upgrade.key]} alt="" width={30} height={30} aria-hidden="true" />
+                    <b>{upgrade.title}<small>{upgrade.level ? `Lv.${upgrade.level}` : "LOCK"}</small></b>
+                    <em>{upgrade.status}</em>
+                    {upgrade.level > 0 && <i aria-hidden="true"><u style={{ width: `${upgrade.charge}%` }} /></i>}
+                  </span>)}
+                </div>
+                <small className="battle-click-count">직접 공격 {clicks}회 · 아이콘이 빛나면 해당 길드 강화가 발동한 공격입니다.</small>
                 <small>{save.specials.double ? "쌍격 적용 · 범위 내 모든 적에게 2배" : "클릭 위치와 공격 반경이 손맛을 결정합니다"}</small>
                 <button className="attack-button" onClick={() => directAttackAt(autoAttackPoint.x, autoAttackPoint.y, false)} disabled={!battleActive}>{activeClickPattern.glyph} 가장 밀집한 곳 베기</button>
               </div>
