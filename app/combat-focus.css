@@ -1,5 +1,6 @@
 /* Keep active combat focused on the battlefield and attack feedback. */
 .battle-mode {
+  position: relative;
   width: 100%;
   min-height: 100svh;
   margin: 0;
@@ -10,20 +11,89 @@
 }
 
 .battle-mode > .developer-banner,
-.battle-mode .field-toolbar,
 .battle-mode .battle-sidebar,
 .battle-mode .environment-tag,
 .battle-mode .battle-banner,
 .battle-mode .swarm-hud,
-.battle-mode .loot-tally,
 .battle-mode .field-click-guide,
 .battle-mode .member-weapon-fx > small,
 .battle-mode .loot-drop > em {
   display: none;
 }
 
+.battle-mode > .topbar {
+  display: flex;
+  min-height: 0;
+  padding: 8px 12px;
+  background: linear-gradient(90deg, #101713, #1c2a22 50%, #101713);
+  border: 0;
+  border-bottom: 1px solid #4d5f51;
+}
+
+.battle-mode > .topbar .brand,
+.battle-mode > .topbar .developer-toggle,
+.battle-mode > .topbar .reset-button,
+.battle-mode > .topbar .resources > span:last-child {
+  display: none;
+}
+
+.battle-mode > .topbar .resources {
+  order: initial;
+  width: 100%;
+  margin: 0;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.battle-mode > .topbar .resources > span,
+.battle-mode > .topbar .resources > button {
+  min-height: 38px;
+}
+
 .battle-mode .field-screen {
   padding: 0;
+}
+
+.battle-mode .field-toolbar {
+  position: relative;
+  top: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 8px 12px;
+  color: #f7ead0;
+  background: linear-gradient(90deg, rgba(40, 31, 25, .98), rgba(60, 44, 31, .96));
+  border: 0;
+  border-bottom: 1px solid #8a6945;
+  border-radius: 0;
+  box-shadow: 0 5px 15px rgba(10, 7, 5, .28);
+}
+
+.battle-mode .field-toolbar .eyebrow,
+.battle-mode .field-toolbar .permadeath-warning,
+.battle-mode .field-toolbar .retreat-button {
+  display: none;
+}
+
+.battle-mode .field-toolbar h2 {
+  color: #fff1cf;
+  font-size: clamp(20px, 2vw, 28px);
+}
+
+.battle-mode .field-toolbar h2 b {
+  color: #e9b957;
+}
+
+.battle-mode .battle-timer {
+  min-width: 180px;
+  padding: 6px 10px;
+}
+
+.battle-mode .battle-timer strong {
+  font-size: 18px;
+}
+
+.battle-mode .battle-timer > i {
+  height: 4px;
 }
 
 .battle-mode .battle-layout {
@@ -31,15 +101,53 @@
 }
 
 .battle-mode .arena {
-  min-height: 100svh;
+  min-height: max(560px, calc(100svh - 114px));
   border: 0;
   border-radius: 0;
   box-shadow: none;
 }
 
 @supports (height: 100dvh) {
-  .battle-mode,
-  .battle-mode .arena {
+  .battle-mode {
     min-height: 100dvh;
+  }
+
+  .battle-mode .arena {
+    min-height: max(560px, calc(100dvh - 114px));
+  }
+}
+
+@media (max-width: 560px) {
+  .battle-mode > .topbar {
+    padding: 6px;
+  }
+
+  .battle-mode > .topbar .resources {
+    gap: 6px;
+  }
+
+  .battle-mode > .topbar .resources > span:first-child {
+    flex: 0 0 auto;
+  }
+
+  .battle-mode > .topbar .resources > button {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .battle-mode .field-toolbar {
+    align-items: center;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .battle-mode .battle-controls {
+    width: auto;
+    margin-left: auto;
+  }
+
+  .battle-mode .battle-timer {
+    width: auto;
+    min-width: 138px;
   }
 }
