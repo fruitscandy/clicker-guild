@@ -9,10 +9,10 @@ test("growth, combat proc, and rare reward sounds are exported", () => {
   for (const soundName of ["playProgressionSound", "playCombatProcSound", "playRareRewardSound"]) {
     assert.match(audioSource, new RegExp(`export function ${soundName}\\b`));
   }
-  for (const kind of ["weapon-craft", "research-unlock", "guild-hall", "special-tactic"]) {
+  for (const kind of ["weapon-craft", "research-unlock", "guild-hall"]) {
     assert.match(audioSource, new RegExp(`\\b${kind}\\b`));
   }
-  for (const kind of ["gear", "first-clear", "boss-token"]) {
+  for (const kind of ["gear", "first-clear"]) {
     assert.match(audioSource, new RegExp(`\\b${kind}\\b`));
   }
 });
@@ -32,10 +32,12 @@ test("new event sounds share global settings and expose a browser smoke marker",
 });
 
 test("game event integration only accents meaningful successful states", () => {
-  for (const kind of ["weapon-craft", "guild-hall", "research-unlock", "special-tactic"]) {
+  for (const kind of ["weapon-craft", "guild-hall", "research-unlock"]) {
     assert.match(gameSource, new RegExp(`playProgressionSound\\("${kind}"`));
   }
-  assert.match(gameSource, /if \(!automatic && targets\.length\) \{\s*playCombatProcSound/);
-  assert.match(gameSource, /stage\.boss && firstClear[\s\S]*\? "boss-token"[\s\S]*\? "gear"[\s\S]*\? "first-clear"/);
+  assert.match(gameSource, /if \(targets\.length\) playCombatProcSound/);
+  assert.match(gameSource, /const rareReward = gearTarget[\s\S]*\? "gear"[\s\S]*\? "first-clear"/);
   assert.match(gameSource, /if \(rareReward\) playRareRewardSound\(rareReward\)/);
+  assert.doesNotMatch(gameSource, /playProgressionSound\("special-tactic"|"boss-token"|파티 특수 전술|보스 증표/);
+  assert.doesNotMatch(audioSource, /special-tactic|boss-token/);
 });

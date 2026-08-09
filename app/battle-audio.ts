@@ -12,8 +12,8 @@ let lastMonsterHitAt = -1;
 let monsterHitVariation = 0;
 let lastCombatProcAt = -1;
 
-export type ProgressionSoundKind = "weapon-craft" | "research-unlock" | "guild-hall" | "special-tactic";
-export type RareRewardSoundKind = "gear" | "first-clear" | "boss-token";
+export type ProgressionSoundKind = "weapon-craft" | "research-unlock" | "guild-hall";
+export type RareRewardSoundKind = "gear" | "first-clear";
 export type CombatProcSound = {
   critical?: boolean;
   combo?: boolean;
@@ -321,15 +321,6 @@ export function playProgressionSound(kind: ProgressionSoundKind, tier = 1) {
       return;
     }
 
-    if (kind === "special-tactic") {
-      tone(context, 220, start, 0.31, 0.026, "sawtooth", 330, 0.012);
-      [659, 880, 1319].forEach((frequency, index) => {
-        tone(context, frequency, start + 0.045 + index * 0.055, 0.32, 0.016, "sine", frequency * 1.08, 0.006);
-      });
-      noiseBurst(context, start + 0.04, 0.13, 0.008, 1900, 5200);
-      return;
-    }
-
     [523, 659, 784].forEach((frequency, index) => {
       tone(context, frequency + tierLift * 12, start + index * 0.06, 0.24, 0.018, "triangle", (frequency + tierLift * 12) * 1.06, 0.006);
     });
@@ -391,15 +382,6 @@ export function playRareRewardSound(kind: RareRewardSoundKind) {
   playWhenAudioIsReady((context) => {
     const start = context.currentTime;
     markEventSound(`reward:${kind}`);
-
-    if (kind === "boss-token") {
-      tone(context, 98, start, 0.42, 0.032, "triangle", 65, 0.004);
-      noiseBurst(context, start, 0.13, 0.018, 920, 220);
-      [392, 523, 784, 1047].forEach((frequency, index) => {
-        tone(context, frequency, start + 0.06 + index * 0.07, 0.35, 0.018, "sine", frequency * 1.025, 0.008);
-      });
-      return;
-    }
 
     if (kind === "gear") {
       noiseBurst(context, start, 0.055, 0.009, 5200, 2800);
