@@ -43,6 +43,7 @@ import { WeaponCursor } from "./guild-hub/WeaponArt";
 import { monsterAssetForStage } from "./monster-assets";
 import { MaterialInventory } from "./MaterialInventory";
 import { SpecialAttackLayer, specialMonsterClassName } from "./SpecialAttackLayer";
+import { WeaponAttackEffect } from "./WeaponAttackEffect";
 import { useSpecialAttackController } from "./special-attack-controller";
 import { SPECIAL_RESEARCH_NODES } from "./special-attacks";
 import { StageMap } from "./stage-map";
@@ -148,9 +149,6 @@ const CLICK_ATTACK_PATTERNS: ClickAttackPattern[] = [
   { key: "myriad-blades-one", weaponName: "길드마스터 신검", title: "만검귀일", subtitle: "수천 검광이 하나의 종언으로 수렴", glyph: "神", tier: 14, visualHits: 25, variants: 4, duration: 2200, ...PLAYER_WEAPON_BALANCE[14] },
 ];
 
-const CLICK_EFFECT_SPARKS = Array.from({ length: 12 }, (_, index) => index);
-const CLICK_EFFECT_PARTICLES = Array.from({ length: 10 }, (_, index) => index);
-const CLICK_EFFECT_BLADES = Array.from({ length: 9 }, (_, index) => index);
 const WEAPON_MAX_LEVEL = CLICK_ATTACK_PATTERNS.length - 1;
 
 function clickAttackPattern(level: number) {
@@ -1358,46 +1356,12 @@ export default function Game() {
               </div>
               {lootCollecting && <span className="sr-only" role="status">토벌이 끝나 전장의 골드와 재료를 회수하고 있습니다. 골드 {compactNumber(collectedGold)} / {compactNumber(plannedGold)}, {stageMaterial.name} {collectedMaterial} / {plannedMaterial}</span>}
 
-              {hitFx && <>
-                {hitFx.shockwave && <>
-                  <span key={`shockwave-screen-${hitFx.id}`} className="shockwave-screen-impact" style={{ "--proc-x": `${hitFx.x}%`, "--proc-y": `${hitFx.y}%` } as React.CSSProperties} aria-hidden="true"><i /><i /></span>
-                  <span key={`shockwave-emblem-${hitFx.id}`} className="shockwave-activation-emblem" aria-hidden="true"><Image src={UPGRADE_ICON_BY_KEY.shockwave} alt="" width={62} height={62} /><i /><i /></span>
-                </>}
-                <span key={`range-${hitFx.id}`} className={`attack-range-impact click-tier-${hitFx.tier} ${hitFx.hitCount ? "has-targets" : "missed"} ${hitFx.shockwave ? "is-shockwave" : ""}`} style={{ left: `${hitFx.x}%`, top: `${hitFx.y}%`, width: `${hitFx.radius * 2}%` }} aria-hidden="true"><i /></span>
-                <span key={hitFx.id} className={`click-attack-fx field-click-fx click-tier-${hitFx.tier} variant-${hitFx.variant} ${hitFx.critical ? "is-critical" : ""} ${hitFx.combo ? "is-combo" : ""} ${hitFx.shockwave ? "is-shockwave" : ""} ${hitFx.momentum ? "has-momentum" : ""}`} style={{ left: `${hitFx.x}%`, top: `${hitFx.y}%` }} aria-hidden="true">
-                  <span className="fx-motion-layer">
-                    <i className="fx-aim-rune" />
-                    <i className="fx-shockwave fx-shockwave-one" />
-                    <i className="fx-shockwave fx-shockwave-two" />
-                    <i className="fx-master-blade" />
-                    <i className="fx-slash fx-slash-one" />
-                    <i className="fx-slash fx-slash-two" />
-                    <i className="fx-slash fx-slash-three" />
-                    <i className="fx-slash fx-slash-four" />
-                    <i className="fx-slash fx-slash-five" />
-                    {hitFx.critical && <span className="critical-impact-burst">{CLICK_EFFECT_BLADES.map((index) => <i key={index} style={{ "--critical-ray": `${index * 45}deg` } as React.CSSProperties} />)}</span>}
-                    {hitFx.combo && <span className="combo-follow-through"><i /><i /><i /></span>}
-                    {hitFx.executionCount > 0 && <span className="execution-impact-cut"><i /><i /><i /></span>}
-                    <i className="fx-asset fx-asset-slash" />
-                    <i className="fx-asset fx-asset-rune" />
-                    <i className="fx-asset fx-asset-light" />
-                    <span className="fx-vivid-stage">
-                      <i className="fx-vivid fx-vivid-primary" />
-                      <i className="fx-vivid fx-vivid-secondary" />
-                      <i className="fx-vivid fx-vivid-impact" />
-                      <span className="fx-signature-mark"><i /><i /><i /><b>{clickAttackPattern(hitFx.tier).glyph}</b></span>
-                      <span className="fx-blade-rain">{CLICK_EFFECT_BLADES.map((index) => <i key={index} style={{ "--blade-x": `${(index - 4) * 42}px`, "--blade-delay": `${index * 45}ms`, "--blade-tilt": `${-18 + index * 5}deg` } as React.CSSProperties} />)}</span>
-                      <span className="fx-orbit-motes">{CLICK_EFFECT_SPARKS.map((index) => <i key={index} style={{ "--mote-angle": `${index * 30}deg`, "--mote-distance": `${105 + index % 3 * 34}px`, "--mote-delay": `${index * 32}ms` } as React.CSSProperties} />)}</span>
-                    </span>
-                    <span className="fx-asset-particles">{CLICK_EFFECT_PARTICLES.map((index) => <i key={index} style={{ "--particle-angle": `${index * 36 + hitFx.variant * 11}deg`, "--particle-distance": `${115 + index % 4 * 30 + hitFx.tier * 5}px`, "--particle-delay": `${index % 5 * 45}ms` } as React.CSSProperties} />)}</span>
-                    <span className="fx-sparks">{CLICK_EFFECT_SPARKS.map((index) => <i key={index} className="fx-spark" style={{ "--spark-angle": `${index * 30 + hitFx.variant * 7}deg`, "--spark-distance": `${82 + index % 3 * 18 + hitFx.tier * 9}px`, "--spark-delay": `${index % 4 * 35}ms` } as React.CSSProperties} />)}</span>
-                  </span>
-                  {hitFx.hitCount > 0 && (hitFx.combo ? <span className="combo-damage-pair">
-                    <strong className="fx-damage combo-damage-first">−{compactNumber(Math.ceil(hitFx.damage / 2))}</strong>
-                    <strong className="fx-damage combo-damage-second">−{compactNumber(Math.floor(hitFx.damage / 2))}</strong>
-                  </span> : <strong className={`fx-damage ${hitFx.executionCount ? "execution-damage" : ""}`}>−{compactNumber(hitFx.damage)}</strong>)}
-                </span>
-              </>}
+              {hitFx && <WeaponAttackEffect
+                key={hitFx.id}
+                effect={hitFx}
+                glyph={clickAttackPattern(hitFx.tier).glyph}
+                formatNumber={compactNumber}
+              />}
 
               {hitFx && <span className="sr-only" role="status">{activeCombatProcs.length ? `${activeCombatProcs.map((proc) => `${proc.title} 레벨 ${proc.level}`).join(", ")} 발동. ` : "일반 직접 공격. "}플레이어의 {clickAttackPattern(hitFx.tier).title}, 범위 안의 몬스터 {hitFx.hitCount}체 타격</span>}
             </div>

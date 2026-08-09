@@ -60,9 +60,11 @@ test("ships region-specific monsters with hit and death actions", async () => {
 });
 
 test("distinguishes direct attacks from triggered guild upgrade effects", async () => {
-  const [game, css] = await Promise.all([
+  const [game, css, weaponEffect, weaponEffectCss] = await Promise.all([
     readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/WeaponAttackEffect.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/WeaponAttackEffect.module.css", import.meta.url), "utf8"),
   ]);
 
   assert.match(game, /activeCombatProcs/);
@@ -71,13 +73,17 @@ test("distinguishes direct attacks from triggered guild upgrade effects", async 
   assert.match(game, /executionTargets/);
   assert.match(game, /shockwaveClicksRemaining/);
   assert.match(game, /comboClicksRemaining/);
-  assert.match(game, /shockwave-activation-emblem/);
-  assert.match(game, /critical-impact-burst/);
-  assert.match(game, /combo-follow-through/);
-  assert.match(game, /execution-impact-cut/);
+  assert.match(game, /<WeaponAttackEffect/);
+  assert.match(weaponEffect, /shockwavePulse/);
+  assert.match(weaponEffect, /criticalNotch/);
+  assert.match(weaponEffect, /data-effect-motif/);
+  assert.match(weaponEffect, /executionCut/);
   assert.match(game, /execution-finisher/);
-  assert.match(game, /combo-damage-first/);
-  assert.match(game, /combo-damage-second/);
+  assert.match(weaponEffect, /comboDamage/);
+  assert.match(weaponEffectCss, /motifCrosscut/);
+  assert.match(weaponEffectCss, /motifAbyss/);
+  assert.match(weaponEffectCss, /motifMyriad/);
+  assert.doesNotMatch(weaponEffect, /tier\s*>=/);
   assert.doesNotMatch(game, /fx-pattern-label/);
   assert.doesNotMatch(game, /combat-proc-popover/);
   assert.match(game, /UPGRADE_ICON_BY_KEY\[upgrade\.key\]/);
@@ -150,7 +156,7 @@ test("separates guild passive weapons from the player's forge click weapon", asy
   assert.match(game, /equipped-member-weapons/);
   assert.doesNotMatch(directAttack, /emitMemberWeaponFx/);
   assert.match(game, /<WeaponCursor/);
-  assert.match(game, /click-attack-fx/);
+  assert.match(game, /<WeaponAttackEffect/);
   assert.doesNotMatch(game, /className="fighters"/);
   assert.doesNotMatch(game, /memberAnimationSource/);
   assert.match(forge, /플레이어의 클릭 무기 공격력/);
