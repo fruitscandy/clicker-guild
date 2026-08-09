@@ -1,0 +1,45 @@
+/* Keep active combat focused on the battlefield and attack feedback. */
+.battle-mode {
+  width: 100%;
+  min-height: 100svh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.battle-mode > .developer-banner,
+.battle-mode .field-toolbar,
+.battle-mode .battle-sidebar,
+.battle-mode .environment-tag,
+.battle-mode .battle-banner,
+.battle-mode .swarm-hud,
+.battle-mode .loot-tally,
+.battle-mode .field-click-guide,
+.battle-mode .member-weapon-fx > small,
+.battle-mode .loot-drop > em {
+  display: none;
+}
+
+.battle-mode .field-screen {
+  padding: 0;
+}
+
+.battle-mode .battle-layout {
+  display: block;
+}
+
+.battle-mode .arena {
+  min-height: 100svh;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+@supports (height: 100dvh) {
+  .battle-mode,
+  .battle-mode .arena {
+    min-height: 100dvh;
+  }
+}
