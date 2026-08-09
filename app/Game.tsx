@@ -6,6 +6,7 @@ import { fieldAssetForRegion } from "./field-assets";
 import { compactNumber, getStage, MEMBERS, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "./game-data";
 import { memberAnimationSource, type MemberMotion } from "./member-animations";
 import { monsterAssetForStage } from "./monster-assets";
+import { StageMap } from "./stage-map";
 
 type Tab = "guild" | "field" | "tavern";
 type MemberProgress = { level: number; xp: number; gear: number };
@@ -1111,7 +1112,16 @@ export default function Game() {
         </section>
       )}
 
-      {stagePicker && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setStagePicker(false); }}><div className="stage-modal" role="dialog" aria-modal="true" aria-labelledby="stage-title"><div className="modal-heading"><div><span className="eyebrow">WORLD MAP</span><h2 id="stage-title">토벌 목표 선택</h2></div><button className="close-button" onClick={() => setStagePicker(false)} aria-label="닫기">×</button></div><div className="region-list">{Array.from({ length: 10 }, (_, regionIndex) => <section key={regionIndex}><div className="region-heading"><strong>{regionIndex + 1}단계 · {getStage(regionIndex * 10 + 1).region.name}</strong><span>{developerMode ? 10 : Math.max(0, Math.min(10, save.unlockedStage - regionIndex * 10))}/10 해금</span></div><div className="stage-grid">{Array.from({ length: 10 }, (_, localIndex) => { const number = regionIndex * 10 + localIndex + 1; const locked = !developerMode && number > save.unlockedStage; const cleared = save.cleared.includes(number); return <button key={number} disabled={locked} className={`${number === stage.stage ? "current" : ""} ${cleared ? "cleared" : ""} ${developerMode ? "developer-unlocked" : ""} ${localIndex === 9 ? "boss-stage" : ""}`} onClick={() => selectStage(number)}><span>{localIndex === 9 ? "♛" : number}</span><small>{locked ? "잠김" : developerMode ? "DEV" : cleared ? "반복 가능" : "첫 도전"}</small></button>; })}</div></section>)}</div></div></div>}
+      {stagePicker && (
+        <StageMap
+          currentStage={stage.stage}
+          unlockedStage={save.unlockedStage}
+          clearedStages={save.cleared}
+          developerMode={developerMode}
+          onSelectStage={selectStage}
+          onClose={() => setStagePicker(false)}
+        />
+      )}
       <footer className="game-footer"><span>GUILDMASTER CHRONICLE · LOCAL BUILD</span><span>작은 길드가 전설이 되는 곳</span></footer>
     </main>
   );
