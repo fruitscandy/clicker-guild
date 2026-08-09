@@ -16,13 +16,22 @@
 
 1. 이 파일과 `docs/coordination/README.md`를 읽는다.
 2. `git status --short --branch`, 현재 브랜치, 최신 커밋과 `origin/main`을 확인한다. 사용자 변경은 덮어쓰거나 되돌리지 않는다.
-3. GitHub의 열린 Issue, PR, 실패한 Actions, Discussion #1의 최신 질문과 인계를 확인한다.
+3. GitHub의 열린 Issue, PR, 실패한 Actions, Discussion #1의 최신 질문과 인계를 확인한다. 로컬 인증 오류가 보이면 아래 인증 연속성 규칙으로 실제 401과 네트워크 차단을 먼저 구분한다.
 4. `status:in-progress` 작업과 열린 PR의 수정 경로를 파악한다.
 5. 사용자가 특정 작업을 지정하지 않았다면, 선행 조건이 끝난 `status:ready` 작업 중 경로가 겹치지 않는 가장 높은 우선순위 하나를 고른다.
 6. 구현 전에 Issue를 자기 계정에 할당하고 `status:in-progress`로 바꾼 뒤, 기준 커밋·브랜치·수정 경로를 댓글로 남긴다.
 7. 최신 `origin/main`에서 작업별 `codex/<짧은-작업명>` 브랜치 또는 별도 worktree를 만든다.
 
 이슈를 선점할 GitHub 쓰기 권한이 없거나 소유 경로가 겹치면 임의 구현을 시작하지 않는다. 대신 읽기 전용 조사·재현·검토를 수행하고 필요한 권한 또는 인계를 보고한다.
+
+## GitHub 인증 연속성
+
+- Issue와 PR 조회·댓글·라벨·담당자 변경은 연결된 GitHub 앱을 우선한다. 로컬 `gh` 인증과 앱 연결은 서로 독립적이다.
+- Actions 로그, Discussion, 현재 브랜치의 git 작업처럼 로컬 CLI가 필요한 경우 `scripts/github-auth-preflight.ps1`로 먼저 판정한다.
+- `AUTH_NETWORK_BLOCKED`(종료 코드 10)는 토큰 만료가 아니다. 재로그인을 요구하지 말고 GitHub 앱으로 가능한 작업을 계속한 뒤, 꼭 필요한 CLI 호출만 승인된 네트워크 경로로 재시도한다.
+- `AUTH_RELOGIN_REQUIRED`(종료 코드 11)는 활성 계정이 없거나 GitHub가 HTTP 401/Bad credentials로 자격 증명을 거부한 경우다. 이때만 사용자에게 재로그인을 요청한다.
+- `AUTH_UNKNOWN` 또는 `AUTH_GH_MISSING`은 원인을 보고하고 앱으로 가능한 읽기·쓰기를 계속한다. 토큰 문자열은 명령 출력, Issue, PR, Discussion, 파일에 남기지 않는다.
+- 정상 키링 OAuth 토큰은 세션마다 다시 로그인하지 않는다. `gh auth login`이나 `gh auth logout`은 실제 종료 코드 11이 확인되고 사용자가 승인한 경우에만 실행한다.
 
 ## 병렬 작업 원칙
 

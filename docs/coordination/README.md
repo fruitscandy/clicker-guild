@@ -14,6 +14,24 @@
 
 Project는 표시 화면이고, 에이전트가 실제로 판단할 때는 Issue 본문·댓글·담당자·라벨, PR과 Actions를 우선한다.
 
+## GitHub 인증 장애 판정
+
+로컬 GitHub CLI와 연결된 GitHub 앱은 별도 인증 경로다. Issue와 PR은 앱을 우선 사용하고, Actions 로그·Discussion·git 원격 작업처럼 CLI가 필요한 경우에만 로컬 인증을 확인한다.
+
+```powershell
+& .\scripts\github-auth-preflight.ps1
+```
+
+| 출력 | 종료 코드 | 의미 | 다음 조치 |
+|---|---:|---|---|
+| `AUTH_OK` | 0 | 키링의 활성 계정이 정상 | 그대로 계속 |
+| `AUTH_NETWORK_BLOCKED` | 10 | 샌드박스·방화벽·DNS 등 네트워크 경계 | 재로그인하지 않고 앱 우선, 필요한 호출만 승인된 네트워크로 재시도 |
+| `AUTH_RELOGIN_REQUIRED` | 11 | 활성 계정 없음 또는 HTTP 401/Bad credentials | 사용자 승인 후에만 `gh auth login` |
+| `AUTH_UNKNOWN` | 12 | 알려지지 않은 CLI 오류 | 오류를 Issue #43에 기록하고 앱으로 가능한 작업 계속 |
+| `AUTH_GH_MISSING` | 13 | GitHub CLI가 설치되지 않음 | 앱 우선, CLI가 꼭 필요할 때 설치 요청 |
+
+`gh auth status`의 일반 텍스트는 네트워크 차단도 “token invalid”처럼 요약할 수 있으므로 단독 근거로 재로그인을 요구하지 않는다. 사전검사는 JSON의 실제 오류 원인을 사용하며 토큰을 출력하지 않는다. 최소 48시간 관찰 동안 각 세션은 시작·인계 시 사전검사 결과와 실제 401 발생 여부를 Issue #43에 누적한다.
+
 ## 상태 흐름
 
 `status:ready` → `status:in-progress` → `status:review` → 완료
