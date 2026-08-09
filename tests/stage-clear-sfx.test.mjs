@@ -25,4 +25,6 @@ test("stage clear sound shares the global SFX output and smoke marker", () => {
   assert.match(implementation, /markEventSound/);
   assert.match(implementation, /noiseBurst/);
   assert.match(implementation, /tone/);
+  assert.match(implementation, /createSfxMixBus\(context, VICTORY_MIX_GAIN\)/);
+  assert.match(implementation, /victoryMix/);
 });

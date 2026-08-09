@@ -20,6 +20,20 @@ test("recorded gold drop samples are shipped and wired into battle audio", async
   assert.match(source, /prepareGoldCoinSamples/);
   assert.match(source, /playGoldCoinSample/);
   assert.match(source, /dropIndex % 3 === 0/);
+  assert.match(source, /const REWARD_MIX_GAIN = 1\.6/);
+  assert.match(source, /playGoldCoinSample\(context, start, dropIndex, rewardMix\)/);
+});
+
+test("currency reward cues use their own boosted mix without changing hit volume", async () => {
+  const source = await readFile("app/battle-audio.ts", "utf8");
+  const lootSection = source.slice(source.indexOf("export function playLootDropSound"));
+
+  assert.match(lootSection, /createSfxMixBus\(context, REWARD_MIX_GAIN\)/);
+  assert.match(lootSection, /export function playLootCollectSound[\s\S]*createSfxMixBus\(context, REWARD_MIX_GAIN\)/);
+  assert.match(lootSection, /export function playLootCompleteSound[\s\S]*createSfxMixBus\(context, REWARD_MIX_GAIN\)/);
+
+  const hitSection = source.match(/export function playMonsterHitSound[\s\S]*?\r?\n}\r?\n\r?\nexport function playProgressionSound/)?.[0] ?? "";
+  assert.doesNotMatch(hitSection, /REWARD_MIX_GAIN|VICTORY_MIX_GAIN|createSfxMixBus/);
 });
 
 test("recorded gold sounds preserve CC0 source provenance", async () => {
