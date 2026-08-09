@@ -1,82 +1,100 @@
-export type WeaponSoundSignature =
-  | "training"
-  | "crescent"
-  | "twin"
-  | "rune"
-  | "sky"
-  | "nebula"
-  | "dragon"
-  | "celestial"
-  | "blood-moon"
-  | "storm"
-  | "radiant"
-  | "abyss"
-  | "time"
-  | "world-tree"
-  | "myriad";
+export type BladeImpactWeight = "light" | "medium" | "heavy";
 
 export type WeaponSoundProfile = {
   tier: number;
   key: string;
   weaponName: string;
-  signature: WeaponSoundSignature;
-  bodyHz: number;
-  bladeHz: number;
-  accentHz: number;
-  duration: number;
-  impact: number;
-  slash: number;
-  brilliance: number;
-  space: number;
+  impactWeight: BladeImpactWeight;
+  swingGain: number;
+  impactGain: number;
+  bodyGain: number;
+  ringGain: number;
+  subGain: number;
+  width: number;
+  tail: number;
+  swingRate: number;
+  impactRate: number;
+  impactDelay: number;
 };
 
+// The weapon name identifies the equipped tier only. Sound growth deliberately
+// ignores the visual theme and follows one consistent blade-impact language.
 export const WEAPON_SOUND_PROFILES = [
-  { tier: 0, key: "training-strike", weaponName: "훈련용 장검", signature: "training", bodyHz: 156, bladeHz: 720, accentHz: 1180, duration: 0.18, impact: 0.48, slash: 0.32, brilliance: 0.10, space: 0.06 },
-  { tier: 1, key: "crescent-slash", weaponName: "초승달 도", signature: "crescent", bodyHz: 174, bladeHz: 1060, accentHz: 1640, duration: 0.23, impact: 0.52, slash: 0.48, brilliance: 0.16, space: 0.09 },
-  { tier: 2, key: "cross-cut", weaponName: "쌍날검", signature: "twin", bodyHz: 188, bladeHz: 1260, accentHz: 1920, duration: 0.27, impact: 0.56, slash: 0.54, brilliance: 0.22, space: 0.12 },
-  { tier: 3, key: "weakpoint-break", weaponName: "룬 파쇄검", signature: "rune", bodyHz: 132, bladeHz: 880, accentHz: 1480, duration: 0.30, impact: 0.62, slash: 0.57, brilliance: 0.28, space: 0.15 },
-  { tier: 4, key: "sky-sword-array", weaponName: "천공검", signature: "sky", bodyHz: 214, bladeHz: 1420, accentHz: 2240, duration: 0.34, impact: 0.66, slash: 0.62, brilliance: 0.36, space: 0.19 },
-  { tier: 5, key: "nebula-dance", weaponName: "성운도", signature: "nebula", bodyHz: 196, bladeHz: 1540, accentHz: 2620, duration: 0.37, impact: 0.69, slash: 0.66, brilliance: 0.44, space: 0.23 },
-  { tier: 6, key: "dragon-vein-break", weaponName: "용맥검", signature: "dragon", bodyHz: 92, bladeHz: 1180, accentHz: 2860, duration: 0.40, impact: 0.74, slash: 0.70, brilliance: 0.50, space: 0.26 },
-  { tier: 7, key: "celestial-ruin", weaponName: "천상검", signature: "celestial", bodyHz: 220, bladeHz: 1760, accentHz: 3120, duration: 0.43, impact: 0.78, slash: 0.73, brilliance: 0.58, space: 0.30 },
-  { tier: 8, key: "blood-moon-eclipse", weaponName: "혈월도", signature: "blood-moon", bodyHz: 82, bladeHz: 980, accentHz: 1880, duration: 0.45, impact: 0.81, slash: 0.77, brilliance: 0.62, space: 0.34 },
-  { tier: 9, key: "storm-twin-dance", weaponName: "폭풍쌍검", signature: "storm", bodyHz: 108, bladeHz: 1920, accentHz: 3480, duration: 0.47, impact: 0.84, slash: 0.82, brilliance: 0.68, space: 0.37 },
-  { tier: 10, key: "radiant-judgment", weaponName: "성휘 대검", signature: "radiant", bodyHz: 116, bladeHz: 1680, accentHz: 3840, duration: 0.50, impact: 0.88, slash: 0.85, brilliance: 0.76, space: 0.41 },
-  { tier: 11, key: "abyss-sever", weaponName: "심연검", signature: "abyss", bodyHz: 58, bladeHz: 740, accentHz: 2260, duration: 0.52, impact: 0.91, slash: 0.87, brilliance: 0.80, space: 0.44 },
-  { tier: 12, key: "time-collapse", weaponName: "시간절단검", signature: "time", bodyHz: 146, bladeHz: 2140, accentHz: 4180, duration: 0.54, impact: 0.94, slash: 0.89, brilliance: 0.86, space: 0.47 },
-  { tier: 13, key: "world-tree-wave", weaponName: "세계수 성검", signature: "world-tree", bodyHz: 128, bladeHz: 1320, accentHz: 3520, duration: 0.57, impact: 0.96, slash: 0.91, brilliance: 0.91, space: 0.50 },
-  { tier: 14, key: "myriad-blades-one", weaponName: "길드마스터 신검", signature: "myriad", bodyHz: 72, bladeHz: 2380, accentHz: 4680, duration: 0.61, impact: 1.00, slash: 0.94, brilliance: 1.00, space: 0.54 },
+  { tier: 0, key: "training-strike", weaponName: "훈련용 장검", impactWeight: "light", swingGain: 0.150, impactGain: 0.280, bodyGain: 0.018, ringGain: 0.004, subGain: 0.002, width: 0.05, tail: 0.040, swingRate: 1.18, impactRate: 1.15, impactDelay: 0.018 },
+  { tier: 1, key: "crescent-slash", weaponName: "초승달 도", impactWeight: "light", swingGain: 0.158, impactGain: 0.296, bodyGain: 0.026, ringGain: 0.008, subGain: 0.006, width: 0.08, tail: 0.052, swingRate: 1.16, impactRate: 1.12, impactDelay: 0.019 },
+  { tier: 2, key: "cross-cut", weaponName: "쌍날검", impactWeight: "light", swingGain: 0.166, impactGain: 0.312, bodyGain: 0.034, ringGain: 0.014, subGain: 0.011, width: 0.11, tail: 0.064, swingRate: 1.14, impactRate: 1.09, impactDelay: 0.020 },
+  { tier: 3, key: "weakpoint-break", weaponName: "룬 파쇄검", impactWeight: "light", swingGain: 0.175, impactGain: 0.328, bodyGain: 0.044, ringGain: 0.021, subGain: 0.017, width: 0.14, tail: 0.078, swingRate: 1.12, impactRate: 1.06, impactDelay: 0.021 },
+  { tier: 4, key: "sky-sword-array", weaponName: "천공검", impactWeight: "light", swingGain: 0.184, impactGain: 0.346, bodyGain: 0.055, ringGain: 0.029, subGain: 0.025, width: 0.18, tail: 0.094, swingRate: 1.10, impactRate: 1.03, impactDelay: 0.022 },
+  { tier: 5, key: "nebula-dance", weaponName: "성운도", impactWeight: "medium", swingGain: 0.194, impactGain: 0.365, bodyGain: 0.067, ringGain: 0.039, subGain: 0.035, width: 0.22, tail: 0.112, swingRate: 1.08, impactRate: 1.00, impactDelay: 0.023 },
+  { tier: 6, key: "dragon-vein-break", weaponName: "용맥검", impactWeight: "medium", swingGain: 0.204, impactGain: 0.384, bodyGain: 0.080, ringGain: 0.050, subGain: 0.046, width: 0.27, tail: 0.132, swingRate: 1.06, impactRate: 0.97, impactDelay: 0.024 },
+  { tier: 7, key: "celestial-ruin", weaponName: "천상검", impactWeight: "medium", swingGain: 0.214, impactGain: 0.404, bodyGain: 0.094, ringGain: 0.063, subGain: 0.059, width: 0.32, tail: 0.155, swingRate: 1.04, impactRate: 0.94, impactDelay: 0.025 },
+  { tier: 8, key: "blood-moon-eclipse", weaponName: "혈월도", impactWeight: "medium", swingGain: 0.224, impactGain: 0.424, bodyGain: 0.109, ringGain: 0.078, subGain: 0.073, width: 0.37, tail: 0.181, swingRate: 1.02, impactRate: 0.91, impactDelay: 0.026 },
+  { tier: 9, key: "storm-twin-dance", weaponName: "폭풍쌍검", impactWeight: "medium", swingGain: 0.234, impactGain: 0.444, bodyGain: 0.125, ringGain: 0.095, subGain: 0.088, width: 0.43, tail: 0.210, swingRate: 1.00, impactRate: 0.89, impactDelay: 0.027 },
+  { tier: 10, key: "radiant-judgment", weaponName: "성휘 대검", impactWeight: "heavy", swingGain: 0.244, impactGain: 0.464, bodyGain: 0.142, ringGain: 0.114, subGain: 0.104, width: 0.49, tail: 0.242, swingRate: 0.98, impactRate: 0.86, impactDelay: 0.028 },
+  { tier: 11, key: "abyss-sever", weaponName: "심연검", impactWeight: "heavy", swingGain: 0.254, impactGain: 0.484, bodyGain: 0.160, ringGain: 0.135, subGain: 0.121, width: 0.56, tail: 0.277, swingRate: 0.96, impactRate: 0.84, impactDelay: 0.029 },
+  { tier: 12, key: "time-collapse", weaponName: "시간절단검", impactWeight: "heavy", swingGain: 0.264, impactGain: 0.504, bodyGain: 0.178, ringGain: 0.158, subGain: 0.139, width: 0.63, tail: 0.315, swingRate: 0.94, impactRate: 0.82, impactDelay: 0.030 },
+  { tier: 13, key: "world-tree-wave", weaponName: "세계수 성검", impactWeight: "heavy", swingGain: 0.274, impactGain: 0.524, bodyGain: 0.197, ringGain: 0.183, subGain: 0.158, width: 0.70, tail: 0.356, swingRate: 0.92, impactRate: 0.80, impactDelay: 0.031 },
+  { tier: 14, key: "myriad-blades-one", weaponName: "길드마스터 신검", impactWeight: "heavy", swingGain: 0.285, impactGain: 0.545, bodyGain: 0.217, ringGain: 0.210, subGain: 0.180, width: 0.78, tail: 0.400, swingRate: 0.90, impactRate: 0.78, impactDelay: 0.032 },
 ] as const satisfies readonly WeaponSoundProfile[];
+
+const WEAPON_AUDIO_ASSETS = {
+  swings: [
+    "/assets/audio/weapons/blade-swing-01.ogg",
+    "/assets/audio/weapons/blade-swing-02.ogg",
+  ],
+  light: [
+    "/assets/audio/weapons/blade-impact-light-01.ogg",
+    "/assets/audio/weapons/blade-impact-light-02.ogg",
+    "/assets/audio/weapons/blade-impact-light-03.ogg",
+  ],
+  medium: [
+    "/assets/audio/weapons/blade-impact-medium-01.ogg",
+    "/assets/audio/weapons/blade-impact-medium-02.ogg",
+    "/assets/audio/weapons/blade-impact-medium-03.ogg",
+  ],
+  heavy: [
+    "/assets/audio/weapons/blade-impact-heavy-01.ogg",
+    "/assets/audio/weapons/blade-impact-heavy-02.ogg",
+    "/assets/audio/weapons/blade-impact-heavy-03.ogg",
+  ],
+  rings: [
+    "/assets/audio/weapons/blade-ring-01.ogg",
+    "/assets/audio/weapons/blade-ring-02.ogg",
+  ],
+  bodies: [
+    "/assets/audio/weapons/blade-body-01.ogg",
+    "/assets/audio/weapons/blade-body-02.ogg",
+  ],
+} as const;
+
+type WeaponSoundBank = {
+  swings: AudioBuffer[];
+  light: AudioBuffer[];
+  medium: AudioBuffer[];
+  heavy: AudioBuffer[];
+  rings: AudioBuffer[];
+  bodies: AudioBuffer[];
+};
 
 type WeaponAudioBus = {
   dry: GainNode;
   reverb: GainNode;
 };
 
-type ToneOptions = {
-  at?: number;
-  duration: number;
-  fromHz: number;
-  toHz?: number;
+type SampleOptions = {
+  at: number;
   gain: number;
-  type?: OscillatorType;
+  playbackRate: number;
+  maxDuration: number;
   pan?: number;
-  space?: number;
-};
-
-type NoiseOptions = {
-  at?: number;
-  duration: number;
-  fromHz: number;
-  toHz: number;
-  gain: number;
   filter?: BiquadFilterType;
-  pan?: number;
+  filterHz?: number;
   space?: number;
 };
 
 const audioBuses = new WeakMap<AudioContext, WeaponAudioBus>();
-const noiseBuffers = new WeakMap<AudioContext, AudioBuffer>();
+const transientBuffers = new WeakMap<AudioContext, AudioBuffer>();
+const activeBursts = new WeakMap<AudioContext, AudioScheduledSourceNode[][]>();
 
 function clampTier(tier: number) {
   return Math.min(WEAPON_SOUND_PROFILES.length - 1, Math.max(0, Math.round(tier)));
@@ -93,20 +111,20 @@ function getAudioBus(context: AudioContext) {
   const master = context.createGain();
   const compressor = context.createDynamicsCompressor();
 
-  master.gain.value = 0.72;
-  wet.gain.value = 0.24;
-  compressor.threshold.value = -18;
-  compressor.knee.value = 14;
-  compressor.ratio.value = 7;
-  compressor.attack.value = 0.003;
-  compressor.release.value = 0.16;
+  master.gain.value = 0.82;
+  wet.gain.value = 0.18;
+  compressor.threshold.value = -15;
+  compressor.knee.value = 10;
+  compressor.ratio.value = 8;
+  compressor.attack.value = 0.002;
+  compressor.release.value = 0.12;
 
-  const impulseLength = Math.floor(context.sampleRate * 1.75);
+  const impulseLength = Math.floor(context.sampleRate * 0.82);
   const impulse = context.createBuffer(2, impulseLength, context.sampleRate);
   for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
     const data = impulse.getChannelData(channel);
     for (let index = 0; index < impulseLength; index += 1) {
-      const decay = Math.pow(1 - index / impulseLength, 3.2);
+      const decay = Math.pow(1 - index / impulseLength, 4.4);
       data[index] = (Math.random() * 2 - 1) * decay;
     }
   }
@@ -124,211 +142,244 @@ function getAudioBus(context: AudioContext) {
   return bus;
 }
 
-function getNoiseBuffer(context: AudioContext) {
-  const cached = noiseBuffers.get(context);
-  if (cached) return cached;
-  const buffer = context.createBuffer(1, context.sampleRate, context.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let index = 0; index < data.length; index += 1) data[index] = Math.random() * 2 - 1;
-  noiseBuffers.set(context, buffer);
-  return buffer;
-}
-
 function connectVoice(context: AudioContext, output: AudioNode, space = 0) {
   const bus = getAudioBus(context);
   output.connect(bus.dry);
-  if (space > 0) {
-    const send = context.createGain();
-    send.gain.value = Math.min(0.42, space * 0.5);
-    output.connect(send);
-    send.connect(bus.reverb);
-  }
+  if (space <= 0) return;
+  const send = context.createGain();
+  send.gain.value = Math.min(0.28, space);
+  output.connect(send);
+  send.connect(bus.reverb);
 }
 
-function tone(context: AudioContext, options: ToneOptions, pitch = 1) {
-  const start = context.currentTime + (options.at ?? 0);
-  const end = start + options.duration;
-  const oscillator = context.createOscillator();
-  const envelope = context.createGain();
-  const panner = context.createStereoPanner();
-  const peakAt = start + Math.min(0.018, options.duration * 0.24);
-
-  oscillator.type = options.type ?? "sine";
-  oscillator.frequency.setValueAtTime(Math.max(24, options.fromHz * pitch), start);
-  oscillator.frequency.exponentialRampToValueAtTime(Math.max(24, (options.toHz ?? options.fromHz) * pitch), end);
-  envelope.gain.setValueAtTime(0.0001, start);
-  envelope.gain.exponentialRampToValueAtTime(Math.max(0.0002, options.gain), peakAt);
-  envelope.gain.exponentialRampToValueAtTime(0.0001, end);
-  panner.pan.value = options.pan ?? 0;
-  oscillator.connect(envelope);
-  envelope.connect(panner);
-  connectVoice(context, panner, options.space);
-  oscillator.start(start);
-  oscillator.stop(end + 0.02);
-}
-
-function noise(context: AudioContext, options: NoiseOptions, offsetSeed = 0) {
-  const start = context.currentTime + (options.at ?? 0);
-  const end = start + options.duration;
+function playSample(context: AudioContext, buffer: AudioBuffer, options: SampleOptions) {
   const source = context.createBufferSource();
   const filter = context.createBiquadFilter();
   const envelope = context.createGain();
   const panner = context.createStereoPanner();
-  const peakAt = start + Math.min(0.014, options.duration * 0.2);
+  const rate = Math.max(0.55, options.playbackRate);
+  const naturalDuration = buffer.duration / rate;
+  const duration = Math.min(options.maxDuration, naturalDuration);
+  const end = options.at + duration;
+  const attackEnd = Math.min(end - 0.004, options.at + 0.004);
+  const releaseStart = Math.max(attackEnd, end - Math.min(0.055, duration * 0.36));
 
-  source.buffer = getNoiseBuffer(context);
-  filter.type = options.filter ?? "bandpass";
-  filter.Q.value = options.filter === "highpass" ? 0.65 : 1.2;
-  filter.frequency.setValueAtTime(Math.max(40, options.fromHz), start);
-  filter.frequency.exponentialRampToValueAtTime(Math.max(40, options.toHz), end);
-  envelope.gain.setValueAtTime(0.0001, start);
-  envelope.gain.exponentialRampToValueAtTime(Math.max(0.0002, options.gain), peakAt);
+  source.buffer = buffer;
+  source.playbackRate.value = rate;
+  filter.type = options.filter ?? "highpass";
+  filter.frequency.value = options.filterHz ?? 90;
+  filter.Q.value = 0.65;
+  envelope.gain.setValueAtTime(0.0001, options.at);
+  envelope.gain.linearRampToValueAtTime(options.gain, attackEnd);
+  envelope.gain.setValueAtTime(options.gain, releaseStart);
   envelope.gain.exponentialRampToValueAtTime(0.0001, end);
   panner.pan.value = options.pan ?? 0;
+
   source.connect(filter);
   filter.connect(envelope);
   envelope.connect(panner);
   connectVoice(context, panner, options.space);
-  const offset = (Math.abs(offsetSeed) * 0.071) % Math.max(0.01, 0.96 - options.duration);
-  source.start(start, offset, options.duration + 0.01);
+  source.start(options.at);
+  source.stop(end + 0.008);
+  return source;
 }
 
-function renderSignature(context: AudioContext, profile: WeaponSoundProfile, variation: number, pitch: number) {
-  const flip = variation % 2 === 0 ? 1 : -1;
-  const bodyGain = 0.055 + profile.impact * 0.055;
-  const slashGain = 0.035 + profile.slash * 0.05;
-  const shineGain = 0.016 + profile.brilliance * 0.035;
-  const space = profile.space;
+function getTransientBuffer(context: AudioContext) {
+  const cached = transientBuffers.get(context);
+  if (cached) return cached;
+  const length = Math.floor(context.sampleRate * 0.038);
+  const buffer = context.createBuffer(1, length, context.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let index = 0; index < data.length; index += 1) {
+    const decay = Math.pow(1 - index / data.length, 5.6);
+    data[index] = (Math.random() * 2 - 1) * decay;
+  }
+  transientBuffers.set(context, buffer);
+  return buffer;
+}
 
-  switch (profile.signature) {
-    case "training":
-      tone(context, { duration: 0.16, fromHz: profile.bodyHz * 1.18, toHz: profile.bodyHz * 0.68, gain: bodyGain, type: "triangle", space }, pitch);
-      noise(context, { duration: 0.11, fromHz: 760, toHz: 260, gain: slashGain, filter: "bandpass", pan: 0.08 * flip, space }, variation);
-      break;
-    case "crescent":
-      noise(context, { duration: 0.21, fromHz: 420, toHz: 2480, gain: slashGain, filter: "highpass", pan: 0.34 * flip, space }, variation);
-      tone(context, { at: 0.018, duration: 0.19, fromHz: profile.bladeHz * 0.72, toHz: profile.bladeHz * 1.14, gain: shineGain, type: "sine", pan: 0.25 * flip, space }, pitch);
-      tone(context, { duration: 0.14, fromHz: profile.bodyHz, toHz: profile.bodyHz * 0.72, gain: bodyGain * 0.72, type: "triangle", space }, pitch);
-      break;
-    case "twin":
-      for (let index = 0; index < 2; index += 1) {
-        const pan = (index === 0 ? -0.52 : 0.52) * flip;
-        noise(context, { at: index * 0.058, duration: 0.16, fromHz: 1980, toHz: 540, gain: slashGain * 0.82, filter: "highpass", pan, space }, variation + index);
-        tone(context, { at: index * 0.058, duration: 0.14, fromHz: profile.bladeHz * (1 + index * 0.12), toHz: profile.bladeHz * 0.7, gain: shineGain, type: "triangle", pan, space }, pitch);
-      }
-      tone(context, { at: 0.085, duration: 0.14, fromHz: profile.bodyHz, toHz: profile.bodyHz * 0.6, gain: bodyGain * 0.82, type: "sine", space }, pitch);
-      break;
-    case "rune":
-      for (let index = 0; index < 3; index += 1) {
-        tone(context, { at: index * 0.038, duration: 0.105, fromHz: profile.bodyHz * (2.7 - index * 0.38), toHz: profile.bodyHz * (1.15 - index * 0.08), gain: bodyGain * (0.84 - index * 0.1), type: "square", pan: (index - 1) * 0.28 * flip, space }, pitch);
-      }
-      noise(context, { at: 0.065, duration: 0.18, fromHz: 1660, toHz: 180, gain: slashGain, filter: "bandpass", space }, variation);
-      tone(context, { at: 0.10, duration: 0.19, fromHz: profile.accentHz, toHz: profile.accentHz * 0.52, gain: shineGain, type: "sine", space: space + 0.08 }, pitch);
-      break;
-    case "sky":
-      for (let index = 0; index < 5; index += 1) {
-        const at = index * 0.027;
-        tone(context, { at, duration: 0.17, fromHz: profile.bladeHz * (0.72 + index * 0.08), toHz: profile.accentHz * (0.86 + index * 0.035), gain: shineGain * 0.66, type: index % 2 ? "sine" : "triangle", pan: ((index - 2) / 4) * flip, space }, pitch);
-      }
-      noise(context, { at: 0.035, duration: 0.23, fromHz: 580, toHz: 4120, gain: slashGain, filter: "highpass", space }, variation);
-      tone(context, { at: 0.11, duration: 0.20, fromHz: profile.bodyHz, toHz: profile.bodyHz * 0.5, gain: bodyGain, type: "triangle", space }, pitch);
-      break;
-    case "nebula":
-      noise(context, { duration: 0.30, fromHz: 620, toHz: 3680, gain: slashGain * 0.82, filter: "highpass", pan: 0.2 * flip, space: space + 0.08 }, variation);
-      [1, 1.26, 1.5, 2.02].forEach((ratio, index) => {
-        tone(context, { at: 0.02 + index * 0.039, duration: 0.23 - index * 0.018, fromHz: profile.bladeHz * ratio, toHz: profile.accentHz * ratio * 0.72, gain: shineGain * (0.78 - index * 0.08), type: "sine", pan: (index % 2 ? 0.48 : -0.48) * flip, space: space + 0.1 }, pitch);
-      });
-      tone(context, { at: 0.11, duration: 0.24, fromHz: profile.bodyHz * 1.1, toHz: profile.bodyHz * 0.52, gain: bodyGain, type: "triangle", space }, pitch);
-      break;
-    case "dragon":
-      tone(context, { duration: 0.34, fromHz: profile.bodyHz * 1.42, toHz: profile.bodyHz * 0.42, gain: bodyGain * 1.25, type: "sawtooth", space }, pitch);
-      noise(context, { duration: 0.35, fromHz: 1760, toHz: 84, gain: slashGain * 1.12, filter: "bandpass", space }, variation);
-      for (let index = 0; index < 4; index += 1) {
-        tone(context, { at: 0.018 + index * 0.034, duration: 0.075, fromHz: profile.accentHz * (1 + index * 0.09), toHz: profile.bladeHz * 0.86, gain: shineGain * 0.78, type: "square", pan: (index % 2 ? 0.65 : -0.65) * flip, space }, pitch);
-      }
-      break;
-    case "celestial":
-      tone(context, { duration: 0.26, fromHz: profile.bodyHz * 1.4, toHz: profile.bodyHz * 0.48, gain: bodyGain * 1.18, type: "triangle", space }, pitch);
-      noise(context, { duration: 0.28, fromHz: 5200, toHz: 460, gain: slashGain, filter: "highpass", space }, variation);
-      [1, 1.5, 2, 2.5].forEach((ratio, index) => tone(context, { at: 0.045 + index * 0.012, duration: 0.31, fromHz: profile.bladeHz * ratio, toHz: profile.bladeHz * ratio * 0.96, gain: shineGain * (0.72 - index * 0.08), type: "sine", pan: (index - 1.5) * 0.24 * flip, space: space + 0.12 }, pitch));
-      break;
-    case "blood-moon":
-      tone(context, { duration: 0.38, fromHz: profile.bodyHz * 1.7, toHz: profile.bodyHz * 0.36, gain: bodyGain * 1.28, type: "sawtooth", pan: -0.14 * flip, space }, pitch);
-      noise(context, { duration: 0.31, fromHz: 380, toHz: 2860, gain: slashGain * 1.06, filter: "highpass", pan: -0.55 * flip, space }, variation);
-      noise(context, { at: 0.095, duration: 0.25, fromHz: 2720, toHz: 310, gain: slashGain * 0.84, filter: "bandpass", pan: 0.55 * flip, space }, variation + 1);
-      tone(context, { at: 0.105, duration: 0.31, fromHz: profile.accentHz * 0.82, toHz: profile.bladeHz * 0.48, gain: shineGain, type: "triangle", space: space + 0.08 }, pitch);
-      break;
-    case "storm":
-      for (let index = 0; index < 6; index += 1) {
-        const pan = (index % 2 ? 0.72 : -0.72) * flip;
-        const at = index * 0.026;
-        noise(context, { at, duration: 0.12, fromHz: 4100 - index * 260, toHz: 620, gain: slashGain * 0.56, filter: "highpass", pan, space }, variation + index);
-        tone(context, { at, duration: 0.085, fromHz: profile.accentHz * (1 + index * 0.04), toHz: profile.bladeHz * 0.62, gain: shineGain * 0.56, type: "square", pan, space }, pitch);
-      }
-      tone(context, { at: 0.12, duration: 0.31, fromHz: profile.bodyHz * 1.6, toHz: profile.bodyHz * 0.38, gain: bodyGain * 1.3, type: "sawtooth", space }, pitch);
-      break;
-    case "radiant":
-      tone(context, { duration: 0.39, fromHz: profile.bodyHz * 1.55, toHz: profile.bodyHz * 0.35, gain: bodyGain * 1.34, type: "triangle", space }, pitch);
-      noise(context, { duration: 0.36, fromHz: 6800, toHz: 380, gain: slashGain * 1.08, filter: "highpass", space }, variation);
-      [1, 1.25, 1.5, 2].forEach((ratio, index) => tone(context, { at: 0.055, duration: 0.39, fromHz: profile.bladeHz * ratio, toHz: profile.accentHz * ratio * 0.78, gain: shineGain * (0.82 - index * 0.09), type: "sine", pan: (index - 1.5) * 0.28 * flip, space: space + 0.12 }, pitch));
-      break;
-    case "abyss":
-      noise(context, { duration: 0.36, fromHz: 5200, toHz: 72, gain: slashGain * 1.08, filter: "bandpass", pan: 0.12 * flip, space }, variation);
-      tone(context, { duration: 0.45, fromHz: profile.bodyHz * 1.75, toHz: 28, gain: bodyGain * 1.42, type: "sawtooth", space: space + 0.08 }, pitch);
-      tone(context, { at: 0.085, duration: 0.36, fromHz: profile.bladeHz * 0.62, toHz: profile.accentHz * 0.34, gain: shineGain * 0.92, type: "sine", pan: -0.48 * flip, space: space + 0.14 }, pitch);
-      tone(context, { at: 0.11, duration: 0.32, fromHz: profile.bladeHz * 0.68, toHz: profile.accentHz * 0.27, gain: shineGain * 0.78, type: "triangle", pan: 0.48 * flip, space: space + 0.14 }, pitch);
-      break;
-    case "time":
-      for (let index = 0; index < 4; index += 1) {
-        const at = index * 0.052;
-        tone(context, { at, duration: 0.075, fromHz: profile.accentHz * (1 - index * 0.08), toHz: profile.accentHz * (0.74 + index * 0.03), gain: shineGain * 0.68, type: "square", pan: (index % 2 ? 0.58 : -0.58) * flip, space }, pitch);
-      }
-      noise(context, { at: 0.20, duration: 0.23, fromHz: 7200, toHz: 320, gain: slashGain * 1.12, filter: "highpass", space }, variation);
-      [0.75, 1, 1.5, 2].forEach((ratio, index) => tone(context, { at: 0.205, duration: 0.32, fromHz: profile.bladeHz * ratio, toHz: profile.bodyHz * (1.4 + index * 0.2), gain: index === 0 ? bodyGain : shineGain * 0.72, type: index === 0 ? "triangle" : "sine", pan: (index - 1.5) * 0.25 * flip, space: space + 0.1 }, pitch));
-      break;
-    case "world-tree":
-      for (let index = 0; index < 3; index += 1) {
-        noise(context, { at: index * 0.047, duration: 0.13, fromHz: 940 - index * 170, toHz: 124, gain: slashGain * 0.68, filter: "bandpass", pan: (index - 1) * 0.34 * flip, space }, variation + index);
-      }
-      [1, 1.5, 2, 2.5].forEach((ratio, index) => tone(context, { at: 0.055 + index * 0.018, duration: 0.45, fromHz: profile.bodyHz * ratio, toHz: profile.bodyHz * ratio * 0.72, gain: index === 0 ? bodyGain * 1.18 : shineGain * 0.78, type: index % 2 ? "sine" : "triangle", pan: (index - 1.5) * 0.2 * flip, space: space + 0.13 }, pitch));
-      noise(context, { at: 0.12, duration: 0.36, fromHz: 480, toHz: 3560, gain: slashGain * 0.82, filter: "highpass", space }, variation);
-      break;
-    case "myriad":
-      for (let index = 0; index < 7; index += 1) {
-        const at = index * 0.022;
-        const pan = (((index * 3) % 7) / 3.5 - 0.86) * flip;
-        noise(context, { at, duration: 0.11, fromHz: 7200 - index * 420, toHz: 720, gain: slashGain * 0.48, filter: "highpass", pan, space }, variation + index);
-        tone(context, { at, duration: 0.10, fromHz: profile.accentHz * (0.82 + index * 0.045), toHz: profile.bladeHz * 0.54, gain: shineGain * 0.48, type: index % 2 ? "sine" : "triangle", pan, space }, pitch);
-      }
-      tone(context, { at: 0.145, duration: 0.44, fromHz: profile.bodyHz * 2.15, toHz: 26, gain: bodyGain * 1.58, type: "sawtooth", space: space + 0.08 }, pitch);
-      noise(context, { at: 0.145, duration: 0.40, fromHz: 8200, toHz: 86, gain: slashGain * 1.12, filter: "bandpass", space }, variation);
-      [1, 1.25, 1.5, 2, 2.5].forEach((ratio, index) => tone(context, { at: 0.16, duration: 0.44, fromHz: profile.bladeHz * ratio, toHz: profile.accentHz * ratio * 0.68, gain: shineGain * (0.82 - index * 0.075), type: "sine", pan: (index - 2) * 0.22 * flip, space: space + 0.16 }, pitch));
-      break;
+function playBladeCrack(context: AudioContext, profile: WeaponSoundProfile, at: number, pan: number) {
+  return playSample(context, getTransientBuffer(context), {
+    at,
+    gain: 0.075 + profile.impactGain * 0.10,
+    playbackRate: 1,
+    maxDuration: 0.018 + profile.tier * 0.0008,
+    pan,
+    filter: "highpass",
+    filterHz: 2300 + profile.tier * 85,
+    space: profile.tail * 0.09,
+  });
+}
+
+function playSubImpact(context: AudioContext, profile: WeaponSoundProfile, at: number, pan: number) {
+  const oscillator = context.createOscillator();
+  const envelope = context.createGain();
+  const panner = context.createStereoPanner();
+  const duration = 0.10 + profile.tail * 0.38;
+  const end = at + duration;
+  const startHz = 96 - profile.tier * 1.8;
+  const endHz = Math.max(28, 43 - profile.tier * 0.65);
+
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(startHz, at);
+  oscillator.frequency.exponentialRampToValueAtTime(endHz, end);
+  envelope.gain.setValueAtTime(0.0001, at);
+  envelope.gain.exponentialRampToValueAtTime(Math.max(0.0002, profile.subGain), at + 0.009);
+  envelope.gain.exponentialRampToValueAtTime(0.0001, end);
+  panner.pan.value = pan;
+  oscillator.connect(envelope);
+  envelope.connect(panner);
+  connectVoice(context, panner, profile.tail * 0.06);
+  oscillator.start(at);
+  oscillator.stop(end + 0.01);
+  return oscillator;
+}
+
+function registerBurst(context: AudioContext, sources: AudioScheduledSourceNode[]) {
+  const bursts = activeBursts.get(context) ?? [];
+  bursts.push(sources);
+  while (bursts.length > 7) {
+    const oldest = bursts.shift();
+    oldest?.forEach((source) => {
+      try { source.stop(); } catch { /* already ended */ }
+    });
+  }
+  activeBursts.set(context, bursts);
+  const lastSource = sources.at(-1);
+  if (lastSource) {
+    lastSource.addEventListener("ended", () => {
+      const current = activeBursts.get(context);
+      if (!current) return;
+      const index = current.indexOf(sources);
+      if (index >= 0) current.splice(index, 1);
+    }, { once: true });
   }
 }
 
-function renderProgressionLayers(context: AudioContext, profile: WeaponSoundProfile, variation: number, pitch: number) {
-  const flip = variation % 2 === 0 ? 1 : -1;
-  if (profile.tier >= 4) {
-    tone(context, { at: 0.11, duration: profile.duration * 0.72, fromHz: profile.accentHz * 1.08, toHz: profile.accentHz * 0.72, gain: 0.018 + profile.brilliance * 0.018, type: "sine", pan: 0.36 * flip, space: profile.space + 0.12 }, pitch);
-  }
-  if (profile.tier >= 7) {
-    tone(context, { at: 0.055, duration: profile.duration * 0.7, fromHz: Math.max(46, profile.bodyHz * 0.72), toHz: 28, gain: 0.038 + profile.impact * 0.026, type: "sine", pan: -0.12 * flip, space: profile.space }, pitch);
-  }
-  if (profile.tier >= 10) {
-    noise(context, { at: 0.08, duration: profile.duration * 0.62, fromHz: 7600, toHz: 980, gain: 0.018 + profile.slash * 0.022, filter: "highpass", pan: 0.62 * flip, space: profile.space + 0.1 }, variation + 17);
-    noise(context, { at: 0.095, duration: profile.duration * 0.58, fromHz: 6800, toHz: 720, gain: 0.016 + profile.slash * 0.02, filter: "highpass", pan: -0.62 * flip, space: profile.space + 0.1 }, variation + 29);
-  }
-  if (profile.tier >= 13) {
-    [1, 1.25, 1.5].forEach((ratio, index) => tone(context, { at: 0.18 + index * 0.008, duration: profile.duration * 0.72, fromHz: profile.accentHz * ratio, toHz: profile.accentHz * ratio * 0.74, gain: 0.022 + profile.brilliance * 0.014, type: "sine", pan: (index - 1) * 0.5 * flip, space: profile.space + 0.18 }, pitch));
-  }
+async function fetchAudioBytes() {
+  const urls = [...new Set(Object.values(WEAPON_AUDIO_ASSETS).flat())];
+  const entries = await Promise.all(urls.map(async (url) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Weapon audio failed to load: ${url}`);
+    return [url, await response.arrayBuffer()] as const;
+  }));
+  return new Map(entries);
 }
 
-export function playWeaponAttackSound(context: AudioContext, tier: number, variation = 0) {
+async function decodeSoundBank(context: AudioContext, bytes: Map<string, ArrayBuffer>): Promise<WeaponSoundBank> {
+  const decodeGroup = (urls: readonly string[]) => Promise.all(urls.map((url) => {
+    const data = bytes.get(url);
+    if (!data) throw new Error(`Weapon audio data missing: ${url}`);
+    return context.decodeAudioData(data.slice(0));
+  }));
+  return {
+    swings: await decodeGroup(WEAPON_AUDIO_ASSETS.swings),
+    light: await decodeGroup(WEAPON_AUDIO_ASSETS.light),
+    medium: await decodeGroup(WEAPON_AUDIO_ASSETS.medium),
+    heavy: await decodeGroup(WEAPON_AUDIO_ASSETS.heavy),
+    rings: await decodeGroup(WEAPON_AUDIO_ASSETS.rings),
+    bodies: await decodeGroup(WEAPON_AUDIO_ASSETS.bodies),
+  };
+}
+
+export function playWeaponAttackSound(context: AudioContext, bank: WeaponSoundBank, tier: number, variation = 0) {
   const profile = WEAPON_SOUND_PROFILES[clampTier(tier)];
-  const pitch = 1 + ((variation % 5) - 2) * 0.006;
-  renderSignature(context, profile, variation, pitch);
-  renderProgressionLayers(context, profile, variation, pitch);
+  const start = context.currentTime + 0.004;
+  const impactAt = start + profile.impactDelay;
+  const direction = variation % 2 === 0 ? 1 : -1;
+  const jitter = 1 + ((variation % 5) - 2) * 0.009;
+  const swingPan = direction * profile.width * 0.48;
+  const impactPan = direction * profile.width * 0.12;
+  const impactBuffers = bank[profile.impactWeight];
+  const sources: AudioScheduledSourceNode[] = [];
+
+  sources.push(playSample(context, bank.swings[variation % bank.swings.length], {
+    at: start,
+    gain: profile.swingGain,
+    playbackRate: profile.swingRate * jitter,
+    maxDuration: 0.20 + profile.tail * 0.36,
+    pan: swingPan,
+    filter: "highpass",
+    filterHz: 170 + profile.tier * 9,
+    space: profile.tail * 0.22,
+  }));
+
+  sources.push(playBladeCrack(context, profile, impactAt, impactPan));
+  sources.push(playSample(context, impactBuffers[variation % impactBuffers.length], {
+    at: impactAt,
+    gain: profile.impactGain,
+    playbackRate: profile.impactRate * jitter,
+    maxDuration: 0.15 + profile.tail * 0.52,
+    pan: impactPan,
+    filter: "highpass",
+    filterHz: 72,
+    space: profile.tail * 0.24,
+  }));
+
+  sources.push(playSample(context, bank.bodies[variation % bank.bodies.length], {
+    at: impactAt + 0.003,
+    gain: profile.bodyGain,
+    playbackRate: Math.max(0.68, 0.94 - profile.tier * 0.012) * jitter,
+    maxDuration: 0.13 + profile.tail * 0.38,
+    pan: -impactPan * 0.45,
+    filter: "lowpass",
+    filterHz: 1050 - profile.tier * 22,
+    space: profile.tail * 0.08,
+  }));
+
+  sources.push(playSample(context, bank.rings[variation % bank.rings.length], {
+    at: impactAt + 0.006,
+    gain: profile.ringGain,
+    playbackRate: Math.max(0.64, 1.10 - profile.tier * 0.022) * jitter,
+    maxDuration: 0.11 + profile.tail * 0.70,
+    pan: -direction * profile.width * 0.28,
+    filter: "highpass",
+    filterHz: 620,
+    space: profile.tail * 0.34,
+  }));
+
+  sources.push(playSubImpact(context, profile, impactAt, -impactPan));
+
+  if (profile.tier >= 9) {
+    sources.push(playSample(context, bank.swings[(variation + 1) % bank.swings.length], {
+      at: start + 0.012,
+      gain: profile.swingGain * (0.20 + profile.width * 0.18),
+      playbackRate: profile.swingRate * 0.94 / jitter,
+      maxDuration: 0.18 + profile.tail * 0.30,
+      pan: -swingPan,
+      filter: "highpass",
+      filterHz: 260,
+      space: profile.tail * 0.20,
+    }));
+  }
+
+  if (profile.tier >= 12) {
+    sources.push(playSample(context, impactBuffers[(variation + 1) % impactBuffers.length], {
+      at: impactAt + 0.026,
+      gain: profile.impactGain * 0.24,
+      playbackRate: profile.impactRate * 1.08 / jitter,
+      maxDuration: 0.12 + profile.tail * 0.22,
+      pan: -direction * profile.width * 0.42,
+      filter: "highpass",
+      filterHz: 150,
+      space: profile.tail * 0.18,
+    }));
+  }
+
+  if (profile.tier >= 14) {
+    sources.push(playSample(context, bank.rings[(variation + 1) % bank.rings.length], {
+      at: impactAt + 0.042,
+      gain: profile.ringGain * 0.34,
+      playbackRate: 0.69 / jitter,
+      maxDuration: 0.34,
+      pan: direction * 0.65,
+      filter: "bandpass",
+      filterHz: 1320,
+      space: 0.22,
+    }));
+  }
+
+  registerBurst(context, sources);
   return profile;
 }
 
@@ -346,33 +397,45 @@ function findAttackArena(target: EventTarget | null) {
 }
 
 export function installWeaponAttackAudio() {
+  const bytesPromise = fetchAudioBytes();
+  void bytesPromise.catch(() => undefined);
   let context: AudioContext | null = null;
+  let bankPromise: Promise<WeaponSoundBank> | null = null;
   let variation = 0;
   let disposed = false;
-  document.documentElement.dataset.weaponAudio = "ready";
+  document.documentElement.dataset.weaponAudio = "loading";
 
-  const playFromPointer = (event: PointerEvent) => {
-    const arena = findAttackArena(event.target);
-    const attackButton = document.querySelector<HTMLButtonElement>(".attack-button");
-    if (!arena || !attackButton || attackButton.disabled) return;
-    const tier = weaponTierFromClassName(arena.className);
-    if (tier === null || typeof window.AudioContext === "undefined") return;
-
+  const prepareAudio = () => {
+    if (typeof window.AudioContext === "undefined") return null;
     context ??= new window.AudioContext({ latencyHint: "interactive" });
     const activeContext = context;
+    if (activeContext.state === "suspended") void activeContext.resume().catch(() => undefined);
+    bankPromise ??= bytesPromise.then((bytes) => decodeSoundBank(activeContext, bytes)).then((bank) => {
+      if (!disposed) document.documentElement.dataset.weaponAudio = "ready";
+      return bank;
+    });
+    return bankPromise.then((bank) => ({ context: activeContext, bank }));
+  };
+
+  const playFromPointer = (event: PointerEvent) => {
+    const prepared = prepareAudio();
+    const arena = findAttackArena(event.target);
+    const attackButton = document.querySelector<HTMLButtonElement>(".attack-button");
+    if (!prepared || !arena || !attackButton || attackButton.disabled) return;
+    const tier = weaponTierFromClassName(arena.className);
+    if (tier === null) return;
     const currentVariation = variation;
     variation += 1;
 
-    const play = () => {
+    void prepared.then(({ context: activeContext, bank }) => {
       if (disposed || activeContext.state === "closed") return;
-      const profile = playWeaponAttackSound(activeContext, tier, currentVariation);
+      const profile = playWeaponAttackSound(activeContext, bank, tier, currentVariation);
       arena.dataset.lastWeaponSound = profile.key;
       arena.dataset.lastWeaponSoundTier = String(profile.tier);
       window.dispatchEvent(new CustomEvent("guild:weapon-attack-sound", { detail: { tier: profile.tier, key: profile.key, weaponName: profile.weaponName } }));
-    };
-
-    if (activeContext.state === "suspended") void activeContext.resume().then(play).catch(() => undefined);
-    else play();
+    }).catch(() => {
+      if (!disposed) document.documentElement.dataset.weaponAudio = "error";
+    });
   };
 
   document.addEventListener("pointerdown", playFromPointer, { capture: true });
