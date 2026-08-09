@@ -8,6 +8,8 @@ import {
 let battleAudioContext: AudioContext | null = null;
 let sfxMasterGain: GainNode | null = null;
 let listeningToAudioSettings = false;
+let lastMonsterHitAt = -1;
+let monsterHitVariation = 0;
 
 const GOLD_COIN_SAMPLE_URLS = [
   "/assets/audio/loot/gold-coin-clink-01.mp3",
@@ -146,6 +148,17 @@ function noiseBurst(
   source.start(start);
 }
 
+function playWhenAudioIsReady(play: (context: AudioContext) => void) {
+  const context = getAudioContext();
+  if (!context) return;
+  getSfxOutput(context);
+  if (context.state === "running") {
+    play(context);
+    return;
+  }
+  void context.resume().then(() => play(context)).catch(() => undefined);
+}
+
 export function unlockBattleAudio() {
   const context = getAudioContext();
   if (!context) return;
@@ -155,19 +168,74 @@ export function unlockBattleAudio() {
 }
 
 export function playSoundSettingsPreview() {
-  const context = getAudioContext();
-  if (!context) return;
-  getSfxOutput(context);
-  const play = () => {
+  playWhenAudioIsReady((context) => {
     const start = context.currentTime;
     tone(context, 587, start, 0.13, 0.03, "triangle", 740);
     tone(context, 880, start + 0.07, 0.2, 0.025, "sine", 1175);
-  };
-  if (context.state === "running") {
-    play();
-    return;
+  });
+}
+
+export function playMenuTabSound() {
+  playWhenAudioIsReady((context) => {
+    const start = context.currentTime;
+    tone(context, 420, start, 0.065, 0.018, "triangle", 610, 0.002);
+    tone(context, 840, start + 0.018, 0.055, 0.009, "sine", 1120, 0.0015);
+    noiseBurst(context, start, 0.026, 0.006, 2600, 4200);
+  });
+}
+
+export function playExpeditionStartSound(boss = false) {
+  playWhenAudioIsReady((context) => {
+    const start = context.currentTime;
+    const weight = boss ? 1.18 : 1;
+    tone(context, boss ? 82 : 98, start, 0.34, 0.04 * weight, "triangle", boss ? 61 : 73, 0.004);
+    noiseBurst(context, start, 0.16, 0.026 * weight, 210, 92);
+    tone(context, boss ? 164 : 196, start + 0.07, 0.34, 0.023, "sawtooth", boss ? 220 : 262, 0.018);
+    tone(context, boss ? 246 : 294, start + 0.15, 0.31, 0.018, "triangle", boss ? 328 : 392, 0.014);
+    tone(context, boss ? 328 : 392, start + 0.25, 0.3, 0.016, "sine", boss ? 438 : 523, 0.012);
+  });
+}
+
+export function playGuildMemberHireSound() {
+  playWhenAudioIsReady((context) => {
+    const start = context.currentTime;
+    tone(context, 145, start, 0.13, 0.027, "triangle", 92, 0.003);
+    noiseBurst(context, start, 0.055, 0.012, 1200, 620);
+    [523, 659, 784].forEach((frequency, index) => {
+      tone(context, frequency, start + 0.055 + index * 0.065, 0.25, 0.021, "sine", frequency * 1.025, 0.008);
+      tone(context, frequency * 2, start + 0.065 + index * 0.065, 0.14, 0.006, "triangle", frequency * 2.08, 0.004);
+    });
+  });
+}
+
+export function playExpeditionFailSound() {
+  playWhenAudioIsReady((context) => {
+    const start = context.currentTime;
+    noiseBurst(context, start, 0.22, 0.02, 520, 110);
+    tone(context, 392, start, 0.26, 0.023, "triangle", 311, 0.01);
+    tone(context, 294, start + 0.13, 0.32, 0.026, "triangle", 220, 0.012);
+    tone(context, 196, start + 0.28, 0.48, 0.032, "sawtooth", 98, 0.018);
+    tone(context, 73, start + 0.3, 0.5, 0.035, "sine", 49, 0.008);
+  });
+}
+
+export function playMonsterHitSound(impactTier = 0, targetCount = 1) {
+  const context = getAudioContext();
+  if (!context || context.state !== "running") return;
+  const start = context.currentTime;
+  if (start - lastMonsterHitAt < 0.035) return;
+  lastMonsterHitAt = start;
+  monsterHitVariation = (monsterHitVariation + 1) % 5;
+
+  const tier = Math.max(0, Math.min(4, impactTier));
+  const crowdWeight = Math.min(1, Math.max(0, targetCount - 1) / 7);
+  const variation = (monsterHitVariation - 2) * 18;
+  const bodyFrequency = 175 + tier * 28 + variation;
+  noiseBurst(context, start, 0.048 + tier * 0.008, 0.012 + tier * 0.003 + crowdWeight * 0.004, 1850 + tier * 280, 620 + tier * 90);
+  tone(context, bodyFrequency, start, 0.072 + tier * 0.012, 0.018 + tier * 0.003, "triangle", Math.max(72, bodyFrequency * 0.55), 0.002);
+  if (tier >= 2 || targetCount >= 4) {
+    tone(context, 720 + tier * 90 + variation, start + 0.012, 0.065, 0.008 + crowdWeight * 0.003, "square", 360 + tier * 55, 0.0015);
   }
-  void context.resume().then(play).catch(() => undefined);
 }
 
 export function playLootDropSound(profile: LootSoundProfile, dropIndex = 0) {
