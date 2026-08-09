@@ -20,7 +20,7 @@ test("every finalized victory plays exactly one stage clear sound", () => {
 });
 
 test("stage clear sound shares the global SFX output and smoke marker", () => {
-  const implementation = audioSource.match(/export function playStageClearSound[\s\S]*?\n}\n\nexport function playMonsterHitSound/)?.[0] ?? "";
+  const implementation = audioSource.match(/export function playStageClearSound[\s\S]*?\r?\n}\r?\n\r?\nexport function playMonsterHitSound/)?.[0] ?? "";
   assert.match(implementation, /playWhenAudioIsReady/);
   assert.match(implementation, /markEventSound/);
   assert.match(implementation, /noiseBurst/);

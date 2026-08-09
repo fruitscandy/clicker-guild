@@ -303,7 +303,9 @@ test("launches expeditions from the hunting ground inside the guild territory", 
   assert.doesNotMatch(game, /GUILD TERRITORY|<h2>길드 관리<\/h2>|expedition-actions/);
   assert.match(game, /aria-label="길드 영지"/);
   assert.match(game, /<TerritoryHuntingGround/);
-  assert.match(game, /<HuntingGroundPanel/);
+  assert.doesNotMatch(game, /<HuntingGroundPanel|huntingGroundOpen/);
+  assert.match(game, /function openHuntingGround\(\) \{[\s\S]*?setStagePicker\(true\)/);
+  assert.match(game, /onSelectStage=\{startStage\}/);
   assert.match(game, /title="사냥터 지도 · 토벌 목표 선택"/);
   assert.match(huntingGround, /토벌 지도 열기/);
   assert.match(huntingGround, /이 웨이브 출정/);

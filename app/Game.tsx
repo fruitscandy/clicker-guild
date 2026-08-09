@@ -34,7 +34,7 @@ import { DeveloperResourcePanel } from "./guild-hub/DeveloperResourcePanel";
 import { DeveloperUpgradePanel } from "./guild-hub/DeveloperUpgradePanel";
 import { ForgeWorkshop } from "./guild-hub/ForgeWorkshop";
 import { GuildBuildingHub } from "./guild-hub/GuildBuildingHub";
-import { HuntingGroundPanel, TerritoryHuntingGround } from "./guild-hub/HuntingGround";
+import { TerritoryHuntingGround } from "./guild-hub/HuntingGround";
 import { ResearchMap, type ResearchNodeView } from "./guild-hub/ResearchMap";
 import { SpecialResearchPanel } from "./guild-hub/SpecialResearchPanel";
 import { TavernHall } from "./guild-hub/TavernHall";
@@ -427,7 +427,6 @@ function upgradeEffectText(key: UpgradeKey, level: number) {
 export default function Game() {
   const [save, setSave] = useState<SaveState>(initialState);
   const [activeFacility, setActiveFacility] = useState<GuildFacility>("hall");
-  const [huntingGroundOpen, setHuntingGroundOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [battleActive, setBattleActive] = useState(false);
   const [fieldMonsters, setFieldMonsters] = useState<FieldMonster[]>([]);
@@ -880,14 +879,6 @@ export default function Game() {
     return () => window.clearInterval(timer);
   }, [save.specials.auto, battleActive, directAttackAt, autoAttackPoint]);
 
-  function selectStage(stageNumber: number) {
-    const nextStage = getStage(stageNumber);
-    if (developerMode) setDeveloperStage(stageNumber);
-    else setSave((current) => ({ ...current, selectedStage: stageNumber }));
-    setStagePicker(false);
-    setToast(`${nextStage.region.name} ${nextStage.localStage}구역을 다음 토벌 목표로 지정했습니다.`);
-  }
-
   function startStage(stageNumber = stage.stage) {
     unlockBattleAudio();
     if (!save.party.length && !developerMode) {
@@ -1087,13 +1078,12 @@ export default function Game() {
 
   function selectGuildFacility(facility: GuildFacility) {
     playMenuTabSound();
-    setHuntingGroundOpen(false);
     setActiveFacility(facility);
   }
 
   function openHuntingGround() {
     playMenuTabSound();
-    setHuntingGroundOpen(true);
+    setStagePicker(true);
   }
 
   function toggleParty(id: string) {
@@ -1201,7 +1191,7 @@ export default function Game() {
       {!combatLocked && (
         <section className="screen guild-screen" aria-label="길드 영지">
           <TerritoryHuntingGround
-            active={huntingGroundOpen}
+            active={stagePicker}
             stageLabel={`${stage.region.name} ${stage.localStage}웨이브`}
             onOpen={openHuntingGround}
           >
@@ -1223,23 +1213,7 @@ export default function Game() {
             onChange={(resources) => setSave((current) => ({ ...current, ...resources }))}
           />}
 
-          {huntingGroundOpen ? <HuntingGroundPanel
-            regionName={stage.region.name}
-            localStage={stage.localStage}
-            stageNumber={stage.stage}
-            unlockedStage={developerMode ? STAGE_COUNT : save.unlockedStage}
-            boss={stage.boss}
-            rewardGold={compactNumber(Math.round(stage.gold * goldMultiplier))}
-            rewardXp={compactNumber(stage.xp)}
-            materialName={stageMaterial.name}
-            materialAmount={stageMaterial.rewardAmount}
-            partyCount={save.party.length}
-            fieldImage={fieldAsset.source}
-            fieldImagePosition={fieldAsset.objectPosition}
-            onOpenMap={() => setStagePicker(true)}
-            onStart={() => startStage()}
-            onClose={() => setHuntingGroundOpen(false)}
-          /> : <div className={`guild-facility-content facility-${activeFacility}`}>
+          <div className={`guild-facility-content facility-${activeFacility}`}>
           {activeFacility === "hall" && <div className="guild-layout guild-hall-management">
             <div className="hall-upgrade-panel panel">
               <div className="panel-title"><div><span className="eyebrow">GUILD HALL DEVELOPMENT</span><h3>길드 본관 승급</h3></div><span className="level-chip">본관 Lv.{hallStage.level}/6</span></div>
@@ -1321,7 +1295,7 @@ export default function Game() {
             </button>)}</div>
           </div>
           </>}
-          </div>}
+          </div>
         </section>
       )}
 
@@ -1514,7 +1488,7 @@ export default function Game() {
           unlockedStage={save.unlockedStage}
           clearedStages={save.cleared}
           developerMode={developerMode}
-          onSelectStage={selectStage}
+          onSelectStage={startStage}
           onClose={() => setStagePicker(false)}
           title="사냥터 지도 · 토벌 목표 선택"
         />
