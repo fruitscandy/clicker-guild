@@ -152,6 +152,6 @@ export function WeaponCursor({ weapon, point }: WeaponCursorProps) {
   >
     <i className={styles.cursorRing} />
     <WeaponArt tier={weapon.tier} glyph={weapon.glyph} label={weapon.weaponName} className={styles.cursorWeapon} />
-    <span className={styles.cursorLabel}><b>+{weapon.tier}</b>{weapon.weaponName}</span>
+    <span className={styles.cursorLabel}><b>연계</b>{weapon.weaponName}</span>
   </span>;
 }

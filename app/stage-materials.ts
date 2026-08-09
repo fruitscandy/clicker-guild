@@ -30,12 +30,6 @@ export type StageMaterial = {
   boss: boolean;
 };
 
-export type WeaponMaterialRecipe = {
-  weaponTier: number;
-  material: StageMaterial;
-  amount: number;
-};
-
 const MATERIAL_FAMILIES = [
   { familyName: "새싹 호박", accent: "#aee856", soundProfile: "seed-amber" as const, description: "초목의 생명력이 굳어 만들어진 수림 촉매" },
   { familyName: "태양 유리", accent: "#ffd25e", soundProfile: "sun-glass" as const, description: "메마른 모래와 햇빛이 고열로 융합된 결정" },
@@ -51,30 +45,20 @@ const MATERIAL_FAMILIES = [
 
 const STAGE_GRADES = [
   "거친",
-  "이슬 맺힌",
-  "맥동하는",
-  "정제된",
-  "빛나는",
-  "공명하는",
-  "각인된",
-  "찬란한",
-  "왕실",
+  "폭주하는",
   "군주의",
 ] as const;
 
-const WEAPON_RECIPE_STAGES = [1, 3, 5, 10, 14, 20, 28, 38, 48, 58, 68, 78, 88, 98] as const;
-const WEAPON_RECIPE_AMOUNTS = [4, 6, 8, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32] as const;
-
 function clampStage(stage: number) {
-  return Math.min(100, Math.max(1, Math.round(stage)));
+  return Math.min(30, Math.max(1, Math.round(stage)));
 }
 
 export function stageMaterialFor(stage: number): StageMaterial {
   const safeStage = clampStage(stage);
-  const region = Math.ceil(safeStage / 10);
-  const localStage = (safeStage - 1) % 10 + 1;
+  const region = Math.ceil(safeStage / 3);
+  const localStage = (safeStage - 1) % 3 + 1;
   const family = MATERIAL_FAMILIES[region - 1];
-  const boss = localStage === 10;
+  const boss = localStage === 3;
   return {
     id: `stage-material-${String(safeStage).padStart(3, "0")}`,
     stage: safeStage,
@@ -82,12 +66,12 @@ export function stageMaterialFor(stage: number): StageMaterial {
     localStage,
     name: `${STAGE_GRADES[localStage - 1]} ${family.familyName}`,
     familyName: family.familyName,
-    description: `${family.description}. ${region}지역 ${localStage}구역에서만 획득할 수 있습니다.`,
+    description: `${family.description}. ${region}지역 ${localStage}웨이브에서만 획득할 수 있습니다.`,
     iconIndex: region - 1,
     variant: localStage - 1,
     accent: family.accent,
     soundProfile: family.soundProfile,
-    rewardAmount: (boss ? 16 : 5) + region + Math.ceil(localStage / 2) + (boss ? region : 0),
+    rewardAmount: boss ? 18 + region * 2 : 7 + region + localStage * 2,
     boss,
   };
 }
@@ -96,30 +80,8 @@ export function stageMaterialById(id: string) {
   const match = /^stage-material-(\d{3})$/.exec(id);
   if (!match) return null;
   const stage = Number(match[1]);
-  if (stage < 1 || stage > 100) return null;
+  if (stage < 1 || stage > 30) return null;
   return stageMaterialFor(stage);
-}
-
-export function weaponMaterialRecipe(weaponTier: number): WeaponMaterialRecipe | null {
-  if (weaponTier < 1 || weaponTier > WEAPON_RECIPE_STAGES.length) return null;
-  const index = weaponTier - 1;
-  return {
-    weaponTier,
-    material: stageMaterialFor(WEAPON_RECIPE_STAGES[index]),
-    amount: WEAPON_RECIPE_AMOUNTS[index],
-  };
-}
-
-export function canAffordWeaponRecipe(inventory: Readonly<Record<string, number>>, recipe: WeaponMaterialRecipe | null) {
-  if (!recipe) return true;
-  return (inventory[recipe.material.id] ?? 0) >= recipe.amount;
-}
-
-export function consumeWeaponRecipe(inventory: Readonly<Record<string, number>>, recipe: WeaponMaterialRecipe | null) {
-  if (!recipe) return { ...inventory };
-  const owned = inventory[recipe.material.id] ?? 0;
-  if (owned < recipe.amount) return null;
-  return { ...inventory, [recipe.material.id]: owned - recipe.amount };
 }
 
 export function materialIconVars(material: StageMaterial) {

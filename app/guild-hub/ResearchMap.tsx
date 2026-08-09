@@ -60,8 +60,8 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
   return (
     <div className={styles.viewport}>
       <div className={styles.map} aria-label="중앙에서 네 방향으로 확장되는 길드 발전 지도">
-        <span className={`${styles.direction} ${styles.north}`}><b>직접 공격</b><small>범위 · 치명타 · 충격파</small></span>
-        <span className={`${styles.direction} ${styles.east}`}><b>전투 리듬</b><small>연격 · 처형 · 몰입</small></span>
+        <span className={`${styles.direction} ${styles.north}`}><b>길드 공세</b><small>선봉 · 사격 · 비전</small></span>
+        <span className={`${styles.direction} ${styles.east}`}><b>연계 전술</b><small>협공 · 암살 · 돌파</small></span>
         <span className={`${styles.direction} ${styles.south}`}><b>원정 지원</b><small>보급 · 정찰 · 전리품</small></span>
         <span className={`${styles.direction} ${styles.west}`}><b>길드 경영</b><small>길드원 · 골드 · 여관</small></span>
 

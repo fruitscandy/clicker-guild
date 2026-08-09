@@ -2,6 +2,17 @@ import { beginnerForestMonsterName } from "./monster-assets";
 
 export type Rank = "F" | "E" | "D" | "C" | "B" | "A" | "S";
 
+export const STAGES_PER_REGION = 3;
+export const STAGE_COUNT = 30;
+
+export type CombatStyle = "vanguard" | "marksman" | "assassin" | "arcane" | "support" | "breaker";
+
+export type MemberCombatTrait = {
+  style: CombatStyle;
+  title: string;
+  description: string;
+};
+
 export type MemberDefinition = {
   id: string;
   name: string;
@@ -60,6 +71,38 @@ export const MEMBERS: MemberDefinition[] = [
   { id: "zello", name: "슬라임 왕자 젤로", rank: "S", job: "몬스터", attack: 540, growth: 52, interval: 1, skill: "왕가의 분열", skillMultiplier: 18, skillCooldown: 10, maxLevel: 100, cost: 100000, glyph: "왕", hue: "#4daea0", description: "예측할 수 없는 왕가의 분열 공격" },
 ];
 
+export const MEMBER_COMBAT_TRAITS: Record<string, MemberCombatTrait> = {
+  roan: { style: "vanguard", title: "선봉 검진", description: "직접 공격 범위가 넓어지고 몬스터 무리를 더 깊게 벱니다." },
+  mia: { style: "marksman", title: "추적 화살", description: "4번째 클릭마다 살아남은 적들에게 연쇄 화살을 쏩니다." },
+  finn: { style: "assassin", title: "급소 추격", description: "체력이 낮아진 적을 즉시 처형하고 연속 킬을 이어갑니다." },
+  lulu: { style: "arcane", title: "마력 대폭발", description: "7번째 클릭마다 전장 전체에 마력 폭발을 일으킵니다." },
+  ellie: { style: "support", title: "빛의 격려", description: "전투 시간을 늘리고 길드 연계 공격의 피해를 높입니다." },
+  garon: { style: "vanguard", title: "철벽 돌진", description: "직접 공격 범위와 길드원 보조 공격의 위력을 높입니다." },
+  reina: { style: "marksman", title: "정조준 연사", description: "연쇄 화살의 대상 수와 피해량을 크게 늘립니다." },
+  bruno: { style: "breaker", title: "난전 본능", description: "빠르게 클릭할수록 연계 피해가 폭발적으로 상승합니다." },
+  sera: { style: "arcane", title: "화염 폭발", description: "주기적으로 전장 전체를 불태우는 대규모 폭발을 만듭니다." },
+  popo: { style: "breaker", title: "부식 물약", description: "몬스터 무리의 방어를 녹여 모든 직접 공격 피해를 높입니다." },
+  kyle: { style: "vanguard", title: "관통 전열", description: "밀집한 몬스터를 관통하는 넓은 지휘참을 만듭니다." },
+  nera: { style: "assassin", title: "그림자 처형", description: "처형 기준을 높이고 남은 적에게 그림자 일격을 잇습니다." },
+  iris: { style: "arcane", title: "빙결 파동", description: "주기적인 전장 파동으로 몬스터 무리를 한꺼번에 얼립니다." },
+  rio: { style: "support", title: "전투의 노래", description: "전투 제한 시간과 모든 길드원의 공격 리듬을 높입니다." },
+  jade: { style: "marksman", title: "도탄 속사", description: "연쇄 사격이 더 많은 적 사이를 빠르게 튕겨 다닙니다." },
+  ur: { style: "breaker", title: "분노의 도끼", description: "연속 클릭 몰입 피해와 광역 충격파 피해를 높입니다." },
+  adel: { style: "support", title: "성전의 맹세", description: "길드 전체의 공격력과 원정 생존 시간을 강화합니다." },
+  theo: { style: "arcane", title: "연쇄 번개", description: "마력 폭발이 더 자주 발동하고 화면 전체를 연쇄 타격합니다." },
+  nabi: { style: "support", title: "바람 정령", description: "길드원 보조 공격 속도와 연계 피해를 끌어올립니다." },
+  ren: { style: "assassin", title: "발도 처형", description: "빈사 적을 베어 넘기고 다음 적에게 처형 피해를 전파합니다." },
+  gray: { style: "marksman", title: "마력 포격", description: "연쇄 사격 대신 밀집 지역에 강력한 포격을 쏟아붓습니다." },
+  mor: { style: "support", title: "망자의 군세", description: "쓰러진 적의 기운으로 길드원 보조 공격을 강화합니다." },
+  aila: { style: "arcane", title: "마력 참격", description: "직접 공격과 마력 폭발이 동시에 발동하는 연계기를 만듭니다." },
+  drake: { style: "vanguard", title: "용의 돌진", description: "전장을 가로지르는 거대한 범위와 압도적인 관통 피해를 더합니다." },
+  zello: { style: "breaker", title: "왕가의 분열", description: "모든 직접 공격을 분열시켜 같은 무리를 여러 번 타격합니다." },
+};
+
+export function combatTraitFor(member: MemberDefinition) {
+  return MEMBER_COMBAT_TRAITS[member.id];
+}
+
 export const REGIONS = [
   { name: "초보자의 숲", monster: "고대 이끼 골렘", boss: "숲의 수호왕", hue: "forest" },
   { name: "메마른 황야", monster: "뿔 모래도마뱀", boss: "사막의 폭군", hue: "desert" },
@@ -74,14 +117,17 @@ export const REGIONS = [
 ];
 
 export function getStage(stage: number) {
-  const safe = Math.max(1, Math.min(100, stage));
-  const regionIndex = Math.floor((safe - 1) / 10);
-  const localStage = ((safe - 1) % 10) + 1;
+  const safe = Math.max(1, Math.min(STAGE_COUNT, stage));
+  const regionIndex = Math.floor((safe - 1) / STAGES_PER_REGION);
+  const localStage = ((safe - 1) % STAGES_PER_REGION) + 1;
   const region = REGIONS[regionIndex];
-  const boss = localStage === 10;
-  const hp = Math.round(92 * Math.pow(1.175, safe - 1) * (boss ? 3.1 : 1));
-  const gold = Math.round(26 * Math.pow(1.115, safe - 1) * (boss ? 2.5 : 1));
-  const xp = Math.round(22 * Math.pow(1.09, safe - 1) * (boss ? 2 : 1));
+  const boss = localStage === STAGES_PER_REGION;
+  const phaseMultiplier = localStage === 1 ? 1 : localStage === 2 ? 0.18 : 2.35;
+  const rewardMultiplier = localStage === 1 ? 1 : localStage === 2 ? 0.62 : 2.4;
+  const hp = Math.round(4_500 * Math.pow(1.72, regionIndex) * phaseMultiplier);
+  const gold = Math.round(150 * Math.pow(1.82, regionIndex) * rewardMultiplier);
+  const xp = Math.round(34 * Math.pow(1.62, regionIndex) * (boss ? 2.2 : 1));
+  const forestMonsterStage = localStage === 1 ? 1 : localStage === 2 ? 6 : 10;
   return {
     stage: safe,
     regionIndex,
@@ -91,7 +137,7 @@ export function getStage(stage: number) {
     hp,
     gold,
     xp,
-    name: regionIndex === 0 ? beginnerForestMonsterName(localStage) : boss ? region.boss : region.monster,
+    name: regionIndex === 0 ? beginnerForestMonsterName(forestMonsterStage) : boss ? region.boss : region.monster,
   };
 }
 

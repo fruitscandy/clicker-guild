@@ -761,7 +761,7 @@ body {
 
 .permadeath-warning { display: block; margin-top: 5px; color: #a93227; font-size: 9px; font-weight: 1000; letter-spacing: .03em; }
 .hack-arena { --click-primary: #d46a48; --click-secondary: #ffe0a0; --click-glow: rgba(255,190,103,.55); position: relative; cursor: crosshair; touch-action: manipulation; user-select: none; }
-@media (pointer: fine) { .hack-arena.has-forge-cursor { cursor: none; } }
+@media (pointer: fine) { .hack-arena.has-forge-cursor, .hack-arena.has-command-cursor { cursor: none; } }
 .field-background-art { z-index: 0; object-fit: cover; object-position: var(--field-art-position, 50% 50%); filter: saturate(.92) contrast(1.035) brightness(.94); pointer-events: none; user-select: none; }
 .hack-arena::before { content: ""; position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse at 53% 49%, transparent 34%, rgba(12,18,17,.08) 70%, rgba(8,13,13,.24) 100%), linear-gradient(90deg, rgba(13,20,18,.08), transparent 31%, transparent 72%, rgba(13,17,18,.08)); box-shadow: inset 0 0 72px rgba(10,16,15,.2); pointer-events: none; }
 .field-tone-bright .field-background-art { filter: saturate(.88) contrast(1.04) brightness(.91); }
@@ -776,9 +776,14 @@ body {
 .field-click-guide b { font-size: 10px; }.field-click-guide span { color: #d7d4c5; font-size: 8px; }
 @keyframes guidePulse { 50% { transform: translateX(-50%) translateY(-2px); box-shadow: 0 5px 22px rgba(255,210,104,.2); } }
 
+.swarm-hud { position:absolute; left:14px; top:58px; z-index:15; display:grid; gap:5px; width:150px; padding:8px 10px; color:#fff2cc; background:linear-gradient(145deg,rgba(83,31,27,.94),rgba(38,24,24,.94)); border:1px solid #d18b4e; border-radius:7px; box-shadow:0 5px 18px rgba(19,10,8,.32); pointer-events:none; }
+.swarm-hud span { display:flex; align-items:end; justify-content:space-between; gap:8px; }.swarm-hud small { color:#f0a269; font-size:7px; font-weight:1000; letter-spacing:.14em; }.swarm-hud strong { font:1000 20px/1 Georgia,"Noto Serif KR",serif; }.swarm-hud strong em { color:#b99c88; font-size:9px; font-style:normal; }.swarm-hud > i { display:block; height:4px; overflow:hidden; background:#271b1a; border-radius:99px; }.swarm-hud > i b { display:block; height:100%; background:linear-gradient(90deg,#ef653f,#ffd66b); box-shadow:0 0 8px #f18746; transition:width .18s ease-out; }
+
 .hack-arena .fighters { z-index: 7; pointer-events: none; }
 .monster-pack { position: absolute; inset: 0; z-index: 4; overflow: hidden; pointer-events: none; }
 .pack-monster { --monster-scale: 1; position: absolute; width: 88px; height: 116px; transform: translate(-50%,-50%) scale(var(--monster-scale)); transform-origin: center bottom; transition: filter .12s ease; }
+.mass-swarm .pack-monster { width:72px; height:98px; }
+.mass-swarm .pack-monster-art-frame { width:108px; height:108px; }
 .pack-monster .pack-shadow { position: absolute; left: 50%; bottom: 8px; width: 58px; height: 15px; background: rgba(19,31,27,.32); border-radius: 50%; transform: translateX(-50%); }
 .pack-monster-art-frame { position: absolute; left: 50%; bottom: 2px; width: 126px; height: 126px; transform: translateX(-50%); }
 .pack-monster-art { object-fit: contain; object-position: center bottom; filter: drop-shadow(0 5px 2px rgba(15,25,20,.36)); transform: scale(var(--monster-art-scale)); transform-origin: center bottom; animation: packMonsterArtIdle 1.8s ease-in-out infinite; user-select: none; }
@@ -889,6 +894,11 @@ body {
 .combat-proc-strip span { display: grid; gap: 2px; padding: 6px 3px; color: #d8cbb7; background: #302820; border: 1px solid #725d47; border-radius: 4px; }
 .combat-proc-strip span.active { color: #fff1a6; border-color: #d19a3c; box-shadow: inset 0 0 12px rgba(255,194,70,.14); }
 .combat-proc-strip b { font-size: 7px; }.combat-proc-strip em { font-size: 8px; font-style: normal; font-weight: 1000; }
+.combat-trait-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; margin:9px 0; }
+.combat-trait-chip { position:relative; display:grid; grid-template-columns:24px 1fr auto; grid-template-rows:auto auto; align-items:center; gap:1px 4px; min-width:0; padding:6px; color:#857665; background:#e4d9c5; border:1px solid #c4b397; border-radius:6px; text-align:left; opacity:.56; }
+.combat-trait-chip > b { grid-row:1 / 3; display:grid; place-items:center; width:24px; height:24px; color:#6d5b49; background:#d1c2aa; border-radius:50%; font-size:10px; }.combat-trait-chip > small { overflow:hidden; font-size:7px; font-weight:1000; text-overflow:ellipsis; white-space:nowrap; }.combat-trait-chip > strong { font-size:9px; }.combat-trait-chip > em { grid-column:2 / 4; overflow:hidden; font-size:6px; font-style:normal; text-overflow:ellipsis; white-space:nowrap; }
+.combat-trait-chip.active { color:#fff1d2; background:linear-gradient(145deg,#493a31,#2b2724); border-color:#c49353; box-shadow:inset 0 0 12px rgba(255,205,111,.08),0 0 8px rgba(137,89,50,.12); opacity:1; }.combat-trait-chip.active > b { color:#2c211d; background:#f1c665; box-shadow:0 0 9px rgba(240,190,90,.4); }.combat-trait-chip.active > em { color:#cbb99d; }
+.combat-trait-chip.trait-marksman.active > b { background:#94d5a7; }.combat-trait-chip.trait-assassin.active > b { color:#f5e9ff; background:#745d8f; }.combat-trait-chip.trait-arcane.active > b { color:#f7efff; background:#8c62bd; }.combat-trait-chip.trait-support.active > b { background:#8fd5d1; }.combat-trait-chip.trait-breaker.active > b { background:#e78c64; }
 .defeat-copy span { display: block; width: 100%; }.defeat-copy span:not(:last-child) { color: #7f2924; font-weight: 900; }
 
 /* Weapon tiers 6–15: layered CC0 particles and increasingly dense finishers */
@@ -1036,6 +1046,7 @@ body {
   .permadeath-warning { line-height: 1.4; }
   .field-click-guide { top: 15%; width: max-content; max-width: 78%; }
   .field-click-guide span { display: none; }
+  .swarm-hud { left:8px; top:54px; width:124px; padding:6px 8px; }.swarm-hud strong { font-size:16px; }
   .pack-monster { width: 58px; height: 86px; }
   .pack-monster .monster-sprite { bottom: -2px; transform: translateX(-50%) scale(.22); }
   @keyframes packMonsterIdle { 50% { transform: translateX(-50%) translateY(-7px) scale(.22) rotate(-2deg); } }

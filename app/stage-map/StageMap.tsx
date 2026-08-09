@@ -12,11 +12,8 @@ import {
 } from "react";
 
 import { fieldAssetForRegion } from "../field-assets";
-import { getStage } from "../game-data";
+import { getStage, STAGE_COUNT, STAGES_PER_REGION } from "../game-data";
 import styles from "./StageMap.module.css";
-
-const STAGE_COUNT = 100;
-const STAGES_PER_REGION = 10;
 
 const ROUTE_POINTS = [
   [8, 23],
@@ -289,14 +286,14 @@ export function StageMap({
                 )}
                 onClick={() => visitRegion(regionIndex)}
                 aria-current={active ? "true" : undefined}
-                aria-label={`${regionIndex + 1}지역 ${region.name}, ${unlockedCount}/10 해금${currentRegion ? ", 현재 목표 지역" : ""}${active ? ", 지도 표시 중" : ""}`}
+                aria-label={`${regionIndex + 1}지역 ${region.name}, ${unlockedCount}/${STAGES_PER_REGION} 해금${currentRegion ? ", 현재 목표 지역" : ""}${active ? ", 지도 표시 중" : ""}`}
               >
                 <span className={styles.regionJumpShade} aria-hidden="true" />
                 <span className={styles.regionJumpContent}>
                   <b>{String(regionIndex + 1).padStart(2, "0")}</b>
                   <span>{region.name}</span>
-                  <small>{currentRegion ? "현재 원정" : unlockedCount === 0 ? "미개척" : `${unlockedCount}/10 탐사`}</small>
-                  <i><em style={{ width: `${unlockedCount * 10}%` }} /></i>
+                  <small>{currentRegion ? "현재 원정" : unlockedCount === 0 ? "미개척" : `${unlockedCount}/${STAGES_PER_REGION} 탐사`}</small>
+                  <i><em style={{ width: `${unlockedCount / STAGES_PER_REGION * 100}%` }} /></i>
                 </span>
               </button>
             );
@@ -317,17 +314,17 @@ export function StageMap({
                 <h3 id={`region-${activeRegionIndex + 1}-${generatedId}`}>{activeRegion.name}</h3>
                 <p>{activeDetails.subtitle}</p>
               </div>
-              <strong>{activeUnlockedCount}<small>/ 10 해금</small></strong>
+              <strong>{activeUnlockedCount}<small>/ {STAGES_PER_REGION} 해금</small></strong>
             </div>
 
             <div className={styles.mapCanvas}>
               <div className={styles.mapStatus} aria-hidden="true">
                 <span>FIELD MAP</span>
-                <strong>{activeClearedCount} / 10 토벌 완료</strong>
+                <strong>{activeClearedCount} / {STAGES_PER_REGION} 토벌 완료</strong>
               </div>
               <div className={styles.compass} aria-hidden="true"><b>N</b><i /></div>
               <svg className={styles.route} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                {ROUTE_POINTS.slice(1).map(([x, y], index) => {
+                {ROUTE_POINTS.slice(1, STAGES_PER_REGION).map(([x, y], index) => {
                   const [previousX, previousY] = ROUTE_POINTS[index];
                   const targetStage = activeFirstStage + index + 1;
                   const targetState = stageState(

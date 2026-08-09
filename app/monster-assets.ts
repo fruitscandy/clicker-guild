@@ -60,13 +60,16 @@ const REGION_MONSTERS: Array<{ normal: MonsterAsset; boss: MonsterAsset }> = [
 ];
 
 export function monsterAssetForStage(stage: number) {
-  if (stage < 1 || stage > 100) return null;
-  if (stage <= 10) return BEGINNERS_FOREST_MONSTERS[stage - 1];
+  if (stage < 1 || stage > 30) return null;
+  const regionIndex = Math.floor((stage - 1) / 3);
+  const localStage = ((stage - 1) % 3) + 1;
+  if (regionIndex === 0) {
+    const forestIndex = localStage === 1 ? 0 : localStage === 2 ? 5 : 9;
+    return BEGINNERS_FOREST_MONSTERS[forestIndex];
+  }
 
-  const regionIndex = Math.floor((stage - 1) / 10) - 1;
-  const localStage = ((stage - 1) % 10) + 1;
-  const region = REGION_MONSTERS[regionIndex];
-  return localStage === 10 ? region.boss : region.normal;
+  const region = REGION_MONSTERS[regionIndex - 1];
+  return localStage === 3 ? region.boss : region.normal;
 }
 
 export function beginnerForestMonsterName(localStage: number) {
