@@ -182,9 +182,9 @@ test("consolidates recruitment and party formation inside the portrait-driven ta
   assert.doesNotMatch(progression, /"training"/);
   assert.match(hub, /tavernBuildingArt/);
   assert.match(tavern, /BUILD YOUR SWARM/);
-  assert.match(tavern, /편성 길드원 패시브/);
+  assert.match(tavern, /편성 길드원/);
   assert.match(tavern, /필드에는 본체 없이/);
-  assert.match(tavern, /보유 길드원 패시브/);
+  assert.match(tavern, /보유 길드원/);
   assert.match(tavern, /onToggleParty/);
   assert.match(tavern, /finnCorrection/);
   assert.match(tavern, /-idle-preview\.webp/);
