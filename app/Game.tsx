@@ -2,6 +2,15 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { playGoldCollectSound, playGoldCompleteSound, playGoldDropSound, unlockBattleAudio } from "./battle-audio";
+import {
+  createGoldDropPlan,
+  GOLD_LOOT_TRAVEL_MS,
+  goldLootStaggerMs,
+  goldLootSweepDuration,
+  revealedGoldDrops,
+  type BattleGoldDrop,
+} from "./battle-loot";
 import { fieldAssetForRegion } from "./field-assets";
 import { compactNumber, getStage, MEMBERS, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "./game-data";
 import { memberAnimationSource, type MemberMotion } from "./member-animations";
@@ -9,6 +18,7 @@ import { monsterAssetForStage } from "./monster-assets";
 import { StageMap } from "./stage-map";
 
 type Tab = "guild" | "field" | "tavern";
+type LootPhase = "idle" | "fighting" | "collecting" | "complete";
 type MemberProgress = { level: number; xp: number; gear: number };
 type UpgradeKey = "range" | "critical" | "combo" | "execution" | "shockwave" | "momentum" | "time" | "scout" | "guild" | "gold" | "tavern" | "loot";
 type SpecialKey = "double" | "command" | "auto";
@@ -367,12 +377,21 @@ export default function Game() {
   const [skillFx, setSkillFx] = useState<string | null>(null);
   const [lostMembers, setLostMembers] = useState<string[]>([]);
   const [territoryPulse, setTerritoryPulse] = useState(0);
+  const [goldDrops, setGoldDrops] = useState<BattleGoldDrop[]>([]);
+  const [lootPhase, setLootPhase] = useState<LootPhase>("idle");
+  const [collectedLoot, setCollectedLoot] = useState(0);
+  const [plannedGold, setPlannedGold] = useState(0);
   const lastAttack = useRef<Record<string, number>>({});
   const lastSkill = useRef<Record<string, number>>({});
   const clickFxCounter = useRef(0);
   const clickCount = useRef(0);
   const momentumState = useRef({ lastAt: 0, stacks: 0 });
   const victoryLock = useRef(false);
+  const rewardLock = useRef(false);
+  const lootPlan = useRef<BattleGoldDrop[]>([]);
+  const goldDropsRef = useRef<BattleGoldDrop[]>([]);
+  const revealedLootIds = useRef(new Set<string>());
+  const lootTimers = useRef<number[]>([]);
 
   const stageNumber = developerMode && developerStage ? developerStage : save.selectedStage;
   const stage = useMemo(() => getStage(stageNumber), [stageNumber]);
@@ -395,8 +414,10 @@ export default function Game() {
   const goldMultiplier = Math.pow(1.1, save.upgrades.gold);
   const battleSeconds = developerMode ? DEV_BATTLE_SECONDS : (stage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + save.upgrades.time * 5;
   const battleTimeLeft = battleDeadline ? Math.max(0, Math.ceil((battleDeadline - now) / 1000)) : battleSeconds;
-  const combatLocked = battleActive || victory || defeat;
+  const lootCollecting = lootPhase === "collecting";
+  const combatLocked = battleActive || lootCollecting || victory || defeat;
   const aliveMonsters = useMemo(() => fieldMonsters.filter((monster) => monster.hp > 0), [fieldMonsters]);
+  const droppedGold = useMemo(() => goldDrops.reduce((sum, drop) => sum + drop.amount, 0), [goldDrops]);
   const autoAttackPoint = useMemo(() => bestAttackPoint(aliveMonsters, attackRange), [aliveMonsters, attackRange]);
   const intelReport = battlefieldIntel(aliveMonsters.length, fieldMonsters.length, developerMode ? 3 : save.upgrades.scout);
   const guildGrowth = Math.max(0, save.nodes.length - 1);
@@ -450,12 +471,17 @@ export default function Game() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const awardVictory = useCallback(() => {
-    if (victoryLock.current) return;
-    victoryLock.current = true;
-    setBattleActive(false);
-    setBattleDeadline(null);
-    setDefeat(false);
+  const clearLootTimers = useCallback(() => {
+    lootTimers.current.forEach((timer) => window.clearTimeout(timer));
+    lootTimers.current = [];
+  }, []);
+
+  useEffect(() => clearLootTimers, [clearLootTimers]);
+
+  const finalizeVictory = useCallback(() => {
+    if (rewardLock.current) return;
+    rewardLock.current = true;
+    setLootPhase("complete");
     setVictory(true);
     if (developerMode) {
       setToast("개발자 토벌 성공! 보상과 진행도는 저장되지 않습니다.");
@@ -492,13 +518,80 @@ export default function Game() {
     setToast(`토벌 성공! 골드 ${compactNumber(earnedGold)}${gearTarget ? ` · ${memberById(gearTarget).name} 장비 획득` : ""}${stage.boss && firstClear ? " · 보스 증표 +1" : ""}`);
   }, [developerMode, save.cleared, save.party, save.upgrades.loot, stage, goldMultiplier]);
 
+  const beginLootSweep = useCallback((drops: BattleGoldDrop[]) => {
+    if (victoryLock.current) return;
+    victoryLock.current = true;
+    clearLootTimers();
+    setBattleActive(false);
+    setBattleDeadline(null);
+    setDefeat(false);
+    setCollectedLoot(0);
+    setLootPhase("collecting");
+    setToast(`토벌 완료! 전장에 떨어진 골드 ${compactNumber(drops.reduce((sum, drop) => sum + drop.amount, 0))}을(를) 회수합니다.`);
+
+    const stagger = goldLootStaggerMs(drops.length);
+    drops.forEach((drop, index) => {
+      const timer = window.setTimeout(() => {
+        setCollectedLoot((current) => current + drop.amount);
+        playGoldCollectSound(index, drops.length);
+      }, GOLD_LOOT_TRAVEL_MS + index * stagger);
+      lootTimers.current.push(timer);
+    });
+
+    const completeTimer = window.setTimeout(() => {
+      playGoldCompleteSound();
+      finalizeVictory();
+    }, goldLootSweepDuration(drops.length));
+    lootTimers.current.push(completeTimer);
+  }, [clearLootTimers, finalizeVictory]);
+
+  const awardVictory = useCallback(() => {
+    const revealedById = new Map(goldDropsRef.current.map((drop) => [drop.id, drop]));
+    const drops = [
+      ...goldDropsRef.current,
+      ...lootPlan.current.filter((drop) => !revealedById.has(drop.id)).map((drop) => ({ ...drop, droppedAt: Date.now() })),
+    ];
+    goldDropsRef.current = drops;
+    setGoldDrops(drops);
+    beginLootSweep(drops);
+  }, [beginLootSweep]);
+
+  useEffect(() => {
+    if (!fieldMonsters.length || !lootPlan.current.length) return;
+    const defeatedAt = new Map(
+      fieldMonsters
+        .filter((monster) => monster.defeatedAt !== null)
+        .map((monster) => [monster.id, monster.defeatedAt!] as const),
+    );
+    const revealed = revealedGoldDrops(lootPlan.current, defeatedAt);
+    const newDrops = revealed.filter((drop) => !revealedLootIds.current.has(drop.id));
+    if (!newDrops.length) return;
+
+    const firstSoundIndex = revealedLootIds.current.size;
+    newDrops.forEach((drop, index) => {
+      revealedLootIds.current.add(drop.id);
+      const timer = window.setTimeout(() => playGoldDropSound(firstSoundIndex + index), index * 28);
+      lootTimers.current.push(timer);
+    });
+    goldDropsRef.current = revealed;
+    setGoldDrops(revealed);
+  }, [fieldMonsters]);
+
   const failBattle = useCallback(() => {
     if (victoryLock.current) return;
     victoryLock.current = true;
+    clearLootTimers();
     setBattleActive(false);
     setBattleDeadline(null);
     setVictory(false);
     setDefeat(true);
+    setGoldDrops([]);
+    setLootPhase("idle");
+    setCollectedLoot(0);
+    setPlannedGold(0);
+    lootPlan.current = [];
+    goldDropsRef.current = [];
+    revealedLootIds.current.clear();
     const casualties = [...save.party];
     setLostMembers(casualties);
     if (!developerMode) {
@@ -511,7 +604,7 @@ export default function Game() {
       });
     }
     setToast(developerMode ? "개발자 전투 실패 · 길드원 손실은 저장되지 않습니다." : "원정대가 전멸했습니다. 출전했던 길드원은 길드 명부에서 영구 삭제되었습니다.");
-  }, [developerMode, save.party]);
+  }, [clearLootTimers, developerMode, save.party]);
 
   useEffect(() => {
     if (!battleActive || !battleDeadline || !aliveMonsters.length) return;
@@ -637,6 +730,7 @@ export default function Game() {
   }
 
   function startStage(stageNumber = stage.stage) {
+    unlockBattleAudio();
     if (!save.party.length && !developerMode) {
       setToast("출전할 길드원이 없습니다. 여관에서 새 길드원을 고용하고 파티에 편성하세요.");
       setTab("guild");
@@ -644,7 +738,14 @@ export default function Game() {
     }
     const nextStage = getStage(stageNumber);
     const durationSeconds = developerMode ? DEV_BATTLE_SECONDS : (nextStage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + save.upgrades.time * 5;
+    const monsters = spawnMonsterPack(nextStage);
+    const rewardGold = Math.round(nextStage.gold * goldMultiplier);
+    clearLootTimers();
     victoryLock.current = false;
+    rewardLock.current = false;
+    lootPlan.current = createGoldDropPlan(monsters, rewardGold);
+    goldDropsRef.current = [];
+    revealedLootIds.current.clear();
     lastAttack.current = {};
     lastSkill.current = {};
     setMemberFx({});
@@ -655,11 +756,15 @@ export default function Game() {
     setClicks(0);
     setMomentumStacks(0);
     setLostMembers([]);
+    setGoldDrops([]);
+    setLootPhase("fighting");
+    setCollectedLoot(0);
+    setPlannedGold(rewardGold);
     setVictory(false);
     setDefeat(false);
     setBattleActive(true);
     setBattleDeadline(Date.now() + durationSeconds * 1000);
-    setFieldMonsters(spawnMonsterPack(nextStage));
+    setFieldMonsters(monsters);
     if (developerMode) setDeveloperStage(stageNumber);
     else setSave((current) => ({ ...current, selectedStage: stageNumber }));
     setStagePicker(false);
@@ -668,12 +773,21 @@ export default function Game() {
   }
 
   function returnToGuild(message = "파티를 영지로 복귀시켰습니다.") {
+    clearLootTimers();
     victoryLock.current = true;
+    rewardLock.current = true;
     setBattleActive(false);
     setBattleDeadline(null);
     setVictory(false);
     setDefeat(false);
     setFieldMonsters([]);
+    setGoldDrops([]);
+    setLootPhase("idle");
+    setCollectedLoot(0);
+    setPlannedGold(0);
+    lootPlan.current = [];
+    goldDropsRef.current = [];
+    revealedLootIds.current.clear();
     setTab("guild");
     setToast(message);
   }
@@ -786,7 +900,9 @@ export default function Game() {
     if (!window.confirm("모든 진행 상황을 지우고 새 게임을 시작할까요?")) return;
     localStorage.removeItem(SAVE_KEY);
     setSave(initialState);
+    clearLootTimers();
     victoryLock.current = true;
+    rewardLock.current = true;
     setBattleActive(false);
     setBattleDeadline(null);
     setVictory(false);
@@ -794,6 +910,13 @@ export default function Game() {
     setDeveloperMode(false);
     setDeveloperStage(null);
     setFieldMonsters([]);
+    setGoldDrops([]);
+    setLootPhase("idle");
+    setCollectedLoot(0);
+    setPlannedGold(0);
+    lootPlan.current = [];
+    goldDropsRef.current = [];
+    revealedLootIds.current.clear();
     setLostMembers([]);
     setTab("guild");
     setToast("새로운 길드가 창설되었습니다. 파티를 편성하고 첫 토벌을 준비하세요.");
@@ -960,14 +1083,23 @@ export default function Game() {
         <section className={`screen field-screen biome-${stage.region.hue}`} aria-label="필드 전투">
           <div className="field-toolbar">
             <div><span className="eyebrow">CURRENT EXPEDITION · SWARM HUNT</span><h2>{stage.region.name} <b>{stage.localStage}/10</b></h2><small className="permadeath-warning">⚠ 제한 시간 종료 시 출전 길드원 영구 소실</small></div>
-            <div className="field-actions battle-controls"><div className={`battle-timer ${battleTimeLeft <= 10 ? "urgent" : ""}`}><span>남은 시간</span><strong>{battleTimeLeft}초</strong><i><b style={{ width: `${battleTimeLeft / battleSeconds * 100}%` }} /></i></div><button className="retreat-button" onClick={retreatBattle}>안전 후퇴 · 길드원 보존</button></div>
+            <div className="field-actions battle-controls">
+              {lootCollecting
+                ? <div className="battle-timer loot-sweep-timer"><span>전리품 회수</span><strong>{compactNumber(collectedLoot)} / {compactNumber(plannedGold)} G</strong><i><b style={{ width: `${plannedGold ? collectedLoot / plannedGold * 100 : 0}%` }} /></i></div>
+                : <div className={`battle-timer ${battleTimeLeft <= 10 ? "urgent" : ""}`}><span>남은 시간</span><strong>{battleTimeLeft}초</strong><i><b style={{ width: `${battleTimeLeft / battleSeconds * 100}%` }} /></i></div>}
+              <button className="retreat-button" onClick={retreatBattle} disabled={!battleActive}>안전 후퇴 · 길드원 보존</button>
+            </div>
           </div>
 
           <div className="battle-layout">
-            <div className={`arena hack-arena panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier}`} style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties} onPointerDown={attackField} role="application" aria-label="클릭한 위치를 중심으로 범위 공격하는 몬스터 전장">
+            <div className={`arena hack-arena panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier} loot-phase-${lootPhase}`} style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties} onPointerDown={attackField} role="application" aria-label="클릭한 위치를 중심으로 범위 공격하는 몬스터 전장">
               <Image className="field-background-art" src={fieldAsset.source} alt="" fill sizes="(max-width: 1180px) 100vw, 900px" priority={stage.stage <= 10} unoptimized draggable={false} />
               <div className="environment-tag"><span>{BIOME_DETAILS[stage.region.hue].label}</span><small>{BIOME_DETAILS[stage.region.hue].description}</small></div>
               <div className="battle-banner"><span>{stage.boss ? "BOSS SWARM" : `STAGE ${stage.stage}`}</span><strong>{stage.name} 무리</strong></div>
+              <div className={`loot-tally ${lootCollecting ? "is-collecting" : ""}`}>
+                <i className="loot-tally-coin">G</i>
+                <span><small>{lootCollecting ? "회수 중" : "전장 전리품"}</small><strong>+{compactNumber(lootCollecting ? collectedLoot : droppedGold)} G</strong></span>
+              </div>
               <div className="field-click-guide"><b>필드를 직접 누르세요</b><span>원 안의 모든 몬스터가 함께 베입니다</span></div>
 
               <div className="fighters" aria-label="출전 길드원">
@@ -1028,6 +1160,21 @@ export default function Game() {
                   </span>;
                 })}
               </div>
+
+              <div className="gold-loot-layer" aria-hidden="true">
+                {goldDrops.map((drop, index) => <span
+                  className={`gold-drop gold-drop-${drop.variant}`}
+                  key={drop.id}
+                  style={{
+                    "--loot-x": `${drop.x}%`,
+                    "--loot-y": `${drop.y}%`,
+                    "--loot-delay": `${index * goldLootStaggerMs(goldDrops.length)}ms`,
+                  } as React.CSSProperties}
+                >
+                  <i /><b /><em>+{compactNumber(drop.amount)}</em>
+                </span>)}
+              </div>
+              {lootCollecting && <span className="sr-only" role="status">토벌이 끝나 전장의 골드를 회수하고 있습니다. {compactNumber(collectedLoot)} / {compactNumber(plannedGold)} 골드</span>}
 
               {hitFx && <>
                 <span key={`range-${hitFx.id}`} className={`attack-range-impact click-tier-${hitFx.tier} ${hitFx.hitCount ? "has-targets" : "missed"} ${hitFx.shockwave ? "is-shockwave" : ""}`} style={{ left: `${hitFx.x}%`, top: `${hitFx.y}%`, width: `${hitFx.radius * 2}%` }} aria-hidden="true"><i /></span>
