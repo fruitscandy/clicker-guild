@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { fieldAssetForRegion } from "./field-assets";
 import { compactNumber, getStage, MEMBERS, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "./game-data";
 import { memberAnimationSource, type MemberMotion } from "./member-animations";
 import { monsterAssetForStage } from "./monster-assets";
@@ -196,22 +197,31 @@ const UPGRADE_NODES: UpgradeNode[] = [
   { id: "citadel", title: "전설의 길드 성채", description: "모든 성장 계통을 완성한 증표", glyph: "♛", cost: 6200, prerequisites: ["sword-6", "range-7", "crit-4", "combo-4", "execute-3", "time-4", "scout-3", "guild-5", "gold-4", "loot-3", "tavern-3"], x: 94, y: 720 },
 ];
 
-const TERRAIN_POSITIONS = [
-  [8, 22, .8], [18, 68, .7], [29, 18, .65], [40, 78, .82], [54, 14, .72], [66, 68, .68], [79, 22, .8], [90, 65, .72],
-  [13, 44, .55], [34, 54, .5], [58, 46, .6], [73, 83, .58], [87, 40, .52], [24, 87, .55], [48, 91, .48], [96, 31, .5],
+const GUILD_GROWTH_STAGES = [
+  { level: 0, min: 0, target: 3, name: "개척 야영지", description: "작은 천막과 목조 회관에서 첫 의뢰를 받는 단계" },
+  { level: 1, min: 3, target: 9, name: "새싹 길드", description: "정식 간판과 작업장이 생기고 모험가가 모이기 시작한 영지" },
+  { level: 2, min: 9, target: 18, name: "성장 길드촌", description: "본관이 증축되고 여관과 훈련장이 자리를 잡은 길드촌" },
+  { level: 3, min: 18, target: 30, name: "번영 길드타운", description: "상단과 연구 시설이 모여 밤에도 불이 꺼지지 않는 거점" },
+  { level: 4, min: 30, target: 47, name: "명문 길드 요새", description: "석조 성벽과 감시탑으로 원정대를 지키는 대형 본부" },
+  { level: 5, min: 47, target: 47, name: "전설의 길드 성채", description: "모든 성장 계통을 완성한 대륙 최고의 모험가 성채" },
 ] as const;
 
-const BIOME_DETAILS: Record<string, { label: string; description: string; objects: string[] }> = {
-  forest: { label: "이끼 숲길", description: "수풀과 고목 사이로 햇살이 드는 초록 전장", objects: ["tree", "bush", "rock", "flower"] },
-  desert: { label: "붉은 모래벌", description: "선인장과 바위가 흩어진 뜨거운 황야", objects: ["cactus", "dune", "rock", "bone"] },
-  swamp: { label: "독안개 수렁", description: "버섯과 웅덩이에서 보랏빛 안개가 피어나는 늪", objects: ["mushroom", "pool", "reed", "stump"] },
-  mine: { label: "수정 채굴장", description: "광차와 광맥이 남은 어두운 갱도", objects: ["ore", "rail", "rock", "torch"] },
-  ice: { label: "서리 빙판", description: "눈 덮인 침엽수와 얼음 결정이 빛나는 협곡", objects: ["ice", "pine", "snow", "crystal"] },
-  volcano: { label: "용암 분지", description: "갈라진 지면 사이로 불꽃과 용암이 솟는 산맥", objects: ["lava", "basalt", "ember", "rock"] },
-  grave: { label: "망자의 묘역", description: "비석과 마른 나무 너머로 안개가 흐르는 묘지", objects: ["tomb", "bone", "dead-tree", "fog"] },
-  storm: { label: "마력 폭풍핵", description: "룬과 마력 수정이 공중에 떠오르는 불안정 지대", objects: ["crystal", "rune", "storm-cloud", "rock"] },
-  fort: { label: "마왕군 전초선", description: "부서진 성벽과 보급 상자가 남은 요새 앞마당", objects: ["wall", "banner", "crate", "spike"] },
-  dragon: { label: "고룡의 제단", description: "용의 뼈와 고대 수정이 잠든 성역", objects: ["dragon-bone", "crystal", "ruin", "ember"] },
+function guildGrowthStage(growth: number, hasCitadel: boolean) {
+  if (hasCitadel) return GUILD_GROWTH_STAGES[5];
+  return [...GUILD_GROWTH_STAGES].reverse().find((stage) => growth >= stage.min) ?? GUILD_GROWTH_STAGES[0];
+}
+
+const BIOME_DETAILS: Record<string, { label: string; description: string }> = {
+  forest: { label: "이끼 숲길", description: "수풀과 고목 사이로 햇살이 드는 초록 전장" },
+  desert: { label: "붉은 모래벌", description: "선인장과 바위가 흩어진 뜨거운 황야" },
+  swamp: { label: "독안개 수렁", description: "버섯과 웅덩이에서 보랏빛 안개가 피어나는 늪" },
+  mine: { label: "수정 채굴장", description: "광차와 광맥이 남은 어두운 갱도" },
+  ice: { label: "서리 빙판", description: "눈 덮인 침엽수와 얼음 결정이 빛나는 협곡" },
+  volcano: { label: "용암 분지", description: "갈라진 지면 사이로 불꽃과 용암이 솟는 산맥" },
+  grave: { label: "망자의 묘역", description: "비석과 마른 나무 너머로 안개가 흐르는 묘지" },
+  storm: { label: "마력 폭풍핵", description: "룬과 마력 수정이 공중에 떠오르는 불안정 지대" },
+  fort: { label: "마왕군 전초선", description: "부서진 성벽과 보급 상자가 남은 요새 앞마당" },
+  dragon: { label: "고룡의 제단", description: "용의 뼈와 고대 수정이 잠든 성역" },
 };
 
 const specialInfo: Record<SpecialKey, { title: string; description: string }> = {
@@ -331,6 +341,7 @@ export default function Game() {
   const [memberSkillFx, setMemberSkillFx] = useState<Record<string, number>>({});
   const [skillFx, setSkillFx] = useState<string | null>(null);
   const [lostMembers, setLostMembers] = useState<string[]>([]);
+  const [territoryPulse, setTerritoryPulse] = useState(0);
   const lastAttack = useRef<Record<string, number>>({});
   const lastSkill = useRef<Record<string, number>>({});
   const clickFxCounter = useRef(0);
@@ -338,6 +349,7 @@ export default function Game() {
 
   const stageNumber = developerMode && developerStage ? developerStage : save.selectedStage;
   const stage = useMemo(() => getStage(stageNumber), [stageNumber]);
+  const fieldAsset = useMemo(() => fieldAssetForRegion(stage.region.hue), [stage.region.hue]);
   const monsterAsset = useMemo(() => monsterAssetForStage(stageNumber), [stageNumber]);
   const partyMembers = useMemo(() => save.party.map(memberById), [save.party]);
   const progressFor = useCallback((member: MemberDefinition) => developerMode ? { level: member.maxLevel, xp: 0, gear: DEV_GEAR_LEVEL } : save.progress[member.id], [developerMode, save.progress]);
@@ -356,6 +368,20 @@ export default function Game() {
   const aliveMonsters = useMemo(() => fieldMonsters.filter((monster) => monster.hp > 0), [fieldMonsters]);
   const autoAttackPoint = useMemo(() => bestAttackPoint(aliveMonsters, attackRange), [aliveMonsters, attackRange]);
   const intelReport = battlefieldIntel(aliveMonsters.length, fieldMonsters.length, developerMode ? 3 : save.upgrades.scout);
+  const guildGrowth = Math.max(0, save.nodes.length - 1);
+  const hasCitadel = save.nodes.includes("citadel");
+  const guildStage = guildGrowthStage(guildGrowth, hasCitadel);
+  const nextGuildStage = GUILD_GROWTH_STAGES[Math.min(GUILD_GROWTH_STAGES.length - 1, guildStage.level + 1)];
+  const stageRange = Math.max(1, guildStage.target - guildStage.min);
+  const guildStageProgress = hasCitadel ? 100 : Math.min(100, Math.round((guildGrowth - guildStage.min) / stageRange * 100));
+  const spriteColumn = guildStage.level % 3;
+  const spriteRow = Math.floor(guildStage.level / 3);
+  const territoryStyle = {
+    "--guild-growth": guildGrowth,
+    "--guild-sprite-x": `${spriteColumn * 50}%`,
+    "--guild-sprite-y": `${spriteRow * 100}%`,
+    "--guild-minor-scale": `${1 + guildStageProgress * .00035}`,
+  } as React.CSSProperties;
 
   const combatPower = useMemo(() => {
     const partyPower = partyMembers.reduce((sum, member) => sum + attackFor(member, progressFor(member)) * developerPower, 0) * guildMultiplier;
@@ -632,6 +658,7 @@ export default function Game() {
       nodes: [...current.nodes, node.id],
       upgrades: node.target ? { ...current.upgrades, [node.target]: current.upgrades[node.target] + 1 } : current.upgrades,
     }));
+    setTerritoryPulse((current) => current + 1);
     setToast(`${node.title} 노드를 해금했습니다. 새로운 성장 경로가 발견됩니다!`);
   }
 
@@ -761,13 +788,33 @@ export default function Game() {
           </div>
 
           <div className="guild-layout">
-            <div className={`territory territory-level-${Math.min(5, Math.floor((save.upgrades.click + save.upgrades.range + save.upgrades.guild + save.upgrades.gold) / 5))}`}>
-              <div className="sun" /><div className="cloud cloud-one" /><div className="cloud cloud-two" />
-              <div className="building guild-hall"><span>길드 회관</span><i /></div>
-              <div className="building tavern-building"><span>여관</span><i /></div>
-              <div className="building training-building"><span>훈련장</span><i /></div>
-              <div className="flag">G</div>
-              <div className="territory-caption"><strong>새싹 길드 영지</strong><span>업그레이드할수록 영지가 발전합니다.</span></div>
+            <div
+              className={`territory guild-territory territory-stage-${guildStage.level} ${hasCitadel ? "has-citadel" : ""}`}
+              style={territoryStyle}
+              aria-label={`${guildStage.name}, 연구 ${guildGrowth}/47 완료`}
+            >
+              <div className="guild-sky" aria-hidden="true"><i /><i /><i /></div>
+              <div className="sun" aria-hidden="true" />
+              <div className="territory-ridge ridge-back" aria-hidden="true" />
+              <div className="territory-ridge ridge-front" aria-hidden="true" />
+              <div className="territory-road" aria-hidden="true" />
+              <div className="territory-stage-badge"><small>TERRITORY {guildStage.level + 1}/6</small><strong>{guildStage.name}</strong></div>
+
+              <div className="guild-sprite-platform" aria-hidden="true">
+                <div key={`${guildStage.level}-${territoryPulse}`} className={`guild-sprite-frame ${territoryPulse ? "is-upgrading" : ""}`}>
+                  <span className="guild-build-sweep" />
+                  <span className="guild-build-ring ring-one" /><span className="guild-build-ring ring-two" />
+                  <span className="guild-build-particles">{Array.from({ length: 10 }, (_, index) => <i key={index} />)}</span>
+                </div>
+              </div>
+              <div key={territoryPulse} className={`territory-growth-flare ${territoryPulse ? "is-active" : ""}`} aria-hidden="true"><span>영지 성장!</span></div>
+
+              <div className="territory-caption">
+                <div><strong>{guildStage.name}</strong><span>{guildStage.description}</span></div>
+                <div className="territory-growth-copy"><small>길드 성장도</small><b>{guildGrowth}/47</b></div>
+                <div className="territory-growth-meter"><i style={{ width: `${guildStageProgress}%` }} /></div>
+                <small className="next-territory-stage">{hasCitadel ? "최종 성채 완성" : `다음 외형 · ${nextGuildStage.name}까지 연구 ${Math.max(0, guildStage.target - guildGrowth)}개`}</small>
+              </div>
             </div>
 
             <div className="upgrade-panel panel">
@@ -840,15 +887,8 @@ export default function Game() {
           </div>
 
           <div className="battle-layout">
-            <div className={`arena hack-arena panel click-style-${activeClickPattern.tier}`} onPointerDown={attackField} role="application" aria-label="클릭한 위치를 중심으로 범위 공격하는 몬스터 전장">
-              <div className={`board-ground board-${stage.region.hue}`} aria-hidden="true" />
-              <div className="terrain-layer" aria-hidden="true">
-                {TERRAIN_POSITIONS.slice(0, Math.min(TERRAIN_POSITIONS.length, 10 + Math.floor(stage.localStage / 2) + (stage.boss ? 3 : 0))).map(([x, y, scale], index) => {
-                  const details = BIOME_DETAILS[stage.region.hue];
-                  const type = details.objects[index % details.objects.length];
-                  return <i key={`${stage.stage}-${index}`} className={`terrain-object terrain-${type}`} style={{ left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) scale(${scale})` }}><span /></i>;
-                })}
-              </div>
+            <div className={`arena hack-arena panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier}`} style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties} onPointerDown={attackField} role="application" aria-label="클릭한 위치를 중심으로 범위 공격하는 몬스터 전장">
+              <Image className="field-background-art" src={fieldAsset.source} alt="" fill sizes="(max-width: 1180px) 100vw, 900px" priority={stage.stage <= 10} unoptimized draggable={false} />
               <div className="environment-tag"><span>{BIOME_DETAILS[stage.region.hue].label}</span><small>{BIOME_DETAILS[stage.region.hue].description}</small></div>
               <div className="battle-banner"><span>{stage.boss ? "BOSS SWARM" : `STAGE ${stage.stage}`}</span><strong>{stage.name} 무리</strong></div>
               <div className="field-click-guide"><b>필드를 직접 누르세요</b><span>원 안의 모든 몬스터가 함께 베입니다</span></div>
