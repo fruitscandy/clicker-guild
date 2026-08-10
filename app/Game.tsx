@@ -1367,7 +1367,7 @@ export default function Game() {
               <div className="panel-title"><div><span className="eyebrow">GROWTH OVERVIEW</span><h3>길드 강화 현황</h3></div><span className="level-chip">본관 Lv.{hallStage.level} · 깊이 {hallStage.researchDepth}</span></div>
               <div className="growth-progress"><i style={{ width: `${save.nodes.length / UPGRADE_NODES.length * 100}%` }} /></div>
               <div className="growth-stats">
-                {UPGRADE_KEYS.map((key) => <div key={key}><span className="upgrade-icon"><Image src={UPGRADE_ICON_BY_KEY[key]} alt="" width={48} height={48} aria-hidden="true" /></span><span><strong>{GUILD_UPGRADE_DEFINITIONS[key].title} · Lv.{effectiveUpgrades[key]}</strong><small>{upgradeEffectText(key, effectiveUpgrades[key])}</small></span></div>)}
+                {UPGRADE_KEYS.map((key) => <div key={key}><span className="upgrade-icon"><Image src={UPGRADE_ICON_BY_KEY[key]} alt="" width={48} height={48} unoptimized aria-hidden="true" /></span><span><strong>{GUILD_UPGRADE_DEFINITIONS[key].title} · Lv.{effectiveUpgrades[key]}</strong><small>{upgradeEffectText(key, effectiveUpgrades[key])}</small></span></div>)}
               </div>
             </div>
             <div className="upgrade-tree-panel panel">
@@ -1591,7 +1591,7 @@ export default function Game() {
                 <div className="click-combat-stats"><span><b>공격 반경</b><em>{attackRange.toFixed(1)}</em></span><span><b>치명타</b><em>{Math.round(criticalChance * 100)}%</em></span><span><b>자동 공격</b><em>{autoAttackLevel ? `${(autoAttackInterval / 1_000).toFixed(1)}초` : "없음"}</em></span></div>
                 <div className="attack-upgrade-monitor" aria-label="직접 공격 강화 현황">
                   {attackUpgradeStatuses.map((upgrade) => <span key={upgrade.key} className={`${upgrade.level ? "unlocked" : "locked"} ${upgrade.ready ? "ready" : ""} ${upgrade.active ? "triggered" : ""}`}>
-                    <Image src={UPGRADE_ICON_BY_KEY[upgrade.key]} alt="" width={30} height={30} aria-hidden="true" />
+                    <Image src={UPGRADE_ICON_BY_KEY[upgrade.key]} alt="" width={30} height={30} unoptimized aria-hidden="true" />
                     <b>{upgrade.title}<small>{upgrade.level ? `Lv.${upgrade.level}` : "LOCK"}</small></b>
                     <em>{upgrade.status}</em>
                     {upgrade.level > 0 && <i aria-hidden="true"><u style={{ width: `${upgrade.charge}%` }} /></i>}
