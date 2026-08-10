@@ -14,7 +14,6 @@ export function MaterialInventory({ materials, unlockedStage, weaponLevel }: Mat
   const [open, setOpen] = useState(false);
   const catalog = useMemo(() => allStageMaterials(), []);
   const totalOwned = catalog.reduce((sum, material) => sum + (materials[material.id] ?? 0), 0);
-  const discovered = catalog.filter((material) => unlockedStage >= material.firstStage || (materials[material.id] ?? 0) > 0).length;
 
   useEffect(() => {
     if (!open) return;
@@ -36,7 +35,7 @@ export function MaterialInventory({ materials, unlockedStage, weaponLevel }: Mat
       <span className={styles.iconStack} aria-hidden="true">
         {catalog.slice(0, 3).map((material) => <i key={material.id} className="stage-material-icon" style={materialIconVars(material) as CSSProperties} />)}
       </span>
-      <span>강화 소재<small>{discovered}/10 발견</small></span>
+      <span>강화 소재</span>
       <strong>{totalOwned}</strong>
     </button>
 
@@ -46,16 +45,9 @@ export function MaterialInventory({ materials, unlockedStage, weaponLevel }: Mat
           <div>
             <span className={styles.eyebrow}>UPGRADE MATERIAL CODEX</span>
             <h2 id="material-inventory-title">강화 소재 보관함</h2>
-            <p>10개 지역을 한 번씩 돌면 필요한 제작 재료가 모두 모입니다.</p>
           </div>
           <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="강화 소재 보관함 닫기">×</button>
         </header>
-
-        <div className={styles.summary}>
-          <span>발견<strong>{discovered}/10</strong></span>
-          <span>총 보유<strong>{totalOwned}</strong></span>
-          <span>플레이 구조<strong>지역당 3웨이브</strong></span>
-        </div>
 
         <div className={styles.grid} role="list" aria-label="획득 가능한 강화 소재 10종">
           {catalog.map((material) => {

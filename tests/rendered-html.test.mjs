@@ -283,6 +283,7 @@ test("shows one complete material inventory and removes the combat power chip", 
   assert.doesNotMatch(game, /current-material-resource/);
   assert.match(inventory, /강화 소재 보관함/);
   assert.match(inventory, /획득 가능한 강화 소재 10종/);
+  assert.doesNotMatch(inventory, /발견|총 보유|플레이 구조|10개 지역을 한 번씩/);
   assert.match(inventory, /STAGE \{material\.firstStage\}–\{material\.lastStage\}/);
   assert.match(economy, /NORMAL_BATTLE_SECONDS = 26/);
   assert.match(economy, /BOSS_BATTLE_SECONDS = 36/);

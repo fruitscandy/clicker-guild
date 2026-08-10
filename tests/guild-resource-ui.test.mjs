@@ -11,8 +11,9 @@ test("guild screens share one resource HUD and keep forge actions focused", asyn
     readFile(new URL("../app/guild-hub/ForgeWorkshop.module.css", import.meta.url), "utf8"),
   ]);
 
-  assert.match(game, /const \[toast, setToast\] = useState\(""\)/);
-  assert.match(game, /\{toast && <div className="toast"/);
+  assert.match(game, /<GameNoticeDialog notice=\{notice\}/);
+  assert.doesNotMatch(game, /setToast|className="toast"/);
+  assert.doesNotMatch(globalStyles, /\.toast(?:\s|,|\{)/);
   assert.doesNotMatch(game, /첫 몬스터를 눌러 길드의 모험을 시작하세요/);
 
   assert.match(globalStyles, /\.resources \{[\s\S]*?background: linear-gradient[\s\S]*?border: 1px solid #3f4d44;/);

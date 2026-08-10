@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { effectiveSfxVolume, readAudioSettings } from "../audio-settings";
+import { OPENING_RESTART_EVENT } from "./opening-events";
 import styles from "./OpeningGate.module.css";
 
 type OpeningPhase = "invitation" | "prologue" | "awakening" | "summon" | "alert" | "title";
@@ -29,14 +30,11 @@ const CUE_BY_PHASE: Partial<Record<OpeningPhase, { source: string; volume: numbe
   title: { source: "/assets/audio/weapons/blade-impact-heavy-03.ogg", volume: 0.72 },
 };
 
-const NEW_GAME_TOAST = "새로운 길드가 창설되었습니다";
-
 export default function OpeningGate({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<OpeningPhase>("invitation");
   const [openingVisible, setOpeningVisible] = useState(true);
   const cuePlayersRef = useRef<HTMLAudioElement[]>([]);
   const skipRef = useRef<HTMLButtonElement | null>(null);
-  const handledNewGameToastRef = useRef(false);
 
   const stopCues = useCallback(() => {
     cuePlayersRef.current.forEach((audio) => {
@@ -106,22 +104,17 @@ export default function OpeningGate({ children }: { children: ReactNode }) {
   }, [finishOpening, moveToPhase, openingVisible, phase]);
 
   useEffect(() => {
-    if (openingVisible) return;
-    const observer = new MutationObserver(() => {
-      const toast = document.querySelector<HTMLElement>(".toast");
-      const isNewGame = toast?.textContent?.includes(NEW_GAME_TOAST) ?? false;
-      if (!isNewGame) {
-        handledNewGameToastRef.current = false;
-        return;
-      }
-      if (!handledNewGameToastRef.current) {
-        handledNewGameToastRef.current = true;
-        window.setTimeout(startOpening, 220);
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
-  }, [openingVisible, startOpening]);
+    let restartTimer: number | null = null;
+    const restartOpening = () => {
+      if (restartTimer !== null) window.clearTimeout(restartTimer);
+      restartTimer = window.setTimeout(startOpening, 220);
+    };
+    window.addEventListener(OPENING_RESTART_EVENT, restartOpening);
+    return () => {
+      if (restartTimer !== null) window.clearTimeout(restartTimer);
+      window.removeEventListener(OPENING_RESTART_EVENT, restartOpening);
+    };
+  }, [startOpening]);
 
   useEffect(() => () => stopCues(), [stopCues]);
 

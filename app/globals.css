@@ -64,8 +64,6 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
 .reset-button { color: var(--ink-soft); white-space: nowrap; }
 .reset-button:hover { background: var(--green-soft); }
 
-.toast { display: flex; align-items: center; gap: 9px; margin: 14px 5px 0; padding: 11px 15px; border: 2px dashed rgba(23, 63, 50, .42); border-radius: 13px; background: var(--yellow-soft); font-size: 13px; font-weight: 800; }
-.toast span { color: var(--coral); }
 .screen { padding: 24px 5px 6px; animation: screenIn .28s ease both; }
 @keyframes screenIn { from { opacity: 0; transform: translateY(8px); } }
 .section-heading, .field-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 22px; margin-bottom: 20px; }
@@ -274,7 +272,6 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
 @media (max-width: 560px) {
   .game-shell { padding: 9px; }.topbar { padding: 3px 0 13px; }.brand-mark { width: 44px; height: 44px; }.brand h1 { font-size: 22px; }.eyebrow { font-size: 9px; }.reset-button { padding: 8px 9px; font-size: 10px; }
   .resources { gap: 5px; }.resources > span { min-height: 34px; padding: 5px; font-size: 8px; }.resources strong { font-size: 11px; }.resource-dot { width: 12px; height: 12px; }
-  .toast { font-size: 10px; }
   .screen { padding-top: 17px; }.section-heading h2, .field-toolbar h2 { font-size: 28px; }.section-heading p { font-size: 11px; }
   .territory { min-height: 340px; }.guild-hall { left: 29%; width: 150px; height: 140px; }.tavern-building { width: 95px; height: 90px; }.flag { left: calc(29% + 69px); bottom: 218px; }.territory-caption { align-items: flex-start; flex-direction: column; }
   .roster-section, .upgrade-panel { padding: 13px; }.member-card { grid-template-columns: 50px 1fr; }.portrait { width: 48px; height: 58px; }.party-check { position: absolute; right: 7px; top: 7px; }
@@ -410,17 +407,6 @@ body {
 .current-objective small { margin-bottom: 3px; color: #efc997; font-size: 9px; letter-spacing: .12em; }
 .current-objective strong { font-size: 13px; }
 
-.toast {
-  justify-content: center;
-  margin: 10px 0 0;
-  padding: 10px 15px;
-  color: #65452e;
-  background: linear-gradient(90deg,#f4e3b9,#ffefcb,#f4e3b9);
-  border: 1px solid #c9a366;
-  border-radius: 3px;
-  font-family: Georgia, "Noto Serif KR", serif;
-}
-.toast span { color: #a44926; }
 .screen { padding: 18px 0 8px; }
 .section-heading, .field-toolbar {
   align-items: center;
@@ -558,7 +544,6 @@ body {
 .battle-mode { width: min(1500px, calc(100% - 24px)); min-height: 100vh; padding-top: 0; }
 .battle-mode > .topbar,
 .battle-mode > .guild-rank-strip,
-.battle-mode > .toast,
 .battle-mode > .game-footer { display: none; }
 .battle-mode .field-screen { padding-top: 14px; }
 .battle-mode .field-screen:has(.victory-overlay) { animation: none; }
@@ -749,7 +734,6 @@ body {
 .tech-node .node-effect { display: -webkit-box; min-height: 23px; margin-top: 4px; overflow: hidden; color: #bcb6cd; font-size: 7px; font-weight: 800; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .tech-node.available .node-effect { color: #f4dfab; }.tech-node.purchased .node-effect { color: #355e4d; }
 
-.permadeath-warning { display: block; margin-top: 5px; color: #a93227; font-size: 9px; font-weight: 1000; letter-spacing: .03em; }
 .hack-arena { --click-primary: #d46a48; --click-secondary: #ffe0a0; --click-glow: rgba(255,190,103,.55); position: relative; cursor: crosshair; touch-action: manipulation; user-select: none; }
 @media (pointer: fine) { .hack-arena.has-forge-cursor, .hack-arena.has-command-cursor { cursor: none; } }
 .field-background-art { z-index: 0; object-fit: cover; object-position: var(--field-art-position, 50% 50%); filter: saturate(.92) contrast(1.035) brightness(.94); pointer-events: none; user-select: none; }
@@ -1152,7 +1136,6 @@ body {
 }
 
 @media (max-width: 560px) {
-  .permadeath-warning { line-height: 1.4; }
   .field-click-guide { top: 15%; width: max-content; max-width: 78%; }
   .field-click-guide span { display: none; }
   .swarm-hud { left:8px; top:54px; width:124px; padding:6px 8px; }.swarm-hud strong { font-size:16px; }

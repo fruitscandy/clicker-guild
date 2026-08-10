@@ -5,9 +5,10 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 
 test("wraps the game in an automatic cinematic opening", async () => {
-  const [page, opening, styles] = await Promise.all([
+  const [page, opening, events, styles] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
     readFile(new URL("app/opening/OpeningGate.tsx", root), "utf8"),
+    readFile(new URL("app/opening/opening-events.ts", root), "utf8"),
     readFile(new URL("app/opening/OpeningGate.module.css", root), "utf8"),
   ]);
 
@@ -16,8 +17,9 @@ test("wraps the game in an automatic cinematic opening", async () => {
   assert.match(opening, /NEXT_PHASE/);
   assert.match(opening, /CUE_BY_PHASE/);
   assert.match(opening, /HERO DATA GENERATING/);
-  assert.match(opening, /NEW_GAME_TOAST/);
-  assert.match(opening, /MutationObserver/);
+  assert.match(opening, /OPENING_RESTART_EVENT/);
+  assert.match(events, /guildmaster:opening-restart/);
+  assert.doesNotMatch(opening, /NEW_GAME_TOAST|MutationObserver|\.toast/);
   assert.match(opening, /Escape/);
   assert.match(opening, /blade-ring-02\.ogg/);
   assert.match(opening, /onClick=\{beginSequence\}/);
