@@ -34,7 +34,12 @@ test("wraps the game in an automatic cinematic opening", async () => {
 });
 
 test("does not ship synthesized opening narration", async () => {
-  const entries = await readdir(new URL("public/audio/opening/", root));
+  let entries = [];
+  try {
+    entries = await readdir(new URL("public/audio/opening/", root));
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
   const narration = entries.filter((file) => file.endsWith(".wav"));
 
   assert.deepEqual(narration, []);
