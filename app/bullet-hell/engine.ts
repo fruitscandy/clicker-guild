@@ -11,6 +11,11 @@ export const FINALE_DESTRUCTION_MS = 1_600;
 export const FINALE_BOSS_REVEAL_MS = 3_600;
 export const FINALE_BOSS_ATTACKABLE_MS = 3_450;
 export const FINALE_BOSS_CLICK_RADIUS = 78;
+export const FINALE_BOSS_ANCHOR_X = FINALE_WIDTH / 2;
+export const FINALE_BOSS_ANCHOR_Y = 184;
+export const FINALE_PLAYER_START_X = FINALE_WIDTH / 2;
+export const FINALE_PLAYER_START_Y = FINALE_HEIGHT - 72;
+export const FINALE_GUILD_SIZE = 90;
 
 const FIXED_STEP_MS = 16;
 const MAX_UPDATE_MS = 512;
@@ -384,8 +389,8 @@ export function createFinaleWorld(
     loadout: normalized,
     stats,
     player: {
-      x: FINALE_WIDTH / 2,
-      y: FINALE_HEIGHT - 72,
+      x: FINALE_PLAYER_START_X,
+      y: FINALE_PLAYER_START_Y,
       radius: 34,
       hitRadius: stats.hitRadius,
       hp: stats.maxHp,
@@ -401,8 +406,8 @@ export function createFinaleWorld(
       executionTriggered: false,
     },
     boss: {
-      x: FINALE_WIDTH / 2,
-      y: 184,
+      x: FINALE_BOSS_ANCHOR_X,
+      y: FINALE_BOSS_ANCHOR_Y,
       radius: 56,
       clickRadius: stats.bossClickRadius,
       hp: PHASE_ONE_HP,
@@ -515,16 +520,16 @@ function configurePhaseOne(world: FinaleWorld) {
   world.modeElapsedMs = 0;
   world.phase = 1;
   world.boss.phase = 1;
-  world.boss.x = FINALE_WIDTH / 2;
-  world.boss.y = 184;
+  world.boss.x = FINALE_BOSS_ANCHOR_X;
+  world.boss.y = FINALE_BOSS_ANCHOR_Y;
   world.boss.hp = PHASE_ONE_HP;
   world.boss.maxHp = PHASE_ONE_HP;
   world.boss.phaseElapsed = 0;
   world.boss.flashMs = 0;
   world.bullets = [];
   world.shots = [];
-  world.player.x = FINALE_WIDTH / 2;
-  world.player.y = FINALE_HEIGHT - 72;
+  world.player.x = FINALE_PLAYER_START_X;
+  world.player.y = FINALE_PLAYER_START_Y;
   world.player.hp = world.player.maxHp;
   world.player.shield = world.player.maxShields;
   world.player.invulnerableMs = 0;
@@ -540,8 +545,8 @@ function configurePhaseTwo(world: FinaleWorld) {
   world.modeElapsedMs = 0;
   world.phase = 2;
   world.boss.phase = 2;
-  world.boss.x = FINALE_WIDTH / 2;
-  world.boss.y = 150;
+  world.boss.x = FINALE_BOSS_ANCHOR_X;
+  world.boss.y = FINALE_BOSS_ANCHOR_Y;
   world.boss.hp = PHASE_TWO_HP;
   world.boss.maxHp = PHASE_TWO_HP;
   world.boss.phaseElapsed = 0;
@@ -554,8 +559,8 @@ function configurePhaseTwo(world: FinaleWorld) {
   world.cycleSerial = 0;
   world.bullets = [];
   world.shots = [];
-  world.player.x = FINALE_WIDTH / 2;
-  world.player.y = FINALE_HEIGHT - 72;
+  world.player.x = FINALE_PLAYER_START_X;
+  world.player.y = FINALE_PLAYER_START_Y;
   world.player.hp = world.player.maxHp;
   world.player.shield = world.player.maxShields;
   world.player.invulnerableMs = 700;
@@ -666,8 +671,8 @@ function spawnAimedFan(world: FinaleWorld) {
     addBullet(world, {
       x: world.boss.x,
       y: world.boss.y + world.boss.radius * 0.5,
-      vx: Math.cos(angle) * (166 + index * 5),
-      vy: Math.sin(angle) * (166 + index * 5),
+      vx: Math.cos(angle) * (150 + index * 5),
+      vy: Math.sin(angle) * (150 + index * 5),
       ax: 0,
       ay: 0,
       radius: 9,

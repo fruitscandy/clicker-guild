@@ -188,16 +188,30 @@ test("phase one has no automatic attack and takes 12-18 deliberate clicks", () =
 
 test("field collapse leads to a fresh phase two without replaying phase one", () => {
   let world = engine.createFinaleWorld(loadout(), { seed: 10 });
+  const fieldBossY = world.boss.y;
   world = engine.forceFinaleMode(world, "collapse");
   world = advance(world, engine.FINALE_COLLAPSE_MS - 16);
   assert.equal(world.mode, "collapse");
+  assert.equal(world.boss.y, fieldBossY);
   world = advance(world, 32);
   assert.equal(world.mode, "bulletHell");
   assert.equal(world.phase, 2);
-  assert.equal(world.boss.y, 150, "phase-two boss should clear the compact HP overlay");
+  assert.equal(world.boss.x, engine.FINALE_BOSS_ANCHOR_X);
+  assert.equal(world.boss.y, engine.FINALE_BOSS_ANCHOR_Y);
+  assert.equal(world.boss.y, fieldBossY, "the live boss must keep one anchor through the page fracture");
   assert.equal(world.boss.hp, 42);
   assert.equal(world.cycle, "dodge");
   assert.equal(world.player.shield, 1);
+
+  const retried = engine.restartFinalePhaseTwo({ ...world, status: "defeat" });
+  assert.equal(retried.boss.y, fieldBossY);
+
+  let firing = engine.forceFinaleMode(world, "bulletHell");
+  firing.player.invulnerableMs = 999_999;
+  firing = advance(firing, 800);
+  const aimedOriginY = engine.FINALE_BOSS_ANCHOR_Y + firing.boss.radius * .5;
+  assert.equal(firing.bullets.filter((bullet) => bullet.y === aimedOriginY).length, 3,
+    "the aimed fan must fire from the same anchored boss body");
 });
 
 test("one run reaches the ending from protected reveal through both combat phases", () => {

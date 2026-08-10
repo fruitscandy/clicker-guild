@@ -73,10 +73,11 @@ test("keeps the equipped sword cursor while narrowing attacks to the assembled b
 });
 
 test("assembles an original archivist silhouette from ominous energy before it becomes attackable", async () => {
-  const [component, engine, css] = await Promise.all([
+  const [component, engine, css, silhouette] = await Promise.all([
     readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8"),
     readFile(new URL("app/bullet-hell/engine.ts", root), "utf8"),
     readFile(new URL("app/bullet-hell/BulletHellFinale.module.css", root), "utf8"),
+    readFile(new URL("app/bullet-hell/boss-silhouette.ts", root), "utf8"),
   ]);
 
   assert.match(engine, /FINALE_BOSS_REVEAL_MS = 3_600/);
@@ -84,8 +85,10 @@ test("assembles an original archivist silhouette from ominous energy before it b
   assert.match(engine, /mode === "field" && next\.modeElapsedMs < FINALE_BOSS_ATTACKABLE_MS/);
   assert.match(component, /function drawBossEntranceEnergy/);
   assert.match(component, /world\.modeElapsedMs \/ FINALE_BOSS_REVEAL_MS/);
-  assert.match(component, /function traceArchivistHead/);
-  assert.match(component, /function traceArchivistMantle/);
+  assert.match(component, /import \{ traceArchivistHead, traceArchivistMantle \} from "\.\/boss-silhouette"/);
+  assert.match(silhouette, /export function traceArchivistHead/);
+  assert.match(silhouette, /export function traceArchivistMantle/);
+  assert.match(silhouette, /export function traceArchivistSilhouette/);
   assert.match(component, /drawArchivistSilhouette/);
   assert.match(component, /const cyan = field/);
   assert.match(component, /const magenta = field/);
@@ -108,23 +111,24 @@ test("assembles an original archivist silhouette from ominous energy before it b
   assert.ok(energyLayer >= 0 && bossLayer >= 0 && energyLayer < bossLayer);
 });
 
-test("removes explanatory panels and exposes only compact accessible combat overlays", async () => {
+test("removes explanatory panels and hides combat overlays after phase one", async () => {
   const component = await readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8");
 
   assert.doesNotMatch(component, /styles\.topHud|styles\.sidePanel|styles\.bottomRail|styles\.clickGuide|scene === "intro"/);
-  assert.equal((component.match(/role="progressbar"/g) ?? []).length, 2);
+  assert.equal((component.match(/role="progressbar"/g) ?? []).length, 1);
   assert.match(component, /data-finale-overlay="boss"/);
-  assert.match(component, /data-finale-overlay="guild"/);
+  assert.match(component, /const showCombatChrome = hud\.mode === "field"/);
+  assert.doesNotMatch(component, /data-finale-overlay="guild"/);
   assert.match(component, /aria-label="기록 말소자 체력"/);
-  assert.match(component, /aria-label="길드 본관 내구도"/);
   assert.match(component, /aria-live="polite"/);
   assert.match(component, /if \(presentation === "embedded"\) return battleSurface/);
 });
 
-test("keeps phase one transparent and changes to a black null field without changing the host rect", async () => {
-  const [component, css] = await Promise.all([
+test("fractures the whole page over a live black phase-two underlay without changing the host rect", async () => {
+  const [component, css, controller] = await Promise.all([
     readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8"),
     readFile(new URL("app/bullet-hell/BulletHellFinale.module.css", root), "utf8"),
+    readFile(new URL("app/bullet-hell/page-fracture.ts", root), "utf8"),
   ]);
 
   assert.match(component, /if \(!preserveHostField\) drawFieldBackground/);
@@ -132,11 +136,27 @@ test("keeps phase one transparent and changes to a black null field without chan
   assert.match(component, /context\.clearRect\(0, 0, canvas\.width, canvas\.height\)/);
   assert.match(component, /Math\.min\(canvas\.width \/ FINALE_WIDTH, canvas\.height \/ FINALE_HEIGHT\)/);
   assert.match(css, /\.embeddedSurface\s*\{[\s\S]*?position: absolute;[\s\S]*?inset: 0;[\s\S]*?background: transparent;/);
+  assert.match(css, /\.battleSurface\[data-finale-mode="collapse"\][\s\S]*?background: #010204;/);
   assert.match(css, /\.battleSurface\[data-finale-mode="bulletHell"\][\s\S]*?background: #000;/);
   assert.match(css, /\.bossOverlay[\s\S]*?pointer-events: none;/);
-  assert.match(css, /\.guildOverlay\s*\{[\s\S]*?right: 14px;[\s\S]*?bottom: 78px;/);
-  assert.match(css, /finaleChromeFracture/);
-  assert.match(css, /visibility: hidden;[\s\S]*?opacity: 0;/);
+  assert.match(component, /mountPageFracture\(/);
+  assert.match(component, /beginPageFracture\(before\)[\s\S]*?worldRef\.current = next/);
+  assert.match(component, /active\.controller\.update\(world\.modeElapsedMs, world\.stats\.collapseDurationMs/);
+  assert.match(component, /before\.mode === "collapse" && world\.mode === "bulletHell"[\s\S]*?settlePageFracture\(\)/);
+  assert.match(component, /pageFractureScrollRef\.current = \{ x: window\.scrollX, y: window\.scrollY \}/);
+  assert.match(component, /window\.scrollTo\(preservedScroll\.x, preservedScroll\.y\)/);
+  assert.match(component, /dataset\.pageFracturePortal = "true"/);
+  assert.match(component, /data-page-fracture-live/);
+  assert.match(controller, /sourceRoot, "source"/);
+  assert.match(controller, /battleSurface, "battle"/);
+  assert.match(controller, /soundDock, "dock"/);
+  assert.doesNotMatch(controller, /requestAnimationFrame|setTimeout|setInterval|MutationObserver|performance\.now/);
+  assert.match(css, /data-page-fracture-underlay="source"/);
+  assert.match(css, /height: 100svh !important/);
+  assert.match(css, /html:has\(\[data-page-fracture-underlay="source"\]\)[\s\S]*?overflow-y: scroll !important/);
+  assert.match(css, /data-page-fracture-underlay="dock"/);
+  assert.doesNotMatch(css, /finaleChromeFracture/);
+  assert.doesNotMatch(css, /data-finale-mode="collapse"[^\{]*\{[^}]*animation:/);
 });
 
 test("stacks visible boss-hit feedback without letting rate-limited clicks erase it", async () => {
@@ -157,15 +177,15 @@ test("stacks visible boss-hit feedback without letting rate-limited clicks erase
   assert.match(component, /const recoil = reducedMotion/);
   assert.doesNotMatch(component, /Math\.random/);
 
-  const collapseLayer = component.indexOf("drawCollapse(context, world, reducedMotion);");
+  const bossLayer = component.indexOf("drawBoss(context, world, reducedMotion);");
   const attackLayer = component.indexOf("attackImpacts.forEach((impact) => drawAttackImpact(context, impact, images, reducedMotion));");
-  assert.ok(collapseLayer >= 0 && attackLayer >= 0 && collapseLayer < attackLayer);
+  assert.ok(bossLayer >= 0 && attackLayer >= 0 && bossLayer < attackLayer);
 });
 
 test("renders the guild under enemy bullets while keeping the exact white hit point on top", async () => {
   const component = await readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8");
 
-  assert.match(component, /const size = 90/);
+  assert.match(component, /const size = FINALE_GUILD_SIZE/);
   assert.match(component, /context\.arc\(0, 0, world\.stats\.hitRadius/);
 
   const bodyLayer = component.indexOf("drawGuildBody(context, world, loadout, images, reducedMotion);");
@@ -185,7 +205,7 @@ test("makes shield absorption, defeat, retry, destruction, and victory whiteout 
   assert.match(component, /이것은 게임 오버가 아닙니다/);
   assert.match(component, /restartFinalePhaseTwo\(worldRef\.current\)/);
   assert.match(component, /2페이즈 즉시 재시도/);
-  assert.match(component, /hud\.mode === "destruction"/);
+  assert.match(component, /world\.mode === "destruction"/);
   assert.match(component, /hud\.mode === "whiteout"/);
   assert.match(component, /WHITEOUT_HOLD_MS/);
   assert.match(component, /최종 보스 격파/);
@@ -200,7 +220,7 @@ test("connects existing boss-stage music and preview scene jumps", async () => {
   for (const mode of ["field", "collapse", "bulletHell", "destruction", "whiteout"]) {
     assert.match(component, new RegExp(`"${mode}"`));
   }
-  assert.match(component, /forceFinaleMode\(worldRef\.current, nextMode\)/);
+  assert.match(component, /forceFinaleMode\(before, nextMode\)/);
   assert.match(component, />CORE OPEN<\/button>/);
 });
 

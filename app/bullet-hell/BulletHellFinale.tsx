@@ -24,6 +24,7 @@ import {
   FINALE_VFX_ASSETS,
   finaleBulletAsset,
 } from "./assets";
+import { traceArchivistHead, traceArchivistMantle } from "./boss-silhouette";
 import {
   attackFinaleBoss,
   createFinaleWorld,
@@ -31,6 +32,7 @@ import {
   FINALE_BOSS_ATTACKABLE_MS,
   FINALE_BOSS_CLICK_RADIUS,
   FINALE_BOSS_REVEAL_MS,
+  FINALE_GUILD_SIZE,
   FINALE_HEIGHT,
   FINALE_WIDTH,
   forceFinaleMode,
@@ -42,6 +44,8 @@ import {
   type FinalePlayerHitEvent,
   type FinaleWorld,
 } from "./engine";
+import { PAGE_FRACTURE_PRELUDE_MS } from "./fracture-geometry";
+import { mountPageFracture, type PageFractureController } from "./page-fracture";
 import styles from "./BulletHellFinale.module.css";
 
 const WHITEOUT_HOLD_MS = 1_550;
@@ -76,6 +80,18 @@ type VirtualDirection = "up" | "down" | "left" | "right" | "focus";
 type PlayerImpact = FinalePlayerHitEvent & { ageMs: number };
 type AttackImpact = FinaleAttackEvent & { ageMs: number };
 type WeaponCursorPoint = { x: number; y: number; visible: boolean };
+type PageFracturePortal = {
+  root: HTMLDivElement;
+  shardHost: HTMLDivElement;
+  faultLines: HTMLDivElement;
+  signalShear: HTMLDivElement;
+  flash: HTMLDivElement;
+};
+type ActivePageFracture = {
+  controller: PageFractureController;
+  portal: PageFracturePortal;
+  settled: boolean;
+};
 
 type HudSnapshot = {
   playerHp: number;
@@ -115,6 +131,76 @@ function clamp(value: number, minimum: number, maximum: number) {
 function smoothstep(value: number) {
   const normalized = clamp(value, 0, 1);
   return normalized * normalized * (3 - 2 * normalized);
+}
+
+const PAGE_FRACTURE_FAULT_ANGLES = [-171, -139, -103, -67, -31, 4, 39, 76, 116, 151] as const;
+
+function createPageFracturePortal(): PageFracturePortal {
+  const root = document.createElement("div");
+  root.className = styles.pageFracturePortal;
+  root.dataset.pageFracturePortal = "true";
+  root.setAttribute("aria-hidden", "true");
+  root.setAttribute("inert", "");
+  root.inert = true;
+
+  const shardHost = document.createElement("div");
+  shardHost.className = styles.pageFractureShardHost;
+  shardHost.dataset.pageFractureLayer = "shards";
+  shardHost.setAttribute("aria-hidden", "true");
+  shardHost.setAttribute("inert", "");
+  shardHost.inert = true;
+
+  const faultLines = document.createElement("div");
+  faultLines.className = styles.pageFractureFaultLines;
+  faultLines.dataset.pageFractureLayer = "fault-lines";
+  for (const angle of PAGE_FRACTURE_FAULT_ANGLES) {
+    const line = document.createElement("i");
+    line.style.rotate = `${angle}deg`;
+    faultLines.append(line);
+  }
+
+  const signalShear = document.createElement("div");
+  signalShear.className = styles.pageFractureSignalShear;
+  signalShear.dataset.pageFractureLayer = "signal-shear";
+
+  const flash = document.createElement("div");
+  flash.className = styles.pageFractureFlash;
+  flash.dataset.pageFractureLayer = "flash";
+
+  root.append(shardHost, faultLines, signalShear, flash);
+  document.body.append(root);
+  return { root, shardHost, faultLines, signalShear, flash };
+}
+
+function updatePageFracturePortal(
+  portal: PageFracturePortal,
+  elapsedMs: number,
+  durationMs: number,
+  reducedMotion: boolean,
+) {
+  const elapsed = clamp(elapsedMs, 0, durationMs);
+  const progress = clamp(elapsed / Math.max(1, durationMs), 0, 1);
+  const charge = clamp(elapsed / PAGE_FRACTURE_PRELUDE_MS, 0, 1);
+  const flight = clamp((elapsed - PAGE_FRACTURE_PRELUDE_MS) / Math.max(1, durationMs - PAGE_FRACTURE_PRELUDE_MS), 0, 1);
+  const phase = elapsed < PAGE_FRACTURE_PRELUDE_MS ? "priming" : elapsed < durationMs ? "fracturing" : "complete";
+  portal.root.dataset.pageFracturePhase = phase;
+  portal.root.style.setProperty("--fracture-progress", String(progress));
+
+  if (reducedMotion) {
+    portal.faultLines.style.opacity = String(.34 * (1 - smoothstep((progress - .16) / .32)));
+    portal.signalShear.style.opacity = "0";
+    portal.flash.style.opacity = "0";
+    return;
+  }
+
+  const faultOpacity = elapsed < PAGE_FRACTURE_PRELUDE_MS
+    ? Math.sin(charge * Math.PI) * .92
+    : (1 - smoothstep(flight)) * .8;
+  const flashProgress = clamp(elapsed / 240, 0, 1);
+  portal.faultLines.style.opacity = String(faultOpacity);
+  portal.signalShear.style.opacity = String((1 - smoothstep(flight)) * Math.abs(Math.sin(progress * Math.PI * 9)) * .48);
+  portal.signalShear.style.translate = `${Math.sin(progress * Math.PI * 13) * 9}px 0`;
+  portal.flash.style.opacity = String(Math.sin(flashProgress * Math.PI) * .88);
 }
 
 function snapshotFromWorld(world: FinaleWorld): HudSnapshot {
@@ -220,37 +306,6 @@ function drawNullBackground(context: CanvasRenderingContext2D, world: FinaleWorl
   context.restore();
 }
 
-function traceArchivistHead(context: CanvasRenderingContext2D) {
-  context.beginPath();
-  context.moveTo(-31, -71);
-  context.lineTo(-7, -77);
-  context.lineTo(25, -72);
-  context.lineTo(37, -43);
-  context.lineTo(27, -13);
-  context.lineTo(6, -2);
-  context.lineTo(-23, -12);
-  context.lineTo(-39, -42);
-  context.closePath();
-}
-
-function traceArchivistMantle(context: CanvasRenderingContext2D) {
-  context.beginPath();
-  context.moveTo(-22, -12);
-  context.lineTo(-64, 4);
-  context.lineTo(-51, 29);
-  context.lineTo(-38, 19);
-  context.lineTo(-31, 68);
-  context.lineTo(-11, 57);
-  context.lineTo(0, 78);
-  context.lineTo(14, 55);
-  context.lineTo(35, 68);
-  context.lineTo(39, 20);
-  context.lineTo(56, 29);
-  context.lineTo(68, 1);
-  context.lineTo(25, -12);
-  context.closePath();
-}
-
 function drawArchivistSilhouette(
   context: CanvasRenderingContext2D,
   fill: string | CanvasGradient,
@@ -338,16 +393,13 @@ function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reduced
   if (world.mode === "whiteout") return;
   const { x, y } = world.boss;
   const seconds = reducedMotion ? 0 : world.elapsedMs / 1_000;
-  const field = world.mode === "field" || world.mode === "collapse";
+  const field = world.mode === "field";
   const opening = world.mode === "bulletHell" && world.cycle === "opening";
   const revealProgress = world.mode === "field"
     ? clamp(world.modeElapsedMs / FINALE_BOSS_REVEAL_MS, 0, 1)
     : 1;
   const assembly = smoothstep((revealProgress - .5) / .38);
   const eyeIgnition = smoothstep((revealProgress - .84) / .12);
-  const collapseProgress = world.mode === "collapse"
-    ? clamp(world.modeElapsedMs / world.stats.collapseDurationMs, 0, 1)
-    : 0;
   const destructionProgress = world.mode === "destruction"
     ? clamp(world.modeElapsedMs / world.stats.destructionDurationMs, 0, 1)
     : 0;
@@ -362,7 +414,7 @@ function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reduced
   const coreColor = opening ? "#fff0a4" : field ? "#f0c66e" : "#bffcff";
   const cyan = field ? "#50d7d3" : "#00ead7";
   const magenta = field ? "#9f4778" : "#ff2b8c";
-  const bodyOpacity = assembly * (1 - collapseProgress * .5) * (1 - destructionProgress * .76);
+  const bodyOpacity = assembly * (1 - destructionProgress * .76);
   const destructionMotion = reducedMotion ? 0 : destructionProgress;
   const attackableVisual = world.mode === "bulletHell"
     || (world.mode === "field" && world.modeElapsedMs >= FINALE_BOSS_ATTACKABLE_MS);
@@ -546,7 +598,7 @@ function drawGuildBody(
   const column = frame % FINALE_GUILD_ATLAS.columns;
   const row = Math.floor(frame / FINALE_GUILD_ATLAS.columns);
   const blink = !reducedMotion && world.player.invulnerableMs > 0 && Math.floor(world.player.invulnerableMs / 90) % 2 === 0;
-  const size = 90;
+  const size = FINALE_GUILD_SIZE;
 
   context.save();
   context.translate(world.player.x, world.player.y);
@@ -839,30 +891,6 @@ function drawAttackImpact(
   context.restore();
 }
 
-function drawCollapse(context: CanvasRenderingContext2D, world: FinaleWorld, reducedMotion: boolean) {
-  if (world.mode !== "collapse") return;
-  const progress = clamp(world.modeElapsedMs / world.stats.collapseDurationMs, 0, 1);
-  context.save();
-  context.fillStyle = `rgba(0,0,0,${progress * .84})`;
-  context.fillRect(0, 0, FINALE_WIDTH, FINALE_HEIGHT);
-  context.strokeStyle = `rgba(103,239,247,${1 - progress})`;
-  context.lineWidth = 3;
-  const split = FINALE_HEIGHT * (.48 + progress * .18);
-  context.beginPath();
-  context.moveTo(0, split);
-  context.lineTo(FINALE_WIDTH, split - 42 * progress);
-  context.stroke();
-  if (!reducedMotion) {
-    for (let index = 0; index < 11; index += 1) {
-      const y = (index * 61 + world.elapsedMs * .34) % FINALE_HEIGHT;
-      const height = 2 + index % 4;
-      context.fillStyle = index % 2 ? `rgba(255,58,154,${.25 * (1 - progress)})` : `rgba(88,235,245,${.3 * (1 - progress)})`;
-      context.fillRect(index % 2 ? 0 : 130, y, FINALE_WIDTH - (index % 3) * 120, height);
-    }
-  }
-  context.restore();
-}
-
 function drawWorld(
   context: CanvasRenderingContext2D,
   world: FinaleWorld,
@@ -874,21 +902,25 @@ function drawWorld(
   reducedMotion: boolean,
   preserveHostField: boolean,
 ) {
-  if (world.mode === "field" || world.mode === "collapse") {
+  if (world.mode === "field") {
     if (!preserveHostField) drawFieldBackground(context, images);
+  } else if (world.mode === "collapse") {
+    context.fillStyle = "#010204";
+    context.fillRect(0, 0, FINALE_WIDTH, FINALE_HEIGHT);
   } else {
     drawNullBackground(context, world, reducedMotion);
   }
 
   drawBossEntranceEnergy(context, world, reducedMotion);
   drawBoss(context, world, reducedMotion);
-  if (world.mode === "bulletHell") {
+  if (world.mode === "collapse" || world.mode === "bulletHell") {
     drawGuildBody(context, world, loadout, images, reducedMotion);
-    world.bullets.forEach((bullet) => drawBullet(context, bullet, images));
-    if (playerImpact) drawPlayerImpact(context, playerImpact, images, reducedMotion);
+    if (world.mode === "bulletHell") {
+      world.bullets.forEach((bullet) => drawBullet(context, bullet, images));
+      if (playerImpact) drawPlayerImpact(context, playerImpact, images, reducedMotion);
+    }
     drawPlayerCore(context, world, focusHeld, reducedMotion);
   }
-  drawCollapse(context, world, reducedMotion);
   attackImpacts.forEach((impact) => drawAttackImpact(context, impact, images, reducedMotion));
 
   if (world.mode === "whiteout") {
@@ -928,6 +960,8 @@ export function BulletHellFinale({
   const lastHudRef = useRef(0);
   const whiteoutStartedAtRef = useRef<number | null>(null);
   const resultSoundRef = useRef<"victory" | "defeat" | null>(null);
+  const pageFractureRef = useRef<ActivePageFracture | null>(null);
+  const pageFractureScrollRef = useRef<{ x: number; y: number } | null>(null);
   const previousModeRef = useRef<FinaleMode>(initialWorld.mode);
   const previousCycleRef = useRef(initialWorld.cycle);
   const sceneRef = useRef<FinaleScene>("running");
@@ -979,6 +1013,101 @@ export function BulletHellFinale({
     );
   }, [loadout, presentation]);
 
+  const restorePageFracture = useCallback(() => {
+    const active = pageFractureRef.current;
+    if (!active) return;
+    active.controller.restore();
+    active.portal.root.remove();
+    pageFractureRef.current = null;
+    pageFractureScrollRef.current = null;
+  }, []);
+
+  const settlePageFracture = useCallback(() => {
+    const active = pageFractureRef.current;
+    if (!active || active.settled) return;
+    active.controller.settle();
+    active.portal.root.remove();
+    active.settled = true;
+    const preservedScroll = pageFractureScrollRef.current;
+    if (preservedScroll) {
+      window.requestAnimationFrame(() => {
+        window.scrollTo(preservedScroll.x, preservedScroll.y);
+        canvasRef.current?.focus({ preventScroll: true });
+        window.scrollTo(preservedScroll.x, preservedScroll.y);
+      });
+    }
+  }, []);
+
+  const updatePageFracture = useCallback((world: FinaleWorld) => {
+    const active = pageFractureRef.current;
+    if (!active || active.settled || world.mode !== "collapse") return;
+    active.controller.update(world.modeElapsedMs, world.stats.collapseDurationMs, reducedMotionRef.current);
+    updatePageFracturePortal(
+      active.portal,
+      world.modeElapsedMs,
+      world.stats.collapseDurationMs,
+      reducedMotionRef.current,
+    );
+  }, []);
+
+  const beginPageFracture = useCallback((world: FinaleWorld) => {
+    const battleCanvas = canvasRef.current;
+    const battleSurface = arenaRef.current;
+    const sourceRoot = battleSurface?.closest<HTMLElement>(".game-shell");
+    if (!battleCanvas || !battleSurface || !sourceRoot || battleCanvas.width < 2 || battleCanvas.height < 2) return false;
+
+    const current = pageFractureRef.current;
+    if (current) {
+      current.controller.restore();
+      current.portal.root.remove();
+      pageFractureRef.current = null;
+    }
+
+    const soundDock = document.querySelector<HTMLElement>("[aria-label='게임 사운드 제어']");
+    pageFractureScrollRef.current = { x: window.scrollX, y: window.scrollY };
+    const portal = createPageFracturePortal();
+    const canvasRect = battleCanvas.getBoundingClientRect();
+    const canvasScale = Math.max(.001, Math.min(canvasRect.width / FINALE_WIDTH, canvasRect.height / FINALE_HEIGHT));
+    const canvasOffsetX = (canvasRect.width - FINALE_WIDTH * canvasScale) / 2;
+    const canvasOffsetY = (canvasRect.height - FINALE_HEIGHT * canvasScale) / 2;
+    portal.root.style.setProperty("--fracture-origin-x", `${canvasRect.left + canvasOffsetX + world.boss.x * canvasScale}px`);
+    portal.root.style.setProperty("--fracture-origin-y", `${canvasRect.top + canvasOffsetY + world.boss.y * canvasScale}px`);
+    try {
+      const controller = mountPageFracture({
+        sourceRoot,
+        battleSurface,
+        soundDock,
+        battleCanvas,
+        shardHost: portal.shardHost,
+        worldWidth: FINALE_WIDTH,
+        worldHeight: FINALE_HEIGHT,
+        boss: {
+          x: world.boss.x,
+          y: world.boss.y,
+          radius: world.boss.radius,
+          clickRadius: world.boss.clickRadius,
+          silhouetteScale: .94,
+        },
+        seed,
+        classNames: {
+          shard: styles.pageFractureShard,
+          content: styles.pageFractureContent,
+        },
+      });
+      pageFractureRef.current = { controller, portal, settled: false };
+      controller.update(0, world.stats.collapseDurationMs, reducedMotionRef.current);
+      updatePageFracturePortal(portal, 0, world.stats.collapseDurationMs, reducedMotionRef.current);
+      return true;
+    } catch {
+      portal.root.remove();
+      pageFractureScrollRef.current = null;
+      sourceRoot.removeAttribute("data-page-fracture-underlay");
+      battleSurface.removeAttribute("data-page-fracture-underlay");
+      soundDock?.removeAttribute("data-page-fracture-underlay");
+      return false;
+    }
+  }, [seed]);
+
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     const arena = arenaRef.current;
@@ -998,12 +1127,15 @@ export function BulletHellFinale({
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
     const syncPreference = () => {
       reducedMotionRef.current = query.matches;
+      updatePageFracture(worldRef.current);
       renderCanvas();
     };
     syncPreference();
     query.addEventListener("change", syncPreference);
     return () => query.removeEventListener("change", syncPreference);
-  }, [renderCanvas]);
+  }, [renderCanvas, updatePageFracture]);
+
+  useEffect(() => () => restorePageFracture(), [restorePageFracture]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1048,6 +1180,7 @@ export function BulletHellFinale({
   const applyBossAttack = useCallback((x: number, y: number) => {
     const before = worldRef.current;
     const next = attackFinaleBoss(before, x, y, performance.now());
+    if (before.mode !== "collapse" && next.mode === "collapse") beginPageFracture(before);
     worldRef.current = next;
     const event = next.attackEvent;
     if (event && event.kind !== "rate-limited") {
@@ -1076,7 +1209,8 @@ export function BulletHellFinale({
     }
     setHud(snapshotFromWorld(next));
     renderCanvas();
-  }, [renderCanvas]);
+    updatePageFracture(next);
+  }, [beginPageFracture, renderCanvas, updatePageFracture]);
 
   useEffect(() => {
     const movementKeys = new Set(["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"]);
@@ -1142,6 +1276,7 @@ export function BulletHellFinale({
       const before = worldRef.current;
       const world = updateFinaleWorld(before, { x: horizontal, y: vertical, focus }, elapsed);
       worldRef.current = world;
+      updatePageFracture(world);
       if (world.playerHitEvent) playerImpactRef.current = { ...world.playerHitEvent, ageMs: 0 };
 
       if (world.playerHit) {
@@ -1172,6 +1307,9 @@ export function BulletHellFinale({
       }
 
       renderCanvas();
+      if (before.mode === "collapse" && world.mode === "bulletHell") {
+        settlePageFracture();
+      }
       const stateChanged = before.mode !== world.mode || before.cycle !== world.cycle || before.status !== world.status;
       if (stateChanged || timestamp - lastHudRef.current >= 80) {
         lastHudRef.current = timestamp;
@@ -1209,7 +1347,7 @@ export function BulletHellFinale({
       if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
       frameRef.current = null;
     };
-  }, [renderCanvas, scene]);
+  }, [renderCanvas, scene, settlePageFracture, updatePageFracture]);
 
   const trackFinaleWeaponCursor = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (event.pointerType !== "mouse") return;
@@ -1239,6 +1377,7 @@ export function BulletHellFinale({
   };
 
   const restartAll = useCallback(() => {
+    restorePageFracture();
     const world = createFinaleWorld(loadout, { preview: mode === "preview", seed });
     worldRef.current = world;
     playerImpactRef.current = null;
@@ -1252,9 +1391,10 @@ export function BulletHellFinale({
     unlockBattleAudio();
     playExpeditionStartSound(true);
     setScene("running");
-  }, [loadout, mode, seed]);
+  }, [loadout, mode, restorePageFracture, seed]);
 
   const retryPhaseTwo = useCallback(() => {
+    settlePageFracture();
     const world = restartFinalePhaseTwo(worldRef.current);
     worldRef.current = world;
     playerImpactRef.current = null;
@@ -1268,10 +1408,13 @@ export function BulletHellFinale({
     playExpeditionStartSound(true);
     setScene("running");
     requestAnimationFrame(() => canvasRef.current?.focus({ preventScroll: true }));
-  }, []);
+  }, [settlePageFracture]);
 
   const jumpToMode = (nextMode: FinaleMode) => {
-    const world = forceFinaleMode(worldRef.current, nextMode);
+    const before = worldRef.current;
+    if (nextMode === "field") restorePageFracture();
+    else if (before.mode === "field") beginPageFracture(before);
+    const world = forceFinaleMode(before, nextMode);
     worldRef.current = world;
     playerImpactRef.current = null;
     attackImpactsRef.current = [];
@@ -1283,10 +1426,14 @@ export function BulletHellFinale({
     setAnnouncement(`개발자 장면 이동: ${nextMode}.`);
     setScene("running");
     renderCanvas();
+    if (nextMode === "collapse") updatePageFracture(world);
+    else if (nextMode !== "field") settlePageFracture();
   };
 
   const forceDefeat = () => {
-    const current = forceFinaleMode(worldRef.current, "bulletHell");
+    const before = worldRef.current;
+    if (before.mode === "field") beginPageFracture(before);
+    const current = forceFinaleMode(before, "bulletHell");
     const world: FinaleWorld = {
       ...current,
       status: "defeat",
@@ -1296,11 +1443,15 @@ export function BulletHellFinale({
     };
     worldRef.current = world;
     setHud(snapshotFromWorld(world));
+    renderCanvas();
+    settlePageFracture();
     setScene("defeat");
   };
 
   const jumpToOpening = () => {
-    const current = forceFinaleMode(worldRef.current, "bulletHell");
+    const before = worldRef.current;
+    if (before.mode === "field") beginPageFracture(before);
+    const current = forceFinaleMode(before, "bulletHell");
     const patternName = "코어 노출 · 클릭 피해 2배";
     const world: FinaleWorld = {
       ...current,
@@ -1319,6 +1470,7 @@ export function BulletHellFinale({
     setAnnouncement("개발자 장면 이동: 첫 CORE OPEN 공격 기회.");
     setScene("running");
     renderCanvas();
+    settlePageFracture();
   };
 
   const setVirtualDirection = (direction: VirtualDirection, active: boolean, event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -1334,10 +1486,8 @@ export function BulletHellFinale({
     }
   };
 
-  const hullCells = Array.from({ length: Math.max(1, hud.playerMaxHp) }, (_, index) => index < hud.playerHp);
   const phaseLabel = hud.mode === "field" || hud.mode === "collapse" ? "PHASE 1" : "PHASE 2";
-  const phaseTwo = hud.mode === "bulletHell" || hud.mode === "destruction" || hud.mode === "whiteout";
-  const guildPercent = hud.playerMaxHp ? clamp(hud.playerHp / hud.playerMaxHp * 100, 0, 100) : 0;
+  const showCombatChrome = hud.mode === "field";
   const showWeaponCursor = Boolean(cursorWeapon) && scene === "running" && (hud.mode === "field" || hud.mode === "bulletHell");
 
   const battleSurface = <div
@@ -1346,6 +1496,7 @@ export function BulletHellFinale({
     data-finale-scene={scene}
     data-finale-mode={hud.mode}
     data-boss-summoning={hud.mode === "field" && hud.modeElapsedMs < FINALE_BOSS_REVEAL_MS ? "true" : undefined}
+    data-page-fracture-live={hud.mode === "field" ? undefined : "true"}
     data-finale-music={musicSignal}
     role="application"
     aria-label="기록 말소자 최종 결전"
@@ -1365,7 +1516,7 @@ export function BulletHellFinale({
       <WeaponCursor weapon={cursorWeapon} point={weaponCursorPoint} />
     </div>}
 
-    <div className={styles.bossOverlay} data-finale-overlay="boss" style={{ "--boss-reveal": bossRevealOpacity } as CSSProperties}>
+    {showCombatChrome && <div className={styles.bossOverlay} data-finale-overlay="boss" style={{ "--boss-reveal": bossRevealOpacity } as CSSProperties}>
       <span><b>기록 말소자</b><em>{hud.mode === "bulletHell" && hud.cycle === "opening" ? "CORE OPEN ×2" : phaseLabel}</em><strong>{Math.ceil(bossPercent)}%</strong></span>
       <div
         className={styles.bossBar}
@@ -1381,29 +1532,9 @@ export function BulletHellFinale({
         {hud.cycle === "opening" ? "CORE OPEN" : "DODGE"} · {(hud.cycleRemainingMs / 1_000).toFixed(1)}s
         <i style={{ "--meter": `${cyclePercent}%` } as CSSProperties} />
       </small>}
-    </div>
-
-    {phaseTwo && <div className={styles.guildOverlay} data-finale-overlay="guild">
-      <span><b>길드 본관</b><strong>{hud.playerHp}/{hud.playerMaxHp}</strong></span>
-      <div
-        className={styles.guildBar}
-        role="progressbar"
-        aria-label="길드 본관 내구도"
-        aria-valuemin={0}
-        aria-valuemax={hud.playerMaxHp}
-        aria-valuenow={hud.playerHp}
-        aria-valuetext={`내구도 ${hud.playerHp}/${hud.playerMaxHp}, 방어막 ${hud.shield}`}
-        style={{ "--guild-hp": `${guildPercent}%` } as CSSProperties}
-      ><i /></div>
-      <div className={styles.hullRow} aria-hidden="true">
-        {hullCells.map((active, index) => <i key={index} className={`${styles.hullCell} ${active ? styles.active : ""}`} />)}
-      </div>
-      <small>SHIELD <b>{hud.shield}</b></small>
     </div>}
 
-    {scene === "running" && <button className={styles.pauseButton} type="button" onClick={() => setScene("paused")} aria-label="전투 일시정지">Ⅱ</button>}
-    {hud.mode === "collapse" && <div className={styles.cinematicLabel}><strong>FIELD // FRACTURE</strong></div>}
-    {hud.mode === "destruction" && <div className={styles.cinematicLabel}><strong>CORE // BREAK</strong></div>}
+    {scene === "running" && showCombatChrome && <button className={styles.pauseButton} type="button" onClick={() => setScene("paused")} aria-label="전투 일시정지">Ⅱ</button>}
     {scene === "running" && hud.mode === "whiteout" && <div className={styles.whiteout} aria-hidden="true"><span>FINAL RECORD RESTORED</span></div>}
 
     {scene === "paused" && <div className={styles.pauseCurtain}><strong>전투 일시정지</strong><small>P 또는 ESC로 계속</small><button className={styles.primaryAction} type="button" onClick={() => setScene("running")}>계속하기</button></div>}
@@ -1418,7 +1549,7 @@ export function BulletHellFinale({
       </div>
     </div>}
 
-    <div className={styles.touchControls} aria-label="터치 이동 패드">
+    {scene === "running" && hud.mode === "bulletHell" && <div className={styles.touchControls} aria-label="터치 이동 패드">
       {(["up", "left", "focus", "right", "down"] as VirtualDirection[]).map((direction) => <button
         key={direction}
         type="button"
@@ -1428,9 +1559,9 @@ export function BulletHellFinale({
         onPointerUp={(event) => setVirtualDirection(direction, false, event)}
         onPointerCancel={(event) => setVirtualDirection(direction, false, event)}
       >{direction === "up" ? "▲" : direction === "down" ? "▼" : direction === "left" ? "◀" : direction === "right" ? "▶" : "FOCUS"}</button>)}
-    </div>
+    </div>}
 
-    {mode === "preview" && <div className={styles.quickTools} aria-label="개발자 장면 이동 도구"><span>DEV</span><div>{(["field", "collapse", "bulletHell", "destruction", "whiteout"] as FinaleMode[]).map((target) => <button className={styles.phaseButton} key={target} type="button" onClick={() => jumpToMode(target)}>{target}</button>)}<button className={styles.phaseButton} type="button" onClick={jumpToOpening}>CORE OPEN</button><button className={styles.phaseButton} type="button" onClick={forceDefeat}>DEFEAT</button><button className={styles.phaseButton} type="button" onClick={restartAll}>RESET</button></div></div>}
+    {mode === "preview" && showCombatChrome && <div className={styles.quickTools} aria-label="개발자 장면 이동 도구"><span>DEV</span><div>{(["field", "collapse", "bulletHell", "destruction", "whiteout"] as FinaleMode[]).map((target) => <button className={styles.phaseButton} key={target} type="button" onClick={() => jumpToMode(target)}>{target}</button>)}<button className={styles.phaseButton} type="button" onClick={jumpToOpening}>CORE OPEN</button><button className={styles.phaseButton} type="button" onClick={forceDefeat}>DEFEAT</button><button className={styles.phaseButton} type="button" onClick={restartAll}>RESET</button></div></div>}
 
     <p id="finale-controls" className={styles.srOnly}>보스를 클릭하거나 Enter로 공격합니다. 2페이즈에서는 WASD 또는 방향키로 길드 본관을 움직이고 Shift로 정밀 이동합니다. 흰 점이 실제 피격점입니다.</p>
     <p className={styles.srOnly} aria-live="polite">{announcement}</p>
