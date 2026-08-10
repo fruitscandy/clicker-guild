@@ -1,7 +1,7 @@
 export const FINALE_WIDTH = 960;
 export const FINALE_HEIGHT = 600;
 
-export const FINALE_BULLET_CAP = 5;
+export const FINALE_BULLET_SOFT_CAP = 5;
 export const FINALE_CLICK_INTERVAL_MS = 125;
 export const FINALE_TELEGRAPH_MS = 650;
 export const FINALE_DODGE_MS = 6_000;
@@ -28,7 +28,11 @@ const DODGE_CLICK_MULTIPLIER = 0.35;
 const ASSET_VOLLEY_SPEED_MIN = 112;
 const ASSET_VOLLEY_SPEED_RANGE = 24;
 const ASSET_VOLLEY_AIM_JITTER = 56;
-const ASSET_BULLET_SPAWN_MS = 520;
+const ASSET_BULLET_SPAWN_MIN_MS = 1_300;
+const ASSET_BULLET_SPAWN_RANGE_MS = 900;
+const ASSET_BULLET_WARNING_HALF_SIZE = FINALE_ASSET_BULLET_CARD_SIZE / 2 + 8;
+const ASSET_BULLET_BOUNDING_RADIUS = ASSET_BULLET_WARNING_HALF_SIZE * Math.sqrt(2);
+const ASSET_BULLET_OFFSCREEN_GAP = 1;
 const GUILD_MASK_GRID_SIZE = 24;
 const GUILD_MASK_CELL_SIZE = FINALE_GUILD_SIZE / GUILD_MASK_GRID_SIZE;
 const GUILD_MASK_CELL_RADIUS = GUILD_MASK_CELL_SIZE * 0.42;
@@ -696,7 +700,6 @@ function addBullet(
   world: FinaleWorld,
   bullet: Omit<FinaleBullet, "id" | "ageMs" | "grazed" | "spriteIndex"> & Partial<Pick<FinaleBullet, "spriteIndex">>,
 ) {
-  if (world.bullets.length >= FINALE_BULLET_CAP) return;
   world.bullets.push({
     ...bullet,
     id: world.nextBulletId,
@@ -708,16 +711,18 @@ function addBullet(
 }
 
 function spawnAssetBullet(world: FinaleWorld) {
-  const halfCard = FINALE_ASSET_BULLET_CARD_SIZE / 2;
   const edge = Math.floor(random(world) * 3);
   const lane = random(world);
-  let x = halfCard;
-  let y = ARENA_TOP + halfCard;
+  let x = -ASSET_BULLET_BOUNDING_RADIUS - ASSET_BULLET_OFFSCREEN_GAP;
+  let y = ARENA_TOP + ASSET_BULLET_BOUNDING_RADIUS;
   if (edge === 0) {
-    x += lane * (FINALE_WIDTH - FINALE_ASSET_BULLET_CARD_SIZE);
+    x = ASSET_BULLET_BOUNDING_RADIUS + lane * (FINALE_WIDTH - ASSET_BULLET_BOUNDING_RADIUS * 2);
+    y = -ASSET_BULLET_BOUNDING_RADIUS - ASSET_BULLET_OFFSCREEN_GAP;
   } else {
-    x = edge === 1 ? halfCard : FINALE_WIDTH - halfCard;
-    y += lane * (FINALE_HEIGHT - ARENA_TOP - FINALE_ASSET_BULLET_CARD_SIZE);
+    x = edge === 1
+      ? -ASSET_BULLET_BOUNDING_RADIUS - ASSET_BULLET_OFFSCREEN_GAP
+      : FINALE_WIDTH + ASSET_BULLET_BOUNDING_RADIUS + ASSET_BULLET_OFFSCREEN_GAP;
+    y += lane * (FINALE_HEIGHT - ARENA_TOP - ASSET_BULLET_BOUNDING_RADIUS * 2);
   }
 
   const targetX = world.player.x + (random(world) * 2 - 1) * ASSET_VOLLEY_AIM_JITTER;
@@ -747,11 +752,10 @@ function spawnAssetBullet(world: FinaleWorld) {
 }
 
 function updatePatterns(world: FinaleWorld, deltaMs: number) {
-  if (world.cycle !== "dodge") return;
   world.boss.attackCooldownMs -= deltaMs;
-  if (world.boss.attackCooldownMs <= 0 && world.bullets.length < FINALE_BULLET_CAP) {
+  if (world.boss.attackCooldownMs <= 0) {
     spawnAssetBullet(world);
-    world.boss.attackCooldownMs += ASSET_BULLET_SPAWN_MS;
+    world.boss.attackCooldownMs = ASSET_BULLET_SPAWN_MIN_MS + random(world) * ASSET_BULLET_SPAWN_RANGE_MS;
   }
 }
 
@@ -777,16 +781,15 @@ function moveBullets(world: FinaleWorld, deltaMs: number) {
     bullet.y += bullet.vy * activeDeltaSeconds;
     bullet.rotation += bullet.spin * activeDeltaSeconds;
   }
-  world.bullets = world.bullets.filter((bullet) => (
-    bullet.ageMs <= bullet.lifetimeMs
-    && bullet.x >= -90
-    && bullet.x <= FINALE_WIDTH + 90
-    && bullet.y >= ARENA_TOP - 90
-    && bullet.y <= FINALE_HEIGHT + 90
-  ));
-  // This defensive slice is deliberately redundant with addBullet's guard. It
-  // makes the hard cap invariant survive imported/debug-mutated state as well.
-  if (world.bullets.length > FINALE_BULLET_CAP) world.bullets.length = FINALE_BULLET_CAP;
+  world.bullets = world.bullets.filter((bullet) => {
+    const warningHalfSize = Math.max(0, finiteOr(bullet.cardSize, 0)) / 2 + 8;
+    const cullingMargin = warningHalfSize * Math.sqrt(2) + 2;
+    return bullet.ageMs <= bullet.lifetimeMs
+      && bullet.x >= -cullingMargin
+      && bullet.x <= FINALE_WIDTH + cullingMargin
+      && bullet.y >= -cullingMargin
+      && bullet.y <= FINALE_HEIGHT + cullingMargin;
+  });
   void deltaSeconds;
 }
 
@@ -872,7 +875,6 @@ function updateCycle(world: FinaleWorld, deltaMs: number) {
   if (world.cycleRemainingMs > 0) return;
   world.cycleSerial += 1;
   world.phaseChanged = true;
-  world.bullets = [];
   if (world.cycle === "dodge") {
     world.cycle = "opening";
     world.cycleRemainingMs += world.stats.openingDurationMs;
@@ -882,9 +884,7 @@ function updateCycle(world: FinaleWorld, deltaMs: number) {
   }
   world.cycle = "dodge";
   world.cycleRemainingMs += world.stats.dodgeDurationMs;
-  world.boss.attackCooldownMs = 0;
-  world.boss.secondaryCooldownMs = 800;
-    world.patternName = "에셋 경계 포격";
+  world.patternName = "에셋 경계 포격";
   world.boss.patternName = world.patternName;
 }
 

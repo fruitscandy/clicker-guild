@@ -144,6 +144,10 @@ test("fractures the whole page over a live black phase-two underlay without chan
   assert.match(component, /presentation === "embedded"/);
   assert.match(component, /context\.clearRect\(0, 0, canvas\.width, canvas\.height\)/);
   assert.match(component, /Math\.min\(canvas\.width \/ FINALE_WIDTH, canvas\.height \/ FINALE_HEIGHT\)/);
+  assert.match(component, /function withFinaleWorldClip[\s\S]*?context\.save\(\);[\s\S]*?context\.rect\(0, 0, FINALE_WIDTH, FINALE_HEIGHT\);[\s\S]*?context\.clip\(\);[\s\S]*?draw\(\);[\s\S]*?context\.restore\(\);/);
+  assert.match(component, /withFinaleWorldClip\(context, \(\) => \{\s*drawWorld\(/);
+  assert.match(component, /withFinaleWorldClip\(battleSnapshotContext, \(\) => \{\s*drawWorld\(/);
+  assert.match(component, /withFinaleWorldClip\(context, \(\) => drawBoss\(context, world, reducedMotion\)\)/);
   assert.match(css, /\.embeddedSurface\s*\{[\s\S]*?position: absolute;[\s\S]*?inset: 0;[\s\S]*?background: transparent;/);
   assert.match(css, /\.battleSurface\[data-finale-mode="collapse"\][\s\S]*?background: #010204;/);
   assert.match(css, /\.battleSurface\[data-finale-mode="bulletHell"\][\s\S]*?background: #000;/);
@@ -268,6 +272,8 @@ test("makes shield absorption, defeat, retry, destruction, and victory whiteout 
   assert.match(component, /hud\.mode === "whiteout"/);
   assert.match(component, /WHITEOUT_HOLD_MS/);
   assert.match(component, /최종 보스 격파/);
+  assert.match(component, /CORE OPEN\. 클릭 피해가 두 배가 되며, 탄막은 계속됩니다\./);
+  assert.doesNotMatch(component, /탄막이 멈췄습니다/);
 });
 
 test("connects existing boss-stage music and preview scene jumps", async () => {

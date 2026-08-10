@@ -1008,6 +1008,15 @@ function drawWorld(
   context.restore();
 }
 
+function withFinaleWorldClip(context: CanvasRenderingContext2D, draw: () => void) {
+  context.save();
+  context.beginPath();
+  context.rect(0, 0, FINALE_WIDTH, FINALE_HEIGHT);
+  context.clip();
+  draw();
+  context.restore();
+}
+
 function drawBossOnlyCanvas(
   canvas: HTMLCanvasElement,
   world: FinaleWorld,
@@ -1021,7 +1030,7 @@ function drawBossOnlyCanvas(
   const offsetX = (canvas.width - FINALE_WIDTH * scale) / 2;
   const offsetY = (canvas.height - FINALE_HEIGHT * scale) / 2;
   context.setTransform(scale, 0, 0, scale, offsetX, offsetY);
-  drawBoss(context, world, reducedMotion);
+  withFinaleWorldClip(context, () => drawBoss(context, world, reducedMotion));
   return true;
 }
 
@@ -1112,17 +1121,19 @@ export function BulletHellFinale({
     const offsetX = (canvas.width - FINALE_WIDTH * scale) / 2;
     const offsetY = (canvas.height - FINALE_HEIGHT * scale) / 2;
     context.setTransform(scale, 0, 0, scale, offsetX, offsetY);
-    drawWorld(
-      context,
-      worldRef.current,
-      loadout,
-      imagesRef.current,
-      keysRef.current.has("shift") || virtualRef.current.has("focus"),
-      playerImpactRef.current,
-      attackImpactsRef.current,
-      reducedMotionRef.current,
-      presentation === "embedded",
-    );
+    withFinaleWorldClip(context, () => {
+      drawWorld(
+        context,
+        worldRef.current,
+        loadout,
+        imagesRef.current,
+        keysRef.current.has("shift") || virtualRef.current.has("focus"),
+        playerImpactRef.current,
+        attackImpactsRef.current,
+        reducedMotionRef.current,
+        presentation === "embedded",
+      );
+    });
   }, [loadout, presentation]);
 
   const restorePageFracture = useCallback(() => {
@@ -1194,18 +1205,20 @@ export function BulletHellFinale({
     const snapshotOffsetX = (battleCanvas.width - FINALE_WIDTH * snapshotScale) / 2;
     const snapshotOffsetY = (battleCanvas.height - FINALE_HEIGHT * snapshotScale) / 2;
     battleSnapshotContext.setTransform(snapshotScale, 0, 0, snapshotScale, snapshotOffsetX, snapshotOffsetY);
-    drawWorld(
-      battleSnapshotContext,
-      world,
-      loadout,
-      imagesRef.current,
-      keysRef.current.has("shift") || virtualRef.current.has("focus"),
-      playerImpactRef.current,
-      attackImpactsRef.current,
-      reducedMotionRef.current,
-      presentation === "embedded",
-      true,
-    );
+    withFinaleWorldClip(battleSnapshotContext, () => {
+      drawWorld(
+        battleSnapshotContext,
+        world,
+        loadout,
+        imagesRef.current,
+        keysRef.current.has("shift") || virtualRef.current.has("focus"),
+        playerImpactRef.current,
+        attackImpactsRef.current,
+        reducedMotionRef.current,
+        presentation === "embedded",
+        true,
+      );
+    });
     const canvasRect = battleCanvas.getBoundingClientRect();
     const canvasScale = Math.max(.001, Math.min(canvasRect.width / FINALE_WIDTH, canvasRect.height / FINALE_HEIGHT));
     const canvasOffsetX = (canvasRect.width - FINALE_WIDTH * canvasScale) / 2;
@@ -1446,7 +1459,7 @@ export function BulletHellFinale({
         previousCycleRef.current = world.cycle;
         playCombatProcSound(world.cycle === "opening" ? { combo: true } : { momentumMaxed: true });
         setAnnouncement(world.cycle === "opening"
-          ? "CORE OPEN. 탄막이 멈췄습니다. 지금 보스를 클릭하면 피해가 두 배입니다."
+          ? "CORE OPEN. 클릭 피해가 두 배가 되며, 탄막은 계속됩니다."
           : "코어 폐쇄. 안전 통로를 찾아 탄막을 피하세요.");
       }
 
