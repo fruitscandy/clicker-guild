@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { upgradeIconForNode } from "../upgrade-icons";
 import { requiredHallLevelForNode } from "./guild-progression";
 import styles from "./ResearchMap.module.css";
@@ -70,13 +71,19 @@ function nodeDepth(nodeId: string) {
   return Number(nodeId.split("-")[1]) || 0;
 }
 
+const subscribeToClient = () => () => {};
+
 export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurchase, readOnly = false }: ResearchMapProps) {
   const purchased = new Set(purchasedIds);
   const foundation = nodes.find((node) => node.id === "foundation");
   const citadel = nodes.find((node) => node.id === "citadel");
   const crossViewportRef = useRef<HTMLDivElement>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const isClient = useSyncExternalStore(subscribeToClient, () => true, () => false);
+  const modalRoot = isClient ? document.body : null;
   const selectedNode = selectedNodeId ? nodes.find((node) => node.id === selectedNodeId) : undefined;
+  const coreNodes = nodes.filter((node) => node.id !== "foundation" && node.id !== "citadel" && !node.id.startsWith("special-"));
+  const completedCoreNodes = coreNodes.filter((node) => purchased.has(node.id)).length;
 
   const centerResearchMap = useCallback(() => {
     const viewport = crossViewportRef.current;
@@ -95,6 +102,20 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
       observer.disconnect();
     };
   }, [centerResearchMap]);
+
+  useEffect(() => {
+    if (!selectedNode) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedNodeId(null);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [selectedNode]);
 
   function stateForNode(node: ResearchNodeView) {
     const isPurchased = purchased.has(node.id);
@@ -132,14 +153,12 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
           type="button"
           data-node-id={node.id}
           className={`${styles.node} ${isPurchased ? styles.purchased : ""} ${available ? styles.available : ""} ${hallLocked ? styles.locked : ""} ${isSelected ? styles.selected : ""}`}
-          onClick={() => {
-            setSelectedNodeId(node.id);
-            window.requestAnimationFrame(centerResearchMap);
-          }}
+          onClick={() => setSelectedNodeId(node.id)}
           aria-label={`${node.title} 상세보기: ${node.description}. ${status}. 선택만으로는 구매되지 않습니다.`}
           aria-pressed={isSelected}
           aria-expanded={isSelected}
           aria-controls="research-node-detail"
+          aria-haspopup="dialog"
           title={`${node.title} · ${status}`}
         >
           {depth > 0 && !singleUnlock && <span className={styles.depth}>{depth}</span>}
@@ -147,6 +166,7 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
             {hallLocked ? "◆" : icon ? <Image src={icon} alt="" width={64} height={64} /> : node.glyph}
           </span>
           <span className={styles.nodeName}>{variant === "branch" ? BRANCH_LABELS[familyForNode(node.id)] : node.title}</span>
+          <span className={styles.nodeCost}>{isPurchased ? "완료" : hallLocked ? `본관 ${requiredHallLevel}` : node.cost ? `${formatCost(node.cost)} G` : "기반"}</span>
           <span className={styles.statusMark} aria-hidden="true">
             {isPurchased ? "✓" : hallLocked || !prerequisitesMet ? "◆" : "+"}
           </span>
@@ -176,8 +196,9 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
             : `${formatCost(selectedNode.cost)} G로 연구하기`;
 
     return (
-      <aside id="research-node-detail" className={styles.detailPanel} aria-live="polite" aria-label={`${selectedNode.title} 연구 상세 정보`}>
-        <button type="button" className={styles.detailClose} onClick={() => setSelectedNodeId(null)} aria-label="연구 설명 닫기">×</button>
+      <div className={styles.modalBackdrop} onMouseDown={(event) => event.target === event.currentTarget && setSelectedNodeId(null)}>
+      <aside id="research-node-detail" className={styles.detailPanel} role="dialog" aria-modal="true" aria-live="polite" aria-label={`${selectedNode.title} 연구 상세 정보`}>
+        <button type="button" autoFocus className={styles.detailClose} onClick={() => setSelectedNodeId(null)} aria-label="연구 설명 닫기">×</button>
         <div className={styles.detailIdentity}>
           <span className={`${styles.detailIcon} ${icon ? styles.detailIconArt : ""}`} aria-hidden="true">
             {icon ? <Image src={icon} alt="" width={64} height={64} /> : selectedNode.glyph}
@@ -202,29 +223,29 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
         </dl>
 
         <div className={styles.detailAction}>
-          <p><strong>노드 선택은 설명만 엽니다.</strong><span>아래 버튼을 눌러야 골드를 사용하고 연구합니다.</span></p>
+          <p><strong>구매 전 효과를 확인하세요.</strong><span>이 버튼을 눌러야 골드를 사용하고 연구합니다.</span></p>
           <button type="button" onClick={() => canPurchase && onPurchase(selectedNode)} disabled={!canPurchase}>{actionLabel}</button>
         </div>
       </aside>
+      </div>
     );
   })() : null;
 
   return (
-    <div className={styles.viewport} aria-label="중앙에서 네 방향으로 뻗는 길드 강화 지도">
+    <div className={styles.viewport} aria-label="핵심 강화와 독립 특수 공격이 함께 있는 길드 강화판">
       <div className={styles.mapHeader}>
         <span className={styles.mapSeal} aria-hidden="true"><i>G</i></span>
         <span className={styles.mapHeaderCopy}>
-          <b>GUILD WAR TABLE · 8 OPTIONAL ORDERS</b>
-          <strong>길드 전술 연구판</strong>
-          <small>강화 없이도 완주할 수 있습니다. 원하는 명령 인장을 눌러 보너스를 확인하세요.</small>
+          <b>GUILD UPGRADES</b>
+          <strong>길드 강화</strong>
+          <small>노드를 눌러 효과를 확인하고 팝업에서 연구하세요.</small>
         </span>
-        <span className={styles.mapLegend} aria-hidden="true"><i />연결된 황동 길은 핵심 연구만 표시합니다</span>
+        <span className={styles.mapProgress}><b>{completedCoreNodes}</b><small>/ {coreNodes.length} 핵심 완료</small></span>
       </div>
 
       <div className={styles.crossViewport} ref={crossViewportRef}>
         <div className={styles.crossCanvas}>
           <span className={styles.boardEmblem} aria-hidden="true">GUILD<br />ORDERS</span>
-          <span className={styles.cornerMark} aria-hidden="true"><i /><i /><i /><i /></span>
           <span className={`${styles.axis} ${styles.axisNorth}`} aria-hidden="true" />
           <span className={`${styles.axis} ${styles.axisEast}`} aria-hidden="true" />
           <span className={`${styles.axis} ${styles.axisSouth}`} aria-hidden="true" />
@@ -243,7 +264,7 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
               >
                 <header className={styles.branchHeader}>
                   <span aria-hidden="true">{branch.glyph}</span>
-                  <span><small>{branch.subtitle}</small><strong id={`research-${branch.direction}`}>{branch.title}</strong></span>
+                  <strong id={`research-${branch.direction}`}>{branch.title}</strong>
                   <em>{completedCount}/{groupNodes.length}</em>
                 </header>
 
@@ -274,31 +295,23 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
           {foundation && (
             <div className={styles.coreDock}>
               <span className={styles.coreHalo} aria-hidden="true" />
-              <small>GUILD CORE</small>
               {renderNode(foundation, "core")}
-              <p>4방향 연구 시작점</p>
             </div>
           )}
 
+          <span className={styles.specialHint} aria-hidden="true">✦ 연결선 없는 특수 공격</span>
+          <div id="guild-special-node-slot" className={styles.specialNodeSlot} />
+
+          {citadel && (
+            <div className={styles.citadelDock}>
+              <small>최종</small>
+              {renderNode(citadel, "citadel")}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className={styles.inspectorDock}>
-        {selectedDetail ?? (
-          <section className={styles.inspectorEmpty} aria-label="연구 인장 선택 안내">
-            <span aria-hidden="true">◆</span>
-            <div><small>ORDER INSPECTION</small><strong>연구 인장을 선택하세요</strong><p>효과와 비용을 확인한 뒤 상세 패널의 연구 버튼으로만 해금할 수 있습니다.</p></div>
-          </section>
-        )}
-      </div>
-
-      {citadel && (
-        <div className={styles.citadelSection}>
-          <span><small>FINAL RESEARCH</small><strong>모든 길의 끝</strong></span>
-          {renderNode(citadel, "citadel")}
-          <p>핵심 강화 8종과 외곽 특수 공격 3종을 모두 완성하는 선택 도전입니다. 게임 클리어의 필수 조건은 아닙니다.</p>
-        </div>
-      )}
+      {modalRoot && selectedDetail ? createPortal(selectedDetail, modalRoot) : null}
     </div>
   );
 }
