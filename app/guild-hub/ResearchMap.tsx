@@ -212,12 +212,19 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
   return (
     <div className={styles.viewport} aria-label="중앙에서 네 방향으로 뻗는 길드 강화 지도">
       <div className={styles.mapHeader}>
-        <span><b>8 ONE-TIME UPGRADES</b><strong>핵심 강화 8개 · 각 연구는 한 번만 해금</strong></span>
-        <small>강화 없이도 완주 가능 · 노드를 클릭하면 선택 보너스 설명 표시</small>
+        <span className={styles.mapSeal} aria-hidden="true"><i>G</i></span>
+        <span className={styles.mapHeaderCopy}>
+          <b>GUILD WAR TABLE · 8 OPTIONAL ORDERS</b>
+          <strong>길드 전술 연구판</strong>
+          <small>강화 없이도 완주할 수 있습니다. 원하는 명령 인장을 눌러 보너스를 확인하세요.</small>
+        </span>
+        <span className={styles.mapLegend} aria-hidden="true"><i />연결된 황동 길은 핵심 연구만 표시합니다</span>
       </div>
 
       <div className={styles.crossViewport} ref={crossViewportRef}>
         <div className={styles.crossCanvas}>
+          <span className={styles.boardEmblem} aria-hidden="true">GUILD<br />ORDERS</span>
+          <span className={styles.cornerMark} aria-hidden="true"><i /><i /><i /><i /></span>
           <span className={`${styles.axis} ${styles.axisNorth}`} aria-hidden="true" />
           <span className={`${styles.axis} ${styles.axisEast}`} aria-hidden="true" />
           <span className={`${styles.axis} ${styles.axisSouth}`} aria-hidden="true" />
@@ -273,8 +280,16 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
             </div>
           )}
 
-          {selectedDetail}
         </div>
+      </div>
+
+      <div className={styles.inspectorDock}>
+        {selectedDetail ?? (
+          <section className={styles.inspectorEmpty} aria-label="연구 인장 선택 안내">
+            <span aria-hidden="true">◆</span>
+            <div><small>ORDER INSPECTION</small><strong>연구 인장을 선택하세요</strong><p>효과와 비용을 확인한 뒤 상세 패널의 연구 버튼으로만 해금할 수 있습니다.</p></div>
+          </section>
+        )}
       </div>
 
       {citadel && (

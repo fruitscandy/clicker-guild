@@ -88,42 +88,42 @@ export function SpecialResearchPanel({
       <header className={styles.heading}>
         <span className={styles.headingSeal} aria-hidden="true"><i />秘</span>
         <span className={styles.headingCopy}>
-          <small>OUTER RING · SPECIAL ATTACK</small>
-          <strong id="special-research-title">외곽 특수 공격</strong>
-          <p>핵심 4방향 트리와 연결되지 않은 독립 연구입니다. 원하는 인장을 눌러 효과를 확인하세요.</p>
+          <small>SEALED RITES · DETACHED SANCTUM</small>
+          <strong id="special-research-title">봉인 비술 제단</strong>
+          <p>길드 전술 연구판과 연결되지 않은 별도 비술입니다. 세 제단은 서로 선행 관계가 없습니다.</p>
         </span>
         <span className={styles.progressBadge}><b>{completed}</b> / 3 해금</span>
       </header>
 
       <div className={styles.satelliteViewport}>
         <div className={styles.satelliteField}>
-          <span className={styles.outerOrbit} aria-hidden="true" />
+          <div className={styles.ritualGrid}>
+            {SPECIAL_ATTACK_ORDER.map((kind) => {
+              const { attack, isPurchased, hallLocked, prerequisitesMet, available, status } = stateFor(kind);
+              const isSelected = kind === selectedKind;
 
-          {SPECIAL_ATTACK_ORDER.map((kind) => {
-            const { attack, isPurchased, hallLocked, prerequisitesMet, available, status } = stateFor(kind);
-            const isSelected = kind === selectedKind;
-
-            return (
-              <button
-                type="button"
-                key={kind}
-                data-kind={kind}
-                className={`${styles.specialNode} ${styles[kind]} ${isPurchased ? styles.unlocked : ""} ${hallLocked ? styles.locked : ""} ${isSelected ? styles.selected : ""}`}
-                style={{ "--special-accent": attack.accent } as CSSProperties}
-                onClick={() => setSelectedKind(kind)}
-                aria-label={`${attack.title} 상세보기: ${attack.description}. ${status}. 선택만으로는 구매되지 않습니다.`}
-                aria-pressed={isSelected}
-                aria-expanded={isSelected}
-                aria-controls="special-research-detail"
-                title={`${attack.title} · ${status}`}
-              >
-                <span className={styles.nodePreview}><SpellPreview kind={kind} /></span>
-                <span className={styles.spellGlyph} aria-hidden="true">{hallLocked ? "鎖" : attack.glyph}</span>
-                <span className={styles.nodeCopy}><small>{attack.subtitle}</small><strong>{attack.title}</strong></span>
-                <span className={styles.nodeStatus} aria-hidden="true">{isPurchased ? "✓" : hallLocked || !prerequisitesMet ? "◆" : available ? "+" : "G"}</span>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  type="button"
+                  key={kind}
+                  data-kind={kind}
+                  className={`${styles.specialNode} ${styles[kind]} ${isPurchased ? styles.unlocked : ""} ${hallLocked ? styles.locked : ""} ${isSelected ? styles.selected : ""}`}
+                  style={{ "--special-accent": attack.accent } as CSSProperties}
+                  onClick={() => setSelectedKind(kind)}
+                  aria-label={`${attack.title} 상세보기: ${attack.description}. ${status}. 선택만으로는 구매되지 않습니다.`}
+                  aria-pressed={isSelected}
+                  aria-expanded={isSelected}
+                  aria-controls="special-research-detail"
+                  title={`${attack.title} · ${status}`}
+                >
+                  <span className={styles.altarCrest} aria-hidden="true">{hallLocked ? "鎖" : attack.glyph}</span>
+                  <span className={styles.nodePreview}><SpellPreview kind={kind} /></span>
+                  <span className={styles.nodeCopy}><small>{attack.subtitle}</small><strong>{attack.title}</strong></span>
+                  <span className={styles.nodeStatus} aria-hidden="true">{isPurchased ? "✓" : hallLocked || !prerequisitesMet ? "◆" : available ? "+" : "G"}</span>
+                </button>
+              );
+            })}
+          </div>
 
           {!selectedState && (
             <div className={styles.selectionHint}>
@@ -133,7 +133,10 @@ export function SpecialResearchPanel({
             </div>
           )}
 
-          {selectedState && selectedAttack && selectedNode && (
+        </div>
+      </div>
+
+      {selectedState && selectedAttack && selectedNode && (
             <aside
               id="special-research-detail"
               className={styles.detailPanel}
@@ -174,9 +177,7 @@ export function SpecialResearchPanel({
                 </button>
               </div>
             </aside>
-          )}
-        </div>
-      </div>
+      )}
 
       <p className={styles.footnote}><b>독립 연구 규칙</b> 세 인장은 선행 순서가 없습니다. 해금하면 전투 중 각자 충전되고 플레이어 무기 공격력을 기준으로 자동 발동합니다.</p>
     </section>
