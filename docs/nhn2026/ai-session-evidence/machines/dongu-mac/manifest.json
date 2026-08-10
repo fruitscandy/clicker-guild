@@ -1,6 +1,6 @@
 {
   "schema_version": "nhn2026-ai-session-summary/v1",
-  "machine_alias": "macos-codex",
+  "machine_alias": "dongu-mac",
   "project": "Clicker Guild",
   "generated_on": "2026-08-10",
   "timezone": "Asia/Seoul",
@@ -45,15 +45,15 @@
     "blocking_gaps_documented_in": "external-sources.md"
   },
   "records": [
-    "macos-codex-001",
-    "macos-codex-002",
-    "macos-codex-003",
-    "macos-codex-004",
-    "macos-codex-005",
-    "macos-codex-006",
-    "macos-codex-007",
-    "macos-codex-008",
-    "macos-codex-009"
+    "dongu-mac-001",
+    "dongu-mac-002",
+    "dongu-mac-003",
+    "dongu-mac-004",
+    "dongu-mac-005",
+    "dongu-mac-006",
+    "dongu-mac-007",
+    "dongu-mac-008",
+    "dongu-mac-009"
   ],
   "package_files": [
     "README.md",

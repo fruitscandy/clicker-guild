@@ -1,10 +1,10 @@
-# macos-codex AI 활용 세션 취합본
+# dongu-mac AI 활용 세션 취합본
 
 이 디렉터리는 NHN2026 제출용 AI 활용 기술문서 작성을 위해 이 macOS 장비에 남아 있던 Clicker Guild 관련 Codex 대화를 비식별 요약한 자료다. 원본 대화는 포함하지 않았으며, Issue #141의 Windows 자료와 합칠 수 있도록 사람용 문서와 기계 병합용 JSONL을 함께 제공한다.
 
 ## 범위
 
-- 장비 별명: `macos-codex`
+- 장비 별명: `dongu-mac`
 - 대상 기간: 2026-08-08~2026-08-10
 - 컷오프: 2026-08-10 20:44:45 KST
 - 논리 세션: 9개
@@ -23,7 +23,7 @@
 - `session-summaries.jsonl`: 장비별 결과 병합용 세션 단위 구조화 요약
 - `manifest.json`: 범위, 집계, 제외 정책, 스키마 정보
 - `validation-report.md`: 형식·민감정보·무결성 검증 결과
-- `macos-codex-ai-session-evidence.zip`: 위 문서와 README의 전달용 압축본
+- `dongu-mac-ai-session-evidence.zip`: 위 문서와 README의 전달용 압축본
 - `SHA256SUMS.txt`: 문서와 ZIP의 SHA-256
 
 ## Windows 자료와 병합

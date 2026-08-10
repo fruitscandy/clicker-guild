@@ -1,4 +1,4 @@
-# macos-codex 검증 보고서
+# dongu-mac 검증 보고서
 
 ## 검증 대상
 
@@ -35,7 +35,7 @@
 - 기능 결과, 대표 테스트, 병합·실험 상태와 알려진 증빙 공백
 - 공개 프로젝트 안의 Issue·PR 번호와 저장소 상대경로
 - 공식 에셋 원본 페이지와 표준 라이선스 URL
-- 비개인 장비 별명 `macos-codex`와 일 단위 작업 날짜
+- 비개인 장비 별명 `dongu-mac`와 일 단위 작업 날짜
 
 ## 형식·집계 검사
 
@@ -45,7 +45,7 @@
 | `session-summaries.jsonl` 각 줄 JSON 파싱 | 통과, 9개 |
 | manifest 레코드와 JSONL 레코드 | 9개로 일치 |
 | 세션 ID 유일성 | 9개 모두 유일 |
-| `machine_alias` | 모두 `macos-codex` |
+| `machine_alias` | 모두 `dongu-mac` |
 | `schema_version` | 모두 `nhn2026-ai-session-summary/v1` |
 | 필수 필드 누락 | 0개 |
 | JSONL `prompt_turns` 합계 | 151개, manifest와 일치 |
