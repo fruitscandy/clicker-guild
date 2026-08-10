@@ -39,7 +39,12 @@ test("opens with the vanishing world and its last remaining guild", async () => 
 
   assert.match(styles, /worldImage/);
   assert.match(styles, /letterbox/);
-  assert.match(styles, /lastGuildArt/);
+  assert.match(opening, /className=\{styles\.erasureLine\}/);
+  assert.match(styles, /\.erasureLine\s*\{[^}]*white-space:\s*nowrap/);
+  assert.match(opening, /className=\{styles\.lastGuildArt\}/);
+  assert.match(styles, /\[data-phase="lastGuild"\] \.lastGuildArt/);
+  assert.match(styles, /guild-growth-sprites-v1/);
+  assert.match(styles, /\[data-phase="frontier"\] \.lastGuildArt\s*\{[^}]*visibility:\s*hidden/);
   assert.match(styles, /guildErase/);
   assert.match(styles, /guildHeartbeat/);
   assert.match(styles, /frontierRoute/);

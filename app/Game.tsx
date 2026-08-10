@@ -365,6 +365,7 @@ export default function Game() {
   const [notice, setNotice] = useState<GameNotice | null>(null);
   const [recruitResults, setRecruitResults] = useState<RecruitResult[]>([]);
   const [recruitSequence, setRecruitSequence] = useState(0);
+  const [lastRevealedRecruitSequence, setLastRevealedRecruitSequence] = useState(0);
   const [pendingSaleId, setPendingSaleId] = useState<string | null>(null);
   const [victory, setVictory] = useState(false);
   const [defeat, setDefeat] = useState(false);
@@ -404,6 +405,9 @@ export default function Game() {
   const developerEntrySave = useRef<SaveState | null>(null);
   const tutorialRecruitLock = useRef(false);
   const closeNotice = useCallback(() => setNotice(null), []);
+  const markRecruitRevealComplete = useCallback((sequence: number) => {
+    setLastRevealedRecruitSequence((current) => Math.max(current, sequence));
+  }, []);
 
   function showNotice(title: string, message: string, options: Omit<GameNotice, "title" | "message"> = {}) {
     setNotice({ title, message, ...options });
@@ -1137,6 +1141,9 @@ export default function Game() {
     setDeveloperStage(null);
     setDeveloperClickLevel(CLICK_ATTACK_PATTERNS.length - 1);
     setFinaleMode(false);
+    setRecruitResults([]);
+    setRecruitSequence(0);
+    setLastRevealedRecruitSequence(0);
     setFieldMonsters([]);
     setHitFx(null);
     setActiveHitFxs([]);
@@ -1324,10 +1331,12 @@ export default function Game() {
             gold={save.gold}
             recruitResults={recruitResults}
             recruitSequence={recruitSequence}
+            recruitRevealComplete={recruitSequence <= lastRevealedRecruitSequence}
             pendingSaleId={pendingSaleId}
             formatNumber={compactNumber}
             getAttack={(member, progress) => attackFor(member, progress)}
             onRecruit={recruitGuildMembers}
+            onRecruitRevealComplete={markRecruitRevealComplete}
             onToggleParty={toggleParty}
             onRequestSale={requestMemberSale}
             onCancelSale={() => setPendingSaleId(null)}
