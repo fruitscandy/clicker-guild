@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "usage": "automatic guild-member field skill VFX (skill === true)",
+  "canvas": { "width": 512, "height": 512, "alpha": true },
+  "members": [
+    { "id": "roan", "rank": "F", "job": "전사", "skill": "강타", "asset": "roan-heavy-strike.webp" },
+    { "id": "mia", "rank": "F", "job": "궁수", "skill": "연속 사격", "asset": "mia-rapid-volley.webp" },
+    { "id": "finn", "rank": "F", "job": "도적", "skill": "급소 찌르기", "asset": "finn-vital-strike.webp" },
+    { "id": "lulu", "rank": "F", "job": "마법사", "skill": "마력탄", "asset": "lulu-magic-bullet.webp" },
+    { "id": "ellie", "rank": "F", "job": "사제", "skill": "축복의 빛", "asset": "ellie-blessing-light.webp" },
+    { "id": "garon", "rank": "E", "job": "기사", "skill": "방패 강타", "asset": "garon-shield-bash.webp" },
+    { "id": "reina", "rank": "E", "job": "궁수", "skill": "정조준", "asset": "reina-aimed-shot.webp" },
+    { "id": "bruno", "rank": "E", "job": "무투가", "skill": "삼연격", "asset": "bruno-triple-strike.webp" },
+    { "id": "sera", "rank": "E", "job": "화염술사", "skill": "화염 폭발", "asset": "sera-flame-explosion.webp" },
+    { "id": "popo", "rank": "E", "job": "연금술사", "skill": "부식 물약", "asset": "popo-corrosive-potion.webp" },
+    { "id": "kyle", "rank": "D", "job": "창술사", "skill": "관통 돌진", "asset": "kyle-piercing-charge.webp" },
+    { "id": "nera", "rank": "D", "job": "암살자", "skill": "그림자 일격", "asset": "nera-shadow-strike.webp" },
+    { "id": "iris", "rank": "D", "job": "냉기술사", "skill": "얼음 파편", "asset": "iris-ice-shard.webp" },
+    { "id": "rio", "rank": "D", "job": "음유시인", "skill": "전투의 노래", "asset": "rio-battle-song.webp" },
+    { "id": "jade", "rank": "D", "job": "총잡이", "skill": "속사", "asset": "jade-rapid-fire.webp" },
+    { "id": "ur", "rank": "C", "job": "광전사", "skill": "분노의 도끼", "asset": "ur-fury-axe.webp" },
+    { "id": "adel", "rank": "C", "job": "성기사", "skill": "신성한 심판", "asset": "adel-holy-judgment.webp" },
+    { "id": "theo", "rank": "C", "job": "번개술사", "skill": "연쇄 번개", "asset": "theo-chain-lightning.webp" },
+    { "id": "nabi", "rank": "C", "job": "정령사", "skill": "바람 정령", "asset": "nabi-wind-spirit.webp" },
+    { "id": "ren", "rank": "B", "job": "사무라이", "skill": "발도술", "asset": "ren-iaijutsu.webp" },
+    { "id": "gray", "rank": "B", "job": "포병", "skill": "마력 포격", "asset": "gray-magic-bombardment.webp" },
+    { "id": "mor", "rank": "B", "job": "사령술사", "skill": "망자의 손", "asset": "mor-hands-of-dead.webp" },
+    { "id": "aila", "rank": "A", "job": "마검사", "skill": "마력 참격", "asset": "aila-magic-slash.webp" },
+    { "id": "drake", "rank": "A", "job": "용기사", "skill": "용의 돌진", "asset": "drake-dragon-charge.webp" },
+    { "id": "zello", "rank": "S", "job": "몬스터", "skill": "왕가의 분열", "asset": "zello-royal-division.webp" }
+  ]
+}
