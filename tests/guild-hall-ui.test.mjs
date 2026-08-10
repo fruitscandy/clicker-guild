@@ -33,7 +33,7 @@ test("guild territory art and hall upgrade UI share the game tone", async () => 
   );
   assert.match(styles, /background-position: var\(--hub-transition-x\) var\(--hub-transition-y\)/);
   assert.match(styles, /\.level-chip\) \{\s*display: none;/, "the retired six-level label should not be exposed");
-  assert.match(styles, /\.panel-title::after\) \{\s*content: "MAX LV\.4";/, "the visible hall cap should match the four-level balance");
+  assert.doesNotMatch(styles, /\.panel-title::after\)|MAX LV\.4/, "the redundant hall level cap should stay hidden");
 
   const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   assert.ok(backdrop.subarray(0, 8).equals(pngSignature));

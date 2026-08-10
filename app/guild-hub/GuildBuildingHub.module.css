@@ -354,19 +354,6 @@
   display: none;
 }
 
-:global(.facility-hall .hall-upgrade-panel .panel-title::after) {
-  content: "MAX LV.4";
-  padding: 5px 9px;
-  font-size: 9px;
-  font-weight: 900;
-  color: #ffe5a4;
-  background: linear-gradient(#65452e, #39281f);
-  border: 1px solid #a67643;
-  border-radius: 999px;
-  box-shadow: inset 0 1px rgba(255, 230, 172, .12);
-  white-space: nowrap;
-}
-
 :global(.facility-hall .hall-current-stage) {
   grid-area: current;
   grid-template-columns: 82px 1fr;

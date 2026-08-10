@@ -153,8 +153,9 @@
   gap: 8px;
 }
 
-.north, .south { left: 338px; width: 264px; }
-.north { top: 30px; }
+.north, .south { left: 50%; translate: -50% 0; }
+.north { top: 30px; width: 500px; }
+.south { width: 264px; }
 .south { bottom: 25px; }
 .west, .east { top: 214px; width: 132px; }
 .west { left: 145px; }
@@ -195,7 +196,23 @@
   place-items: center;
 }
 
-.nodeWrap:not(:last-child)::after { display: none; }
+.nodeWrap:not(:last-child)::after {
+  position: absolute;
+  right: -7px;
+  top: 56px;
+  z-index: -1;
+  width: 14px;
+  height: 4px;
+  content: "";
+  background: linear-gradient(90deg, #7c593f, #d39850, #7c593f);
+  border: 1px solid #3a291f;
+  box-shadow: 0 0 7px rgba(225, 156, 72, .32);
+}
+
+.nodeWrap.pathComplete:not(:last-child)::after {
+  background: linear-gradient(90deg, #5f8b62, #9bc27f, #5f8b62);
+  box-shadow: 0 0 8px rgba(123, 190, 116, .34);
+}
 
 .node {
   position: relative;
@@ -290,20 +307,6 @@
 .nodeWrap.core { width: 108px; height: 108px; }
 .core .node { width: 98px; height: 101px; grid-template-rows: 62px auto auto; background: linear-gradient(145deg, #8b4d3a, #3c2930 62%, #221820); border-color: #dda251; }
 .core .glyph { width: 57px; height: 57px; border-color: #efbc61; font-size: 29px; }
-
-.specialHint {
-  position: absolute;
-  left: 24px;
-  top: 166px;
-  z-index: 3;
-  padding: 5px 8px;
-  color: #bba9ca;
-  background: rgba(24, 19, 29, .76);
-  border: 1px solid rgba(139, 102, 153, .3);
-  border-radius: 999px;
-  font-size: 7px;
-  font-weight: 900;
-}
 
 .specialNodeSlot { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
 
@@ -413,7 +416,7 @@
   .mapProgress { grid-column: 1 / -1; justify-content: center; padding-block: 6px; }
   .crossViewport { padding: 10px; }
   .crossCanvas { width: 860px; min-width: 860px; }
-  .north, .south { left: 298px; }
+  .north, .south { left: 50%; }
   .axisNorth, .axisSouth { left: 427px; }
   .coreDock { left: 362px; }
   .axisWest { left: 197px; }
