@@ -33,20 +33,20 @@ type GuildUpgradeDefinition = {
   levelDescription: (level: number) => string;
 };
 
-export const ATTACK_RANGE_PER_LEVEL = 3.5;
-export const CRITICAL_CHANCE_PER_LEVEL = 0.05;
-export const BATTLE_TIME_PER_LEVEL = 4;
-export const GUILD_ATTACK_BONUS_PER_LEVEL = 0.18;
-export const RAID_GOLD_BONUS_PER_LEVEL = 0.12;
-export const AUTO_ATTACK_INTERVALS_MS = [0, 5_200, 4_400, 3_700, 3_100, 2_600] as const;
+export const ATTACK_RANGE_PER_LEVEL = 6;
+export const CRITICAL_CHANCE_PER_LEVEL = 0.12;
+export const BATTLE_TIME_PER_LEVEL = 8;
+export const GUILD_ATTACK_BONUS_PER_LEVEL = 0.35;
+export const RAID_GOLD_BONUS_PER_LEVEL = 0.2;
+export const AUTO_ATTACK_INTERVALS_MS = [0, 4_500] as const;
 export const CITADEL_RESEARCH_COST = 9_000;
 
 export function shockwaveAttackInterval(level: number) {
-  return level > 0 ? Math.max(4, 9 - level) : 0;
+  return level > 0 ? 6 : 0;
 }
 
 export function shockwaveDamageMultiplier(level: number) {
-  return level > 0 ? 1.3 + level * 0.15 : 1;
+  return level > 0 ? 1.65 : 1;
 }
 
 export function guildAttackMultiplier(level: number) {
@@ -68,9 +68,9 @@ export const GUILD_UPGRADE_DEFINITIONS: Record<UpgradeKey, GuildUpgradeDefinitio
     nodeFamily: "range",
     title: "공격 범위 증가",
     description: "플레이어 공격이 닿는 범위를 넓힙니다.",
-    glyphs: ["원", "◌", "풍", "旋", "界"],
-    levelTitles: ["긴 칼날", "넓은 궤적", "검풍 확장", "대회전 베기", "무한 검계"],
-    costs: [100, 180, 320, 650, 1_200],
+    glyphs: ["界"],
+    levelTitles: ["확장 검풍"],
+    costs: [800],
     levelDescription: (level) => `플레이어 공격 반경 +${(level * ATTACK_RANGE_PER_LEVEL).toFixed(1)}`,
   },
   critical: {
@@ -78,9 +78,9 @@ export const GUILD_UPGRADE_DEFINITIONS: Record<UpgradeKey, GuildUpgradeDefinitio
     nodeFamily: "crit",
     title: "치명타 확률",
     description: "플레이어 공격이 두 배 피해를 줄 확률을 높입니다.",
-    glyphs: ["치", "점", "살", "眼", "必"],
-    levelTitles: ["약점 관찰", "급소 추적", "살기 감지", "필중의 눈", "완벽한 일격"],
-    costs: [140, 260, 480, 900, 1_800],
+    glyphs: ["必"],
+    levelTitles: ["필중 감각"],
+    costs: [1_200],
     levelDescription: (level) => `플레이어 치명타 확률 +${Math.round(level * CRITICAL_CHANCE_PER_LEVEL * 100)}%`,
   },
   shockwave: {
@@ -88,9 +88,9 @@ export const GUILD_UPGRADE_DEFINITIONS: Record<UpgradeKey, GuildUpgradeDefinitio
     nodeFamily: "shockwave",
     title: "공격 횟수 광역 공격",
     description: "일정 횟수의 플레이어 공격마다 넓은 충격파를 일으킵니다.",
-    glyphs: ["파", "波", "震", "轟", "天"],
-    levelTitles: ["검압 방출", "파동 증폭", "천지 진동", "대지 공명", "천공 붕괴"],
-    costs: [220, 420, 800, 1_600, 3_200],
+    glyphs: ["轟"],
+    levelTitles: ["대지 공명"],
+    costs: [2_200],
     levelDescription: (level) => `${shockwaveAttackInterval(level)}번째 플레이어 공격마다 ${Math.round(shockwaveDamageMultiplier(level) * 100)}% 광역 공격`,
   },
   time: {
@@ -98,9 +98,9 @@ export const GUILD_UPGRADE_DEFINITIONS: Record<UpgradeKey, GuildUpgradeDefinitio
     nodeFamily: "time",
     title: "전투 제한 시간 증가",
     description: "토벌에서 싸울 수 있는 제한 시간을 늘립니다.",
-    glyphs: ["시", "막", "차", "路", "鐘"],
-    levelTitles: ["휴대 식량", "원정 천막", "보급 마차", "왕실 보급로", "시간의 종"],
-    costs: [100, 200, 380, 750, 1_500],
+    glyphs: ["鐘"],
+    levelTitles: ["원정 보급선"],
+    costs: [700],
     levelDescription: (level) => `전투 제한 시간 +${level * BATTLE_TIME_PER_LEVEL}초`,
   },
   tavern: {
@@ -108,19 +108,19 @@ export const GUILD_UPGRADE_DEFINITIONS: Record<UpgradeKey, GuildUpgradeDefinitio
     nodeFamily: "tavern",
     title: "좋은 등급 영입 확률",
     description: "길드원 영입에서 B·A·S 등급이 나올 확률을 높입니다.",
-    glyphs: ["관", "잔", "杯", "契", "星"],
-    levelTitles: ["여관 증축", "유명한 술집", "영웅의 주점", "황금 계약소", "전설의 객잔"],
-    costs: [220, 450, 900, 1_800, 3_600],
-    levelDescription: (level) => `상위 등급 영입 확률 ${level}단계 적용`,
+    glyphs: ["星"],
+    levelTitles: ["영웅 계약소"],
+    costs: [1_600],
+    levelDescription: () => "B 이상 영입 확률 4% → 8%",
   },
   gold: {
     key: "gold",
     nodeFamily: "gold",
     title: "토벌 골드 증가량",
     description: "토벌 성공과 실패 회수로 얻는 골드를 늘립니다.",
-    glyphs: ["금", "◇", "상", "財", "王"],
-    levelTitles: ["보급 계약", "상단 협약", "교역로", "황금 길드", "왕실 금고"],
-    costs: [120, 240, 460, 900, 1_800],
+    glyphs: ["財"],
+    levelTitles: ["황금 보급로"],
+    costs: [1_200],
     levelDescription: (level) => `토벌 골드 +${Math.round(level * RAID_GOLD_BONUS_PER_LEVEL * 100)}%`,
   },
   guild: {
@@ -128,9 +128,9 @@ export const GUILD_UPGRADE_DEFINITIONS: Record<UpgradeKey, GuildUpgradeDefinitio
     nodeFamily: "guild",
     title: "길드원 공격력",
     description: "편성한 길드원의 일반 공격과 기술 피해를 높입니다.",
-    glyphs: ["진", "旗", "합", "★", "軍"],
-    levelTitles: ["전투 대형", "집결 깃발", "합동 훈련", "정예 토벌대", "영웅의 군세"],
-    costs: [110, 220, 420, 850, 1_700],
+    glyphs: ["軍"],
+    levelTitles: ["정예 토벌대"],
+    costs: [1_800],
     levelDescription: (level) => `길드원 공격력 +${Math.round(level * GUILD_ATTACK_BONUS_PER_LEVEL * 100)}%`,
   },
   autoAttack: {
@@ -138,9 +138,9 @@ export const GUILD_UPGRADE_DEFINITIONS: Record<UpgradeKey, GuildUpgradeDefinitio
     nodeFamily: "auto",
     title: "자동 공격",
     description: "플레이어의 현재 무기로 밀집 지역을 주기적으로 자동 공격합니다.",
-    glyphs: ["自", "連", "速", "無", "極"],
-    levelTitles: ["자율 검격", "자동 추적", "고속 반응", "무인 검진", "극의 자동화"],
-    costs: [300, 600, 1_200, 2_500, 5_000],
+    glyphs: ["自"],
+    levelTitles: ["자율 검진"],
+    costs: [2_600],
     levelDescription: (level) => level ? `${(playerAutoAttackIntervalMs(level) / 1_000).toFixed(1)}초마다 플레이어 공격 자동 발동` : "플레이어 자동 공격 잠김",
   },
 };
@@ -178,8 +178,40 @@ export const CITADEL_PREREQUISITES = [
 ] as const;
 
 export const LEGACY_REMOVED_NODE_REFUNDS: Readonly<Record<string, number>> = {
+  "range-2": 180,
+  "range-3": 320,
+  "range-4": 650,
+  "range-5": 1_200,
   "range-6": 1_780,
   "range-7": 2_800,
+  "crit-2": 260,
+  "crit-3": 480,
+  "crit-4": 900,
+  "crit-5": 1_800,
+  "shockwave-2": 420,
+  "shockwave-3": 800,
+  "shockwave-4": 1_600,
+  "shockwave-5": 3_200,
+  "time-2": 200,
+  "time-3": 380,
+  "time-4": 750,
+  "time-5": 1_500,
+  "tavern-2": 450,
+  "tavern-3": 900,
+  "tavern-4": 1_800,
+  "tavern-5": 3_600,
+  "gold-2": 240,
+  "gold-3": 460,
+  "gold-4": 900,
+  "gold-5": 1_800,
+  "guild-2": 220,
+  "guild-3": 420,
+  "guild-4": 850,
+  "guild-5": 1_700,
+  "auto-2": 600,
+  "auto-3": 1_200,
+  "auto-4": 2_500,
+  "auto-5": 5_000,
   "combo-1": 210,
   "combo-2": 470,
   "combo-3": 980,

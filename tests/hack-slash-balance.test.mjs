@@ -58,8 +58,10 @@ test("the opening pressure wave clears before the timer and the upgrade wave bec
   assert.equal(balance.monsterCountForStage(2), 68);
 });
 
-test("the full first-clear route fits the 10-20 minute hack-and-slash target", async () => {
+test("the full first-clear route needs no guild research and fits the 10-20 minute target", async () => {
   const balance = await loadBalanceModule();
+  // This simulation intentionally uses only the expected player weapon tier:
+  // no range, critical, shockwave, time, guild, auto, gold, or tavern research.
   const totalClicks = Array.from({ length: 30 }, (_, index) => simulateFocusedClicks(balance, index + 1)).reduce((sum, clicks) => sum + clicks, 0);
   const transitionAndLootSeconds = 30 * 8.5;
   const quickRunMinutes = (totalClicks / 3.25 + transitionAndLootSeconds) / 60;
