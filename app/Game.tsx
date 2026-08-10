@@ -480,11 +480,8 @@ export default function Game() {
   const battleSeconds = (developerMode ? DEV_BATTLE_SECONDS : stage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + effectiveUpgrades.time * 5 + traitCounts.support * 3;
   const battleTimeLeft = battleDeadline ? Math.max(0, Math.ceil((battleDeadline - now) / 1000)) : battleSeconds;
   const finaleLoadout = useMemo<FinaleLoadout>(() => ({
-    upgrades: effectiveUpgrades,
-    weaponLevel: clickVisualLevel,
     hallLevel: developerMode ? GUILD_HALL_STAGES.length : save.guildHallLevel,
-    partySize: developerMode ? 4 : Math.max(1, partyMembers.length),
-  }), [clickVisualLevel, developerMode, effectiveUpgrades, partyMembers.length, save.guildHallLevel]);
+  }), [developerMode, save.guildHallLevel]);
   const lootCollecting = lootPhase === "collecting";
   const combatLocked = battleActive || lootCollecting || victory || defeat;
   const aliveMonsters = useMemo(() => fieldMonsters.filter((monster) => monster.hp > 0), [fieldMonsters]);
@@ -1170,7 +1167,7 @@ export default function Game() {
     setFinaleMode(false);
     returnToGuild(developerMode
       ? "개발자 글리치 보스 격파 완료! 시험 결과는 저장되지 않습니다."
-      : "CODEX NULL을 격파했습니다. 길드의 마지막 기록이 새로 쓰였습니다.");
+      : "기록 말소자를 격파했습니다. 길드의 마지막 기록이 새로 쓰였습니다.");
   }
 
   if (finaleMode) {
@@ -1194,7 +1191,8 @@ export default function Game() {
           <MaterialInventory materials={save.materials} unlockedStage={save.unlockedStage} weaponLevel={save.weaponLevel} />
         </div>
         {developerToolsAvailable && <button className={`small-button developer-toggle ${developerMode ? "active" : ""}`} onClick={toggleDeveloperMode}>DEV {developerMode ? "ON" : "OFF"}</button>}
-        {developerToolsAvailable && developerMode && <button className="small-button" onClick={() => setFinaleMode(true)}>탄막 TEST</button>}
+        {developerToolsAvailable && developerMode && <button className="small-button" onClick={() => setFinaleMode(true)}>엔딩 TEST</button>}
+        {!developerMode && save.cleared.includes(STAGE_COUNT) && !save.finaleCleared && <button className="small-button" onClick={() => setFinaleMode(true)}>엔딩 재개</button>}
         <button className="small-button reset-button" onClick={resetGame}>새 게임</button>
       </header>
 

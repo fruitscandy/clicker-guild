@@ -1,4 +1,4 @@
-export type BgmSceneId = "guild" | "field-select" | "battle" | "boss";
+export type BgmSceneId = "guild" | "field-select" | "battle" | "boss" | "finale";
 
 export type BgmTrackId =
   | "guild-hearth"
@@ -6,7 +6,8 @@ export type BgmTrackId =
   | "vanguards-charge"
   | "iron-advance"
   | "fantasy-boss-battle"
-  | "fantasy-boss-battle-take-2";
+  | "fantasy-boss-battle-take-2"
+  | "crown-of-ruin";
 
 export type BgmTrack = {
   id: BgmTrackId;
@@ -87,18 +88,32 @@ export const BGM_TRACKS: readonly BgmTrack[] = [
     source: "/assets/audio/bgm/flow-candidates/fantasy-boss-battle-take-2.m4a",
     palette: "어두운 상승 긴장 · 대형 북 · 승리의 브라스",
   },
+  {
+    id: "crown-of-ruin",
+    sceneId: "finale",
+    title: "파멸의 왕관",
+    subtitle: "Crown of Ruin",
+    scene: "최종 기록 붕괴",
+    bpm: 150,
+    duration: "0:25",
+    source: "/assets/audio/bgm/crown-of-ruin.wav",
+    palette: "왜곡된 신스 · 붕괴 펄스 · 최종 결전 리듬",
+  },
 ] as const;
 
 export const BGM_TRACK_BY_ID = Object.fromEntries(
   BGM_TRACKS.map((track) => [track.id, track]),
 ) as Record<BgmTrackId, BgmTrack>;
 
+export type BgmTrackPool = readonly [BgmTrack, ...BgmTrack[]];
+
 export const BGM_TRACKS_BY_SCENE = Object.fromEntries(
-  (["guild", "field-select", "battle", "boss"] as const).map((sceneId) => [
-    sceneId,
-    BGM_TRACKS.filter((track) => track.sceneId === sceneId),
-  ]),
-) as Record<BgmSceneId, readonly BgmTrack[]>;
+  (["guild", "field-select", "battle", "boss", "finale"] as const).map((sceneId) => {
+    const tracks = BGM_TRACKS.filter((track) => track.sceneId === sceneId);
+    if (tracks.length === 0) throw new Error(`BGM scene has no tracks: ${sceneId}`);
+    return [sceneId, tracks as unknown as BgmTrackPool];
+  }),
+) as unknown as Record<BgmSceneId, BgmTrackPool>;
 
 export type BattleBgmCandidate = {
   id: string;

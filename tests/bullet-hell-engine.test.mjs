@@ -13,22 +13,26 @@ async function loadEngine() {
 
 const engine = await loadEngine();
 
-function zeroLoadout() {
+function loadout({ hallLevel = 1, weaponLevel = 0, partySize = 0, upgradeLevel = 0 } = {}) {
   return {
-    upgrades: Object.fromEntries(Object.keys(engine.FINALE_UPGRADE_CAPS).map((key) => [key, 0])),
-    weaponLevel: 0,
-    hallLevel: 1,
-    partySize: 0,
+    upgrades: Object.fromEntries(Object.keys(engine.FINALE_UPGRADE_CAPS).map((key) => [key, upgradeLevel])),
+    weaponLevel,
+    hallLevel,
+    partySize,
   };
 }
 
 function advance(world, milliseconds, input = {}) {
   let next = world;
   for (let elapsed = 0; elapsed < milliseconds; elapsed += 16) {
-    next = engine.updateFinaleWorld(next, input, 16);
+    next = engine.updateFinaleWorld(next, input, Math.min(16, milliseconds - elapsed));
     if (next.status !== "playing") break;
   }
   return next;
+}
+
+function bossClick(world, nowMs) {
+  return engine.attackFinaleBoss(world, world.boss.x, world.boss.y, nowMs);
 }
 
 function overlappingBullet(world, id = 900_000) {
@@ -37,7 +41,7 @@ function overlappingBullet(world, id = 900_000) {
     x: world.player.x,
     y: world.player.y,
     vx: 0,
-    vy: 0,
+    vy: 1,
     ax: 0,
     ay: 0,
     radius: 8,
@@ -45,7 +49,8 @@ function overlappingBullet(world, id = 900_000) {
     spriteIndex: 0,
     spin: 0,
     turnRate: 0,
-    ageMs: 0,
+    ageMs: engine.FINALE_TELEGRAPH_MS,
+    telegraphMs: engine.FINALE_TELEGRAPH_MS,
     lifetimeMs: 10_000,
     damage: 1,
     kind: "error",
@@ -54,202 +59,209 @@ function overlappingBullet(world, id = 900_000) {
   };
 }
 
-test("exposes the fixed finale arena and maps every saved upgrade family", () => {
-  assert.equal(engine.FINALE_WIDTH, 960);
-  assert.equal(engine.FINALE_HEIGHT, 600);
-  assert.deepEqual(Object.keys(engine.FINALE_UPGRADE_CAPS), [
-    "range", "critical", "combo", "execution", "shockwave", "momentum",
-    "time", "scout", "guild", "gold", "tavern", "loot",
-  ]);
+test("only guild hall level survives loadout normalization and affects combat", () => {
+  assert.deepEqual(engine.maximumFinaleLoadout(), { hallLevel: 6 });
+  const hallOnly = engine.createFinaleWorld({ hallLevel: 3 }, { seed: 1 });
+  assert.equal(hallOnly.loadout.hallLevel, 3);
 
-  const base = engine.deriveFinaleStats(zeroLoadout());
-  const maximumLoadout = engine.maximumFinaleLoadout();
-  const maximum = engine.deriveFinaleStats(maximumLoadout);
-  assert.deepEqual(maximumLoadout.upgrades, engine.FINALE_UPGRADE_CAPS);
-  assert.equal(maximumLoadout.weaponLevel, 14);
-  assert.equal(maximumLoadout.hallLevel, 6);
-  assert.equal(maximumLoadout.partySize, 4);
-  assert.ok(maximum.shotDamage > base.shotDamage);
-  assert.ok(maximum.shotCount > base.shotCount);
-  assert.ok(maximum.shotIntervalMs < base.shotIntervalMs);
-  assert.ok(maximum.criticalChance > 0);
-  assert.ok(maximum.executionThreshold > 0);
-  assert.ok(Number.isFinite(maximum.pulseCooldownMs));
-  assert.ok(maximum.moveSpeed > base.moveSpeed);
-  assert.ok(maximum.hitRadius < base.hitRadius);
-  assert.ok(maximum.maxHp > base.maxHp);
-  assert.ok(maximum.maxShields > base.maxShields);
-  assert.ok(maximum.droneCount > base.droneCount);
-  assert.ok(maximum.invulnerabilityMs > base.invulnerabilityMs);
-  assert.ok(maximum.scoreMultiplier > base.scoreMultiplier);
+  const plain = engine.createFinaleWorld(loadout({ hallLevel: 1 }), { seed: 1 });
+  const noisy = engine.createFinaleWorld(loadout({
+    hallLevel: 1,
+    weaponLevel: 14,
+    partySize: 4,
+    upgradeLevel: 99,
+  }), { seed: 1 });
+  assert.deepEqual(noisy.stats, plain.stats);
+  assert.equal(noisy.loadout.weaponLevel, 0);
+  assert.equal(noisy.loadout.partySize, 0);
+  assert.ok(Object.values(noisy.loadout.upgrades).every((level) => level === 0));
 
-  const world = engine.createFinaleWorld(maximumLoadout, { preview: true, seed: 1 });
-  assert.equal(world.elapsedMs, world.elapsed);
-  assert.equal(world.player.shield, maximum.maxShields);
-  assert.equal(world.pulse, false);
-  assert.equal(world.pulseRadius, 0);
-  assert.equal(world.playerHit, false);
-  assert.equal(world.playerHitEvent, null);
-  assert.equal(world.phaseChanged, false);
+  const highHall = engine.createFinaleWorld(loadout({ hallLevel: 6 }), { seed: 1 });
+  assert.equal(plain.stats.maxHp, 4);
+  assert.equal(highHall.stats.maxHp, 5);
+  assert.equal(plain.stats.maxShields, 1);
+  assert.equal(highHall.stats.maxShields, 1);
+  assert.equal(plain.stats.hitRadius, 7);
+  assert.equal(highHall.stats.hitRadius, 7);
+  assert.equal(plain.stats.moveSpeed, highHall.stats.moveSpeed);
+  assert.equal(plain.stats.clickDamage, 1);
+  assert.equal(highHall.stats.clickDamage, 1.25);
+  assert.equal(highHall.stats.shotCount, 0);
+  assert.equal(highHall.stats.droneCount, 0);
 });
 
-test("normalizes diagonal axes and clamps the guild building inside the arena", () => {
-  const loadout = engine.maximumFinaleLoadout();
-  const start = engine.createFinaleWorld(loadout, { preview: true, seed: 11 });
-  const moved = advance(start, 960, { x: 1, y: -1 });
-  const dx = moved.player.x - start.player.x;
-  const dy = start.player.y - moved.player.y;
-  assert.ok(Math.abs(dx - dy) < 0.01, `normalized diagonal should move equally: ${dx}, ${dy}`);
-  assert.ok(Math.hypot(dx, dy) <= moved.stats.moveSpeed * 0.97);
-
-  const edge = advance(moved, 12_000, { right: true, down: true });
-  assert.ok(edge.player.x <= engine.FINALE_WIDTH - edge.player.radius * 0.72);
-  assert.ok(edge.player.y <= engine.FINALE_HEIGHT - edge.player.radius * 0.72);
-  assert.ok(edge.player.x >= 0 && edge.player.y >= 0);
-});
-
-test("same seed and inputs produce byte-for-byte deterministic combat state", () => {
-  const loadout = engine.maximumFinaleLoadout();
-  let first = engine.createFinaleWorld(loadout, { preview: true, seed: 0x12345678 });
-  let second = engine.createFinaleWorld(loadout, { preview: true, seed: 0x12345678 });
-  for (let frame = 0; frame < 260; frame += 1) {
+test("same seed and inputs produce deterministic phase-two patterns", () => {
+  let first = engine.forceFinaleMode(engine.createFinaleWorld(loadout(), { seed: 0x12345678 }), "bulletHell");
+  let second = engine.forceFinaleMode(engine.createFinaleWorld(loadout(), { seed: 0x12345678 }), "bulletHell");
+  first.player.invulnerableMs = 999_999;
+  second.player.invulnerableMs = 999_999;
+  for (let frame = 0; frame < 320; frame += 1) {
     const input = { x: Math.sin(frame / 19), y: Math.cos(frame / 27), focus: frame % 7 < 3 };
     first = engine.updateFinaleWorld(first, input, 16);
     second = engine.updateFinaleWorld(second, input, 16);
   }
   assert.deepEqual(second, first);
 
-  const differentSeed = advance(engine.createFinaleWorld(loadout, { preview: true, seed: 99 }), 4_160);
-  assert.notDeepEqual(differentSeed.bullets, first.bullets);
+  let different = engine.forceFinaleMode(engine.createFinaleWorld(loadout(), { seed: 99 }), "bulletHell");
+  different.player.invulnerableMs = 999_999;
+  different = advance(different, 5_120);
+  assert.notDeepEqual(different.bullets, first.bullets);
 });
 
-test("all four health phases have distinct seeded asset patterns and respect the bullet cap", () => {
-  const names = new Set();
-  for (const phase of [1, 2, 3, 4]) {
-    let world = engine.createFinaleWorld(zeroLoadout(), { preview: true, seed: 700 + phase });
-    world = engine.forceFinalePhase(world, phase);
-    world = advance(world, 2_600, { left: phase % 2 === 0 });
-    names.add(world.patternName);
-    assert.equal(world.phase, phase);
-    assert.ok(world.bullets.length > 0, `phase ${phase} should emit bullets`);
-    assert.ok(world.bullets.every((bullet) => bullet.asset.startsWith("/assets/")));
+test("boss damage requires an actual click inside the generous 220px target", () => {
+  let world = engine.createFinaleWorld(loadout(), { seed: 7 });
+  const initialHp = world.boss.hp;
+  world = engine.attackFinaleBoss(world, world.boss.x + world.boss.clickRadius + 1, world.boss.y, 0);
+  assert.equal(world.boss.hp, initialHp);
+  assert.equal(world.clicksMissed, 1);
+  assert.equal(world.attackEvent.kind, "miss");
+
+  world = engine.attackFinaleBoss(world, world.boss.x + world.boss.clickRadius, world.boss.y, 125);
+  assert.equal(world.boss.hp, initialHp - world.stats.clickDamage);
+  assert.equal(world.clicksLanded, 1);
+  assert.equal(world.attackEvent.kind, "hit");
+  assert.equal(world.boss.clickRadius * 2, 220);
+});
+
+test("click damage has a strict eight-clicks-per-second cap", () => {
+  let world = engine.createFinaleWorld(loadout(), { seed: 8 });
+  world = bossClick(world, 0);
+  const hpAfterFirst = world.boss.hp;
+  world = bossClick(world, 124);
+  assert.equal(world.boss.hp, hpAfterFirst);
+  assert.equal(world.clicksRejected, 1);
+  assert.equal(world.attackEvent.kind, "rate-limited");
+  world = bossClick(world, 125);
+  assert.ok(world.boss.hp < hpAfterFirst);
+  assert.equal(world.clicksLanded, 2);
+});
+
+test("phase one has no automatic attack and takes 12-18 deliberate clicks", () => {
+  for (const hallLevel of [1, 6]) {
+    let world = engine.createFinaleWorld(loadout({ hallLevel }), { seed: 9 });
+    world = advance(world, 30_000);
+    assert.equal(world.boss.hp, world.boss.maxHp, "time alone must never damage the boss");
+    assert.equal(world.shots.length, 0);
+    let clicks = 0;
+    while (world.mode === "field") {
+      world = bossClick(world, 30_000 + clicks * 125);
+      clicks += 1;
+    }
+    assert.ok(clicks >= 12 && clicks <= 18, `hall ${hallLevel} ended phase one in ${clicks} clicks`);
+    assert.equal(world.mode, "collapse");
+    assert.equal(world.status, "playing");
   }
-  assert.equal(names.size, 4);
-
-  let overflow = engine.forceFinalePhase(engine.createFinaleWorld(zeroLoadout(), { seed: 41 }), 4);
-  overflow.player.invulnerableMs = 999_999;
-  overflow = advance(overflow, 30_000);
-  assert.ok(overflow.bullets.length <= 480);
 });
 
-test("shields absorb one collision and invulnerability rejects the overlapping follow-up", () => {
-  const loadout = zeroLoadout();
-  loadout.upgrades.loot = 3;
-  let world = engine.createFinaleWorld(loadout, { preview: true, seed: 5 });
+test("field collapse leads to a fresh phase two without replaying phase one", () => {
+  let world = engine.createFinaleWorld(loadout(), { seed: 10 });
+  world = engine.forceFinaleMode(world, "collapse");
+  world = advance(world, engine.FINALE_COLLAPSE_MS - 16);
+  assert.equal(world.mode, "collapse");
+  world = advance(world, 32);
+  assert.equal(world.mode, "bulletHell");
+  assert.equal(world.phase, 2);
+  assert.equal(world.boss.hp, 42);
+  assert.equal(world.cycle, "dodge");
+  assert.equal(world.player.shield, 1);
+});
+
+test("phase two repeats a six-second dodge and 2.5-second double-damage opening", () => {
+  let world = engine.forceFinaleMode(engine.createFinaleWorld(loadout(), { seed: 11 }), "bulletHell");
+  world.player.invulnerableMs = 999_999;
+  world = advance(world, engine.FINALE_DODGE_MS - 16);
+  assert.equal(world.cycle, "dodge");
+  const dodged = bossClick(world, 6_000);
+  assert.ok(Math.abs(world.boss.hp - dodged.boss.hp - world.stats.clickDamage * 0.35) < 1e-9);
+  assert.equal(dodged.attackEvent.multiplier, 0.35);
+
+  world = advance(world, 32);
+  assert.equal(world.cycle, "opening");
+  assert.equal(world.bullets.length, 0);
+  const opened = bossClick(world, 6_125);
+  assert.equal(world.boss.hp - opened.boss.hp, world.stats.clickDamage * 2);
+  assert.equal(opened.attackEvent.multiplier, 2);
+
+  let spammed = engine.forceFinaleMode(engine.createFinaleWorld(loadout({ hallLevel: 6 }), { seed: 111 }), "bulletHell");
+  for (let click = 0; click < 40; click += 1) spammed = bossClick(spammed, click * 125);
+  assert.equal(spammed.mode, "bulletHell", "dodge clicks alone must not skip the first CORE OPEN");
+
+  world = advance(opened, engine.FINALE_OPENING_MS + 16);
+  assert.equal(world.cycle, "dodge");
+});
+
+test("telegraphed safe-corridor patterns stay near the 100-bullet target and below 140", () => {
+  let world = engine.forceFinaleMode(engine.createFinaleWorld(loadout(), { seed: 12 }), "bulletHell");
+  world.player.invulnerableMs = 999_999;
+  let observedMaximum = 0;
+  let observedTelegraph = false;
+  for (let elapsed = 0; elapsed < 34_000; elapsed += 16) {
+    world = engine.updateFinaleWorld(world, {}, 16);
+    observedMaximum = Math.max(observedMaximum, world.bullets.length);
+    observedTelegraph ||= world.bullets.some((bullet) => bullet.ageMs < bullet.telegraphMs && bullet.telegraphMs >= 500);
+    assert.ok(world.bullets.length <= engine.FINALE_BULLET_CAP);
+  }
+  assert.equal(observedTelegraph, true);
+  assert.ok(observedMaximum >= 80, `expected a dense but readable field, saw ${observedMaximum}`);
+  assert.ok(observedMaximum <= 140);
+});
+
+test("one shield, one-second invulnerability, hull defeat, and phase-two retry are explicit", () => {
+  let world = engine.forceFinaleMode(engine.createFinaleWorld(loadout(), { seed: 13 }), "bulletHell");
   const initialHp = world.player.hp;
-  world.player.shield = 1;
-  const initialShields = world.player.shield;
+  world.player.invulnerableMs = 0;
   world.bullets = [overlappingBullet(world, 1), overlappingBullet(world, 2)];
   world = engine.updateFinaleWorld(world, {}, 16);
-  assert.equal(world.player.shield, initialShields - 1);
+  assert.equal(world.player.shield, 0);
   assert.equal(world.player.hp, initialHp);
-  assert.equal(world.playerHit, true);
   assert.equal(world.playerHitEvent.kind, "shield");
-  assert.equal(world.playerHitEvent.serial, 1);
-  assert.ok(world.player.invulnerableMs > 0);
-  assert.equal(world.bullets.length, 1);
+  assert.ok(world.player.invulnerableMs >= 984);
 
-  world.bullets.push(overlappingBullet(world, 3));
-  const protectedWorld = engine.updateFinaleWorld(world, {}, 16);
-  assert.equal(protectedWorld.player.shield, world.player.shield);
-  assert.equal(protectedWorld.player.hp, world.player.hp);
-  assert.equal(protectedWorld.playerHitEvent, null);
+  world.bullets = [overlappingBullet(world, 3)];
+  world = engine.updateFinaleWorld(world, {}, 16);
+  assert.equal(world.player.hp, initialHp);
+  assert.equal(world.playerHitEvent, null);
 
-  protectedWorld.player.invulnerableMs = 0;
-  protectedWorld.bullets = [overlappingBullet(protectedWorld, 4)];
-  const hullHit = engine.updateFinaleWorld(protectedWorld, {}, 16);
-  assert.equal(hullHit.player.shield, 0);
-  assert.equal(hullHit.player.hp, initialHp - 1);
-  assert.equal(hullHit.playerHitEvent.kind, "hull");
-});
-
-test("support drones match the loadout and fire from every visible cyan turret", () => {
-  for (const [partySize, tavernLevel] of [[0, 0], [1, 0], [4, 0], [4, 3]]) {
-    const loadout = zeroLoadout();
-    loadout.partySize = partySize;
-    loadout.upgrades.tavern = tavernLevel;
-    const stats = engine.deriveFinaleStats(loadout);
-    assert.equal(engine.finaleDroneOffsets(stats.droneCount).length, stats.droneCount);
+  for (let hit = 0; hit < initialHp; hit += 1) {
+    world.player.invulnerableMs = 0;
+    world.bullets = [overlappingBullet(world, 10 + hit)];
+    world = engine.updateFinaleWorld(world, {}, 16);
   }
+  assert.equal(world.status, "defeat");
+  assert.equal(world.phase, 2);
+  assert.equal(world.player.hp, 0);
 
-  const loadout = engine.maximumFinaleLoadout();
-  const start = engine.createFinaleWorld(loadout, { preview: true, seed: 44 });
-  const fired = engine.updateFinaleWorld(start, { right: true }, 16);
-  const guildShots = fired.shots.filter((shot) => shot.source === "guild");
-  const droneShots = fired.shots.filter((shot) => shot.source === "drone");
-  const offsets = engine.finaleDroneOffsets(fired.stats.droneCount);
-  assert.equal(guildShots.length, fired.stats.shotCount);
-  assert.equal(droneShots.length, offsets.length);
-
-  for (let index = 0; index < droneShots.length; index += 1) {
-    const shot = droneShots[index];
-    const offset = offsets[index];
-    const originX = shot.x - shot.vx * 0.016;
-    const originY = shot.y - shot.vy * 0.016;
-    assert.ok(Math.abs(originX - (fired.player.x + offset.x)) < 0.001);
-    assert.ok(Math.abs(originY - (fired.player.y + offset.y)) < 0.001);
-    assert.equal(shot.sourceIndex, index);
-    const targetX = fired.boss.x - originX;
-    const targetY = fired.boss.y - originY;
-    assert.ok(Math.abs(targetX * shot.vy - targetY * shot.vx) < 0.001);
-    assert.ok(targetX * shot.vx + targetY * shot.vy > 0);
-  }
+  const retried = engine.restartFinalePhaseTwo(world);
+  assert.equal(retried.status, "playing");
+  assert.equal(retried.mode, "bulletHell");
+  assert.equal(retried.phase, 2);
+  assert.equal(retried.player.hp, retried.player.maxHp);
+  assert.equal(retried.player.shield, 1);
+  assert.equal(retried.boss.hp, retried.boss.maxHp);
 });
 
-test("shockwave research deletes nearby hostile assets without deleting distant bullets", () => {
-  const loadout = zeroLoadout();
-  loadout.upgrades.shockwave = 3;
-  let world = engine.createFinaleWorld(loadout, { preview: true, seed: 18 });
-  const near = overlappingBullet(world, 1);
-  near.x += world.stats.pulseRadius * 0.5;
-  const far = overlappingBullet(world, 2);
-  far.x = 30;
-  far.y = 110;
-  world.bullets = [near, far];
-  world = engine.updateFinaleWorld(world, { pulse: true }, 16);
-  assert.equal(world.pulse, true);
-  assert.equal(world.pulseState.count, 1);
-  assert.equal(world.pulseState.removed, 1);
-  assert.equal(world.bullets.length, 1);
-  assert.equal(world.bullets[0].id, far.id);
-  assert.ok(world.pulseState.cooldownMs > 0);
-});
-
-test("automatic volleys exercise criticals and combos before execution wins phase four", () => {
-  let world = engine.createFinaleWorld(engine.maximumFinaleLoadout(), { preview: true, seed: 77 });
-  world = engine.forceFinalePhase(world, 1);
-  world = advance(world, 3_200, { focus: true });
-  assert.ok(world.player.volleysFired >= 10);
-  assert.ok(world.player.comboVolleys >= 3);
-  assert.ok(world.player.criticalShots > 0);
-  assert.ok(world.player.damageDealt > 0);
-
-  world = engine.forceFinalePhase(world, 4);
-  world = advance(world, 900, { focus: true });
+test("phase-two victory reserves success for destruction followed by whiteout", () => {
+  let world = engine.forceFinaleMode(engine.createFinaleWorld(loadout(), { seed: 14 }), "bulletHell");
+  world.cycle = "opening";
+  world.boss.hp = world.stats.clickDamage * 2;
+  world = bossClick(world, 0);
+  assert.equal(world.mode, "destruction");
+  assert.equal(world.status, "playing");
+  assert.equal(world.victory, false);
+  world = advance(world, engine.FINALE_DESTRUCTION_MS - 16);
+  assert.equal(world.mode, "destruction");
+  world = advance(world, 32);
+  assert.equal(world.mode, "whiteout");
   assert.equal(world.status, "victory");
   assert.equal(world.victory, true);
-  assert.equal(world.boss.hp, 0);
-  assert.equal(world.player.executionTriggered, true);
-  assert.equal(world.patternName, "GLITCH PURGED");
 });
 
-test("an unshielded final hit ends the run in defeat", () => {
-  let world = engine.createFinaleWorld(zeroLoadout(), { preview: true, seed: 3 });
-  world.player.hp = 1;
-  world.bullets = [overlappingBullet(world)];
-  world = engine.updateFinaleWorld(world, {}, 16);
-  assert.equal(world.status, "defeat");
-  assert.equal(world.defeat, true);
-  assert.equal(world.player.hp, 0);
-  assert.equal(world.patternName, "GUILD CORE LOST");
+test("there is no timeout or enrage failure", () => {
+  let world = engine.forceFinaleMode(engine.createFinaleWorld(loadout(), { seed: 15 }), "bulletHell");
+  world.player.invulnerableMs = 1_000_000;
+  const bossHp = world.boss.hp;
+  world = advance(world, 180_000);
+  assert.equal(world.status, "playing");
+  assert.equal(world.boss.hp, bossHp);
+  assert.equal(world.shots.length, 0);
 });

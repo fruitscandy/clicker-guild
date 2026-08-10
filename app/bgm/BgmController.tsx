@@ -18,8 +18,32 @@ import {
 import styles from "./BgmController.module.css";
 
 const CROSSFADE_MS = 1_150;
+const FINALE_DESTRUCTION_FADE_MS = 480;
+const FINALE_WHITEOUT_FADE_MS = 220;
+const FINALE_RESUME_FADE_MS = 520;
 
-function sceneFromDocument(): BgmSceneId {
+type FinaleMusicSignal = "none" | "phase-one" | "collapse" | "phase-two" | "destruction" | "whiteout";
+
+function isFinaleSilenceSignal(signal: FinaleMusicSignal) {
+  return signal === "destruction" || signal === "whiteout";
+}
+
+function finaleMusicSignalFromDocument(): FinaleMusicSignal {
+  const value = document.querySelector<HTMLElement>("[data-finale-music]")?.dataset.finaleMusic;
+  if (
+    value === "phase-one"
+    || value === "collapse"
+    || value === "phase-two"
+    || value === "destruction"
+    || value === "whiteout"
+  ) return value;
+  return "none";
+}
+
+function sceneFromDocument(finaleMusic = finaleMusicSignalFromDocument()): BgmSceneId {
+  if (finaleMusic === "phase-one" || finaleMusic === "collapse") return "boss";
+  if (finaleMusic === "phase-two" || finaleMusic === "destruction" || finaleMusic === "whiteout") return "finale";
+
   const dialog = document.querySelector<HTMLElement>("[role='dialog'][aria-modal='true']");
   if (dialog?.textContent?.includes("GUILD EXPEDITION ATLAS")) return "field-select";
 
@@ -38,14 +62,18 @@ export default function BgmController({ children }: { children: ReactNode }) {
   const [activated, setActivated] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [developerMode, setDeveloperMode] = useState(false);
+  const [finaleMusicSignal, setFinaleMusicSignal] = useState<FinaleMusicSignal>("none");
   const players = useRef<[HTMLAudioElement | null, HTMLAudioElement | null]>([null, null]);
   const activePlayer = useRef(0);
   const fadeTimer = useRef<number | null>(null);
+  const fadeGeneration = useRef(0);
   const desiredScene = useRef<BgmSceneId>("guild");
   const desiredTrack = useRef<BgmTrackId>("guild-hearth");
-  const sceneCursors = useRef<Record<BgmSceneId, number>>({ guild: 0, "field-select": 0, battle: 0, boss: 0 });
+  const sceneCursors = useRef<Record<BgmSceneId, number>>({ guild: 0, "field-select": 0, battle: 0, boss: 0, finale: 0 });
   const playingTrack = useRef<BgmTrackId | null>(null);
   const settingsRef = useRef(settings);
+  const finaleMusicSignalRef = useRef<FinaleMusicSignal>("none");
+  const previousFinaleMusicSignal = useRef<FinaleMusicSignal>("none");
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -65,7 +93,10 @@ export default function BgmController({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const update = () => {
-      const nextScene = sceneFromDocument();
+      const nextFinaleMusicSignal = finaleMusicSignalFromDocument();
+      finaleMusicSignalRef.current = nextFinaleMusicSignal;
+      setFinaleMusicSignal((current) => current === nextFinaleMusicSignal ? current : nextFinaleMusicSignal);
+      const nextScene = sceneFromDocument(nextFinaleMusicSignal);
       if (nextScene !== desiredScene.current) {
         const pool = BGM_TRACKS_BY_SCENE[nextScene];
         const cursor = sceneCursors.current[nextScene] % pool.length;
@@ -79,11 +110,17 @@ export default function BgmController({ children }: { children: ReactNode }) {
     };
     update();
     const observer = new MutationObserver(update);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "data-finale-music"],
+    });
     return () => observer.disconnect();
   }, []);
 
   const fadeTo = useCallback(async (nextTrack: BgmTrackId, immediate = false) => {
+    const generation = ++fadeGeneration.current;
     const fromIndex = activePlayer.current;
     const toIndex = 1 - fromIndex;
     const from = players.current[fromIndex];
@@ -91,6 +128,7 @@ export default function BgmController({ children }: { children: ReactNode }) {
     if (!to) return;
 
     if (fadeTimer.current !== null) window.clearInterval(fadeTimer.current);
+    fadeTimer.current = null;
     const targetVolume = settingsRef.current.bgmMuted ? 0 : settingsRef.current.bgmVolume;
     const source = BGM_TRACK_BY_ID[nextTrack].source;
     if (!to.src.endsWith(source)) {
@@ -99,36 +137,104 @@ export default function BgmController({ children }: { children: ReactNode }) {
     }
     to.currentTime = 0;
     to.volume = immediate ? targetVolume : 0;
-    playingTrack.current = nextTrack;
     try {
       await to.play();
     } catch {
-      playingTrack.current = null;
       return;
     }
+    if (generation !== fadeGeneration.current || isFinaleSilenceSignal(finaleMusicSignalRef.current)) return;
 
+    playingTrack.current = nextTrack;
     activePlayer.current = toIndex;
     if (immediate) {
       from?.pause();
+      if (from) from.volume = 0;
       return;
     }
     const started = performance.now();
     const fromVolume = from?.volume ?? 0;
-    fadeTimer.current = window.setInterval(() => {
+    const timerId = window.setInterval(() => {
+      if (generation !== fadeGeneration.current) {
+        window.clearInterval(timerId);
+        return;
+      }
       const progress = Math.min(1, (performance.now() - started) / CROSSFADE_MS);
       to.volume = targetVolume * progress;
       if (from) from.volume = fromVolume * (1 - progress);
       if (progress >= 1) {
-        if (fadeTimer.current !== null) window.clearInterval(fadeTimer.current);
-        fadeTimer.current = null;
+        window.clearInterval(timerId);
+        if (fadeTimer.current === timerId) fadeTimer.current = null;
         from?.pause();
+        if (from) from.volume = 0;
       }
     }, 40);
+    fadeTimer.current = timerId;
+  }, []);
+
+  const fadeOutCurrent = useCallback((durationMs: number, pauseAtEnd: boolean) => {
+    const generation = ++fadeGeneration.current;
+    const activeIndex = activePlayer.current;
+    const player = players.current[activeIndex];
+    if (fadeTimer.current !== null) window.clearInterval(fadeTimer.current);
+    fadeTimer.current = null;
+    players.current.forEach((candidate, index) => {
+      if (!candidate || index === activeIndex) return;
+      candidate.pause();
+      candidate.volume = 0;
+    });
+    if (!player) return;
+    const started = performance.now();
+    const fromVolume = player.volume;
+    const timerId = window.setInterval(() => {
+      if (generation !== fadeGeneration.current) {
+        window.clearInterval(timerId);
+        return;
+      }
+      const progress = Math.min(1, (performance.now() - started) / durationMs);
+      player.volume = fromVolume * (1 - progress);
+      if (progress >= 1) {
+        window.clearInterval(timerId);
+        if (fadeTimer.current === timerId) fadeTimer.current = null;
+        player.volume = 0;
+        if (pauseAtEnd) player.pause();
+      }
+    }, 40);
+    fadeTimer.current = timerId;
+  }, []);
+
+  const fadeInCurrent = useCallback(async (durationMs: number) => {
+    const player = players.current[activePlayer.current];
+    if (!player || playingTrack.current !== desiredTrack.current) return;
+    const generation = ++fadeGeneration.current;
+    if (fadeTimer.current !== null) window.clearInterval(fadeTimer.current);
+    fadeTimer.current = null;
+    const targetVolume = settingsRef.current.bgmMuted ? 0 : settingsRef.current.bgmVolume;
+    const fromVolume = player.volume;
+    try {
+      await player.play();
+    } catch {
+      return;
+    }
+    if (generation !== fadeGeneration.current || isFinaleSilenceSignal(finaleMusicSignalRef.current)) return;
+    const started = performance.now();
+    const timerId = window.setInterval(() => {
+      if (generation !== fadeGeneration.current) {
+        window.clearInterval(timerId);
+        return;
+      }
+      const progress = Math.min(1, (performance.now() - started) / durationMs);
+      player.volume = fromVolume + (targetVolume - fromVolume) * progress;
+      if (progress >= 1) {
+        window.clearInterval(timerId);
+        if (fadeTimer.current === timerId) fadeTimer.current = null;
+      }
+    }, 40);
+    fadeTimer.current = timerId;
   }, []);
 
   const startCurrent = useCallback(() => {
     setActivated(true);
-    if (settingsRef.current.bgmMuted) return;
+    if (settingsRef.current.bgmMuted || isFinaleSilenceSignal(finaleMusicSignalRef.current)) return;
     const player = players.current[activePlayer.current];
     if (playingTrack.current === desiredTrack.current && player?.src) {
       player.volume = settingsRef.current.bgmVolume;
@@ -139,14 +245,47 @@ export default function BgmController({ children }: { children: ReactNode }) {
   }, [fadeTo]);
 
   useEffect(() => {
-    if (activated && !settings.bgmMuted && playingTrack.current !== trackId) void fadeTo(trackId);
-  }, [activated, fadeTo, settings.bgmMuted, trackId]);
+    const previousSignal = previousFinaleMusicSignal.current;
+    previousFinaleMusicSignal.current = finaleMusicSignal;
+    if (!activated) return;
+
+    if (finaleMusicSignal === "destruction") {
+      fadeOutCurrent(FINALE_DESTRUCTION_FADE_MS, false);
+      return;
+    }
+    if (finaleMusicSignal === "whiteout") {
+      fadeOutCurrent(FINALE_WHITEOUT_FADE_MS, true);
+      return;
+    }
+    if (
+      isFinaleSilenceSignal(previousSignal)
+      && !settings.bgmMuted
+      && playingTrack.current === desiredTrack.current
+    ) {
+      void fadeInCurrent(FINALE_RESUME_FADE_MS);
+    }
+  }, [activated, fadeInCurrent, fadeOutCurrent, finaleMusicSignal, settings.bgmMuted]);
+
+  useEffect(() => {
+    if (
+      activated
+      && !settings.bgmMuted
+      && !isFinaleSilenceSignal(finaleMusicSignal)
+      && playingTrack.current !== trackId
+    ) void fadeTo(trackId);
+  }, [activated, fadeTo, finaleMusicSignal, settings.bgmMuted, trackId]);
 
   useEffect(() => {
     const player = players.current[activePlayer.current];
     if (!player) return;
+    if (isFinaleSilenceSignal(finaleMusicSignalRef.current)) return;
     player.volume = settings.bgmMuted ? 0 : settings.bgmVolume;
   }, [settings.bgmMuted, settings.bgmVolume]);
+
+  useEffect(() => () => {
+    fadeGeneration.current += 1;
+    if (fadeTimer.current !== null) window.clearInterval(fadeTimer.current);
+  }, []);
 
   useEffect(() => {
     const unlock = () => {
@@ -172,10 +311,20 @@ export default function BgmController({ children }: { children: ReactNode }) {
     const next = { ...settingsRef.current, bgmMuted: !settingsRef.current.bgmMuted };
     updateSettings(next);
     if (next.bgmMuted) {
-      players.current.forEach((player) => player?.pause());
+      fadeGeneration.current += 1;
+      if (fadeTimer.current !== null) window.clearInterval(fadeTimer.current);
+      fadeTimer.current = null;
+      players.current.forEach((player) => {
+        player?.pause();
+        if (player) player.volume = 0;
+      });
       return;
     }
     const player = players.current[activePlayer.current];
+    if (isFinaleSilenceSignal(finaleMusicSignalRef.current)) {
+      if (player) player.volume = 0;
+      return;
+    }
     if (playingTrack.current === desiredTrack.current && player?.src) {
       player.volume = next.bgmVolume;
       void player.play().catch(() => undefined);
@@ -188,6 +337,10 @@ export default function BgmController({ children }: { children: ReactNode }) {
     const next = { ...settingsRef.current, bgmMuted: false, bgmVolume };
     updateSettings(next);
     const player = players.current[activePlayer.current];
+    if (isFinaleSilenceSignal(finaleMusicSignalRef.current)) {
+      if (player) player.volume = 0;
+      return;
+    }
     if (playingTrack.current === desiredTrack.current && player?.src) {
       player.volume = bgmVolume;
       if (activated) void player.play().catch(() => undefined);
