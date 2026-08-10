@@ -14,6 +14,12 @@ test("separates research detail selection from the purchase action", async () =>
   assert.match(researchMap, /선택만으로는 구매되지 않습니다/);
   assert.match(researchMap, /아래 버튼을 눌러야 골드를 사용하고 연구합니다/);
   assert.match(researchMap, /setSelectedNodeId\(null\)/);
+  assert.match(researchMap, /className=\{styles\.inspectorDock\}/);
+  assert.match(researchMap, /className=\{styles\.crossViewport\}/);
+  assert.ok(
+    researchMap.indexOf("className={styles.inspectorDock}") > researchMap.indexOf("className={styles.crossViewport}"),
+    "the research inspector should be rendered after the tactical board instead of covering it",
+  );
 });
 
 test("documents every upgrade family and its purchase requirements", async () => {
@@ -35,6 +41,8 @@ test("documents every upgrade family and its purchase requirements", async () =>
   assert.match(researchMap, /readOnly/);
   assert.match(styles, /\.detailPanel/);
   assert.match(styles, /@media \(max-width: 560px\)/);
+  assert.match(styles, /:global\(\.facility-research \.research-overview\)/);
+  assert.match(styles, /#211814/);
 });
 
 test("keeps special attacks outside the core tree and opens details before purchase", async () => {
@@ -49,8 +57,17 @@ test("keeps special attacks outside the core tree and opens details before purch
   assert.match(specialPanel, /selectedState\.available && onPurchase\(selectedNode\)/);
   assert.doesNotMatch(specialPanel, /onClick=\{\(\) => onPurchase\(node\)\}/);
   assert.match(specialPanel, /선택만으로는 구매되지 않습니다/);
-  assert.match(styles, /\.specialNode\[data-kind="lightning"\]/);
-  assert.match(styles, /\.specialNode\[data-kind="tornado"\]/);
-  assert.match(styles, /\.specialNode\[data-kind="meteor"\]/);
+  assert.match(specialPanel, /SEALED RITES · DETACHED SANCTUM/);
+  assert.match(specialPanel, /className=\{styles\.ritualGrid\}/);
+  assert.match(specialPanel, /서로 선행 관계가 없습니다/);
+  assert.ok(
+    specialPanel.indexOf("className={styles.detailPanel}") > specialPanel.indexOf("className={styles.satelliteViewport}"),
+    "the special-attack detail should be rendered after the detached altar field",
+  );
+  assert.match(styles, /\.ritualGrid/);
+  assert.match(styles, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(styles, /margin-top: clamp\(48px, 6vw, 76px\)/);
+  assert.doesNotMatch(styles, /\.outerOrbit/);
+  assert.doesNotMatch(styles, /\.specialNode\[data-kind=/);
   assert.match(styles, /\.detailPanel/);
 });
