@@ -78,9 +78,10 @@ test("운석 넉백은 충돌점 바깥으로 밀되 전장 경계를 절대 넘
 });
 
 test("새 특수공격 원화만으로 전장 연출을 구성하고 기존 합성 레이어는 제거한다", async () => {
-  const [layer, layerStyles, panel, panelStyles, audio] = await Promise.all([
+  const [layer, layerStyles, canvas, panel, panelStyles, audio] = await Promise.all([
     readFile(new URL("../app/SpecialAttackLayer.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/SpecialAttackLayer.module.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/SpecialAttackCanvas.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/guild-hub/SpecialResearchPanel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/guild-hub/SpecialResearchPanel.module.css", import.meta.url), "utf8"),
     readFile(new URL("../app/special-attack-audio.ts", import.meta.url), "utf8"),
@@ -88,22 +89,26 @@ test("새 특수공격 원화만으로 전장 연출을 구성하고 기존 합�
   assert.match(layer, /LightningEffect/);
   assert.match(layer, /TornadoEffect/);
   assert.match(layer, /MeteorEffect/);
-  assert.match(layer, /lightningBolt/);
-  assert.match(layer, /tornadoBands/);
-  assert.match(layer, /meteorFlight/);
+  assert.match(layer, /SpecialAttackCanvas/);
+  assert.match(layer, /kind="lightning"/);
+  assert.match(layer, /kind="tornado"/);
+  assert.match(layer, /kind="meteor"/);
   assert.match(layer, /specialMonsterEffectStyle/);
   assert.doesNotMatch(layer, /effectTitle|--spell-art|attack\.art/);
   assert.doesNotMatch(panel, /--spell-art|attack\.art/);
   assert.doesNotMatch(`${layer}\n${layerStyles}`, /special-(?:lightning|tornado|meteor)-v2|(?:tornado-twirl|meteor-explosion|lightning-arc)\.png/);
-  assert.match(layer, /special-lightning-impact-v3-alpha\.webp/);
-  assert.match(layer, /special-tornado-funnel-v3-alpha\.webp/);
-  assert.match(layer, /special-meteor-impact-v3-alpha\.webp/);
-  assert.match(layerStyles, /@keyframes lightningBoltForm/);
-  assert.match(layerStyles, /@keyframes lightningChargeArc/);
-  assert.match(layerStyles, /@keyframes tornadoBandSpin/);
-  assert.match(layerStyles, /@keyframes tornadoInflow/);
-  assert.match(layerStyles, /@keyframes meteorFlight/);
-  assert.match(layerStyles, /@keyframes meteorBlastRay/);
+  assert.doesNotMatch(layer, /<img|special-(?:lightning-impact|tornado-funnel|meteor-impact)-v3-alpha\.webp/);
+  assert.match(layerStyles, /\.lightningCanvas/);
+  assert.match(layerStyles, /\.tornadoCanvas/);
+  assert.match(layerStyles, /\.meteorCanvas/);
+  assert.match(canvas, /requestAnimationFrame/);
+  assert.match(canvas, /createLightningModel/);
+  assert.match(canvas, /groundBranches/);
+  assert.match(canvas, /createTornadoModel/);
+  assert.match(canvas, /particle\.angle \+ seconds \* particle\.speed/);
+  assert.match(canvas, /drawMeteorFlight/);
+  assert.match(canvas, /drawMeteorImpact/);
+  assert.match(canvas, /globalCompositeOperation = "lighter"/);
   assert.match(layerStyles, /monsterElectricCage/);
   assert.match(layerStyles, /monsterTornadoPull/);
   assert.match(layerStyles, /monsterMeteorKnockback/);
@@ -118,10 +123,6 @@ test("새 특수공격 원화만으로 전장 연출을 구성하고 기존 합�
   for (const kind of ["lightning", "tornado", "meteor"]) {
     const artwork = await readFile(new URL(`../public/assets/vfx/special/special-${kind}-v3.webp`, import.meta.url));
     assert.ok(artwork.byteLength > 50_000, `${kind} node art`);
-  }
-  for (const filename of ["special-lightning-impact-v3-alpha.webp", "special-tornado-funnel-v3-alpha.webp", "special-meteor-impact-v3-alpha.webp"]) {
-    const texture = await readFile(new URL(`../public/assets/vfx/special/${filename}`, import.meta.url));
-    assert.ok(texture.byteLength > 70_000, filename);
   }
   assert.doesNotMatch(panel, /연결선 없는 독립 노드|detailGlyph/);
   assert.match(audio, /playLightning/);
@@ -143,4 +144,5 @@ test("길드 연구와 전투 화면이 특수 비술 모듈을 실제로 사용
   assert.match(controller, /moveTargets\(kind, center, targetIds, pulse\);\s+damageMonsters/);
   assert.match(controller, /playSpecialAttackSound/);
   assert.match(controller, /FIRST_CAST_DELAY/);
+  assert.match(controller, /attack\.delayMs \+ 620 \+ pulse \* 520/);
 });

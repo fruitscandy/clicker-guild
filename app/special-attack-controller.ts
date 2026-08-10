@@ -27,7 +27,7 @@ type SpecialAttackControllerOptions<T extends SpecialAttackMonster> = {
 const FIRST_CAST_DELAY: Record<SpecialAttackKind, number> = {
   lightning: 1_050,
   tornado: 1_850,
-  meteor: 2_850,
+  meteor: 1_950,
 };
 
 export function useSpecialAttackController<T extends SpecialAttackMonster>({
@@ -108,7 +108,7 @@ export function useSpecialAttackController<T extends SpecialAttackMonster>({
           moveTargets(kind, center, targetIds, pulse);
           damageMonsters(targetIds, specialAttackDamage(kind, playerDamage, pulse), impactTier);
           playSpecialAttackSound(kind, "pulse");
-        }, attack.delayMs + 360 + pulse * 520);
+        }, attack.delayMs + 620 + pulse * 520);
       });
     } else {
       queueTimer(() => {
