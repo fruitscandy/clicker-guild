@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 async function render() {
@@ -335,4 +335,41 @@ test("launches expeditions from the hunting ground inside the guild territory", 
   assert.match(huntingStyles, /\.territoryCanvas/);
   assert.match(huntingStyles, /\.fieldPreview/);
   assert.ok(huntingAssets.includes("hunting-ground-outpost-v2.png"));
+});
+
+const retiredVividMarkers = [
+  /\/assets\/vfx\/vivid\//,
+  /fx-vivid/,
+  /vividFrames(?:16|20|24|32)/,
+  /vivid(?:Impact)?Appear/,
+  /voidCollapseStrip/,
+];
+
+async function collectAppSourceFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nested = await Promise.all(entries.map(async (entry) => {
+    const url = new URL(entry.name + (entry.isDirectory() ? "/" : ""), directory);
+    if (entry.isDirectory()) return collectAppSourceFiles(url);
+    return /\.(?:css|js|mjs|ts|tsx)$/.test(entry.name) ? [url] : [];
+  }));
+  return nested.flat();
+}
+
+test("retired Vivid Motion references stay out of the current app", async () => {
+  const appRoot = new URL("../app/", import.meta.url);
+  const files = await collectAppSourceFiles(appRoot);
+
+  await Promise.all(files.map(async (file) => {
+    const source = await readFile(file, "utf8");
+    for (const marker of retiredVividMarkers) {
+      assert.doesNotMatch(source, marker, `${file.pathname} still contains ${marker}`);
+    }
+  }));
+});
+
+test("retired Vivid Motion derivatives stay out of public assets", async () => {
+  await assert.rejects(
+    access(new URL("../public/assets/vfx/vivid/", import.meta.url)),
+    (error) => error?.code === "ENOENT",
+  );
 });
