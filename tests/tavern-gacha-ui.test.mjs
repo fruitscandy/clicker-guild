@@ -43,6 +43,9 @@ test("uses discounted one and ten contract recruitment with transparent rank odd
   assert.doesNotMatch(saleFlow, /window\.confirm|장비/);
   assert.match(audio, /playGuildRecruitRevealSound/);
   assert.match(audio, /guild-recruit-reveal:/);
+  assert.match(audio, /const RECRUIT_OPEN_MIX_GAIN = 1\.35/);
+  assert.match(audio, /const RECRUIT_REVEAL_MIX_GAIN = 1\.32/);
+  assert.match(audio, /createSfxMixBus\(context, RECRUIT_OPEN_MIX_GAIN\)/);
   assert.match(styles, /\.rareResult/);
   assert.match(styles, /\.rankB/);
   assert.match(styles, /\.rankA/);

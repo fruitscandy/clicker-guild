@@ -6,7 +6,7 @@ const audioSource = await readFile(new URL("../app/battle-audio.ts", import.meta
 const gameSource = await readFile(new URL("../app/Game.tsx", import.meta.url), "utf8");
 
 test("growth, combat proc, and rare reward sounds are exported", () => {
-  for (const soundName of ["playProgressionSound", "playCombatProcSound", "playRareRewardSound"]) {
+  for (const soundName of ["playProgressionSound", "playWeaponCraftSound", "playGuildHallUpgradeSound", "playCombatProcSound", "playRareRewardSound"]) {
     assert.match(audioSource, new RegExp(`export function ${soundName}\\b`));
   }
   for (const kind of ["weapon-craft", "research-unlock", "guild-hall"]) {
@@ -31,12 +31,19 @@ test("new event sounds share global settings and expose a browser smoke marker",
 });
 
 test("game event integration only accents meaningful successful states", () => {
-  for (const kind of ["weapon-craft", "guild-hall", "research-unlock"]) {
-    assert.match(gameSource, new RegExp(`playProgressionSound\\("${kind}"`));
-  }
+  assert.match(gameSource, /playWeaponCraftSound\(nextLevel\)/);
+  assert.match(gameSource, /playGuildHallUpgradeSound\(nextHallStage\.level\)/);
+  assert.match(gameSource, /playProgressionSound\("research-unlock"/);
   assert.match(gameSource, /if \(targets\.length\) playCombatProcSound/);
   assert.match(gameSource, /if \(firstClear\) playRareRewardSound\("first-clear"\)/);
   assert.doesNotMatch(gameSource, /gearTarget|gotGear|effectiveUpgrades\.loot/);
   assert.doesNotMatch(gameSource, /playProgressionSound\("special-tactic"|"boss-token"|파티 특수 전술|보스 증표/);
   assert.doesNotMatch(audioSource, /special-tactic|boss-token/);
+});
+
+test("weapon crafting and guild hall upgrades use dedicated boosted mixes", () => {
+  assert.match(audioSource, /const WEAPON_CRAFT_MIX_GAIN = 1\.5/);
+  assert.match(audioSource, /const GUILD_HALL_MIX_GAIN = 1\.55/);
+  assert.match(audioSource, /kind === "weapon-craft"[\s\S]*createSfxMixBus\(context, WEAPON_CRAFT_MIX_GAIN\)/);
+  assert.match(audioSource, /kind === "guild-hall"[\s\S]*createSfxMixBus\(context, GUILD_HALL_MIX_GAIN\)/);
 });

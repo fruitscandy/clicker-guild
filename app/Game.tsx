@@ -6,6 +6,7 @@ import {
   playCombatProcSound,
   playExpeditionFailSound,
   playExpeditionStartSound,
+  playGuildHallUpgradeSound,
   playGuildMemberHireSound,
   playLootCollectSound,
   playLootCompleteSound,
@@ -15,6 +16,7 @@ import {
   playProgressionSound,
   playRareRewardSound,
   playStageClearSound,
+  playWeaponCraftSound,
   unlockBattleAudio,
 } from "./battle-audio";
 import {
@@ -938,7 +940,7 @@ export default function Game() {
       };
     });
     setTerritoryPulse((current) => current + 1);
-    playProgressionSound("weapon-craft", nextLevel);
+    playWeaponCraftSound(nextLevel);
   }
 
   function purchaseGuildHallUpgrade() {
@@ -956,7 +958,7 @@ export default function Game() {
     }
     setSave((current) => ({ ...current, gold: current.gold - hallStage.upgradeCost!, guildHallLevel: current.guildHallLevel + 1 }));
     setTerritoryPulse((current) => current + 1);
-    playProgressionSound("guild-hall", nextHallStage.level);
+    playGuildHallUpgradeSound(nextHallStage.level);
   }
 
   function purchaseNode(node: UpgradeNode) {
