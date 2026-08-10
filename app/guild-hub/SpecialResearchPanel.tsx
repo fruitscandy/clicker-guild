@@ -21,9 +21,15 @@ type SpecialResearchPanelProps = {
 };
 
 function SpellPreview({ kind }: { kind: SpecialAttackKind }) {
+  const attack = SPECIAL_ATTACKS[kind];
   return (
-    <span className={`${styles.spellPreview} ${styles[kind]}`} aria-hidden="true">
+    <span
+      className={`${styles.spellPreview} ${styles[kind]}`}
+      style={{ "--spell-art": `url("${attack.art}")`, "--special-accent": attack.accent } as CSSProperties}
+      aria-hidden="true"
+    >
       <i className={styles.previewField} />
+      <i className={styles.previewArtwork} />
       <i className={styles.previewCore} />
       <i className={styles.previewRing} />
       <i className={styles.previewRingSecondary} />
@@ -110,7 +116,7 @@ export function SpecialResearchPanel({
   const selectedState = selectedKind ? stateFor(selectedKind) : null;
 
   const nodeLayer = (
-    <div className={styles.nodeLayer} role="group" aria-label="연결선 없는 특수 공격 업그레이드">
+    <div className={styles.nodeLayer} role="group" aria-label="특수 공격 업그레이드">
       {SPECIAL_ATTACK_ORDER.map((kind) => {
         const { attack, isPurchased, hallLocked, prerequisitesMet, available, status, shortStatus } = stateFor(kind);
         const isSelected = kind === selectedKind;
@@ -120,7 +126,7 @@ export function SpecialResearchPanel({
             key={kind}
             data-kind={kind}
             className={`${styles.specialNode} ${styles[kind]} ${isPurchased ? styles.purchased : ""} ${available ? styles.available : ""} ${hallLocked || !prerequisitesMet ? styles.locked : ""} ${isSelected ? styles.selected : ""}`}
-            style={{ "--special-accent": attack.accent } as CSSProperties}
+            style={{ "--special-accent": attack.accent, "--spell-art": `url("${attack.art}")` } as CSSProperties}
             onClick={() => setSelectedKind(kind)}
             aria-label={`${attack.title} 특수 공격 상세보기: ${attack.description}. ${status}. 선택만으로는 구매되지 않습니다.`}
             aria-pressed={isSelected}
@@ -154,11 +160,10 @@ export function SpecialResearchPanel({
         <button type="button" autoFocus className={styles.detailClose} onClick={() => setSelectedKind(null)} aria-label="특수 공격 설명 닫기">×</button>
         <div className={styles.detailVisual}>
           <SpellPreview kind={selectedKind!} />
-          <span className={styles.detailGlyph} aria-hidden="true">{selectedState.hallLocked ? "鎖" : selectedAttack.glyph}</span>
         </div>
 
         <div className={styles.detailCopy}>
-          <small>특수 공격 · 연결선 없는 독립 노드</small>
+          <small>자동 발동 특수 공격</small>
           <h4>{selectedAttack.title}</h4>
           <p>{selectedAttack.description}</p>
           <em>{selectedState.status}</em>

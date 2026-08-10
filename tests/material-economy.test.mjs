@@ -58,7 +58,7 @@ test("one clear preserves the compact but generous gold curve", () => {
   assert.equal(GUILD_HALL_STAGES.length, 4);
   assert.deepEqual(GUILD_HALL_STAGES.map((hall) => hall.requiredResearch), [3, 6, 10, null]);
   assert.equal(requiredPlayerProgressionCost, 143380);
-  assert.equal(optionalGuildProgressionCost, 31700);
+  assert.equal(optionalGuildProgressionCost, 29950);
   assert.ok(onePassGold >= requiredPlayerProgressionCost, "one clear should fund the player weapon route without guild research");
   assert.ok(optionalGuildProgressionCost < onePassGold * 0.15, "optional guild research should remain a compact side path");
   assert.ok(onePassGold - requiredPlayerProgressionCost >= optionalGuildProgressionCost, "guild research should accelerate a run, not gate it");

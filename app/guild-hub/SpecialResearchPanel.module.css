@@ -78,6 +78,17 @@
   box-shadow: inset 0 0 14px rgba(0, 0, 0, .62), 0 3px 7px rgba(0, 0, 0, .52);
 }
 
+.nodeIcon::after {
+  position: absolute;
+  inset: 2px;
+  z-index: 8;
+  content: "";
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 8px;
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, .42);
+}
+
 .nodeName { width: 100%; overflow: hidden; color: #fff0d2; font-size: 8px; font-weight: 1000; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .nodeCost { color: var(--special-accent); font-size: 7px; font-weight: 1000; }
 .purchased .nodeCost { color: #bce2ad; }
@@ -166,18 +177,6 @@
   box-shadow: inset 0 0 28px rgba(0, 0, 0, .72);
 }
 
-.detailGlyph {
-  position: absolute;
-  right: 10px;
-  bottom: 8px;
-  z-index: 4;
-  color: #fff0d7;
-  font-family: serif;
-  font-size: 31px;
-  font-weight: 1000;
-  text-shadow: 0 0 15px var(--special-accent), 0 2px #000;
-}
-
 .detailCopy { display: grid; align-content: center; gap: 6px; min-width: 0; padding: 5px 34px 5px 0; }
 .detailCopy small { color: var(--special-accent); font-size: 8px; font-weight: 1000; letter-spacing: .1em; }
 .detailCopy h4 { margin: 0; color: #fff0d2; font: 900 27px/1.1 Georgia, "Noto Serif KR", serif; }
@@ -200,6 +199,7 @@
 
 .spellPreview,
 .previewField,
+.previewArtwork,
 .previewCore,
 .previewRing,
 .previewRingSecondary,
@@ -209,8 +209,16 @@
 
 .spellPreview { inset: 0; }
 .previewField { inset: 0; background: radial-gradient(circle at 50% 70%, color-mix(in srgb, var(--special-accent) 28%, transparent), transparent 48%); }
+.previewArtwork {
+  inset: -8%;
+  z-index: 2;
+  background: var(--spell-art) center / cover no-repeat;
+  filter: contrast(1.08) saturate(1.16) drop-shadow(0 0 9px var(--special-accent));
+  mix-blend-mode: screen;
+  transform-origin: center;
+}
 .previewCore { left: 50%; top: 53%; width: 40px; height: 40px; border-radius: 50%; translate: -50% -50%; }
-.previewRing { left: 50%; top: 68%; width: 54px; height: 15px; border: 1px solid color-mix(in srgb, var(--special-accent) 74%, white); border-radius: 50%; box-shadow: 0 0 10px var(--special-accent); translate: -50% -50%; }
+.previewRing { z-index: 4; left: 50%; top: 68%; width: 54px; height: 15px; border: 1px solid color-mix(in srgb, var(--special-accent) 74%, white); border-radius: 50%; box-shadow: 0 0 10px var(--special-accent); translate: -50% -50%; }
 .previewRingSecondary { left: 50%; top: 67%; width: 38px; height: 11px; border: 1px solid rgba(255, 255, 255, .67); border-radius: 50%; translate: -50% -50%; }
 .previewTrail { left: 50%; top: 2%; width: 10px; height: 50px; translate: -50% 0; }
 .previewParticles { inset: 0; }
@@ -234,6 +242,8 @@
   animation: lightningPreview 1.5s steps(2) infinite;
 }
 
+.lightning .previewArtwork { background-position: 50% 52%; animation: lightningArtwork 1.55s steps(2) infinite; }
+
 .lightning .previewCore { background: radial-gradient(circle, white, var(--special-accent) 18%, transparent 65%); filter: blur(2px); }
 
 .tornado .previewCore {
@@ -242,8 +252,11 @@
   background: url("/assets/vfx/special/tornado-twirl.png") center / contain no-repeat;
   border-radius: 52% 48% 20% 20%;
   filter: sepia(1) saturate(2.4) hue-rotate(95deg) brightness(1.4) drop-shadow(0 0 10px var(--special-accent));
+  opacity: .42;
   animation: tornadoPreview 2.2s linear infinite;
 }
+
+.tornado .previewArtwork { background-size: 112%; animation: tornadoArtwork 2.4s ease-in-out infinite; }
 
 .tornado .previewTrail { display: none; }
 .tornado .previewRing { animation: ringTurn 2s linear infinite; }
@@ -260,10 +273,13 @@
   animation: meteorPreview 1.9s ease-in-out infinite;
 }
 
+.meteor .previewArtwork { background-position: 50% 56%; background-size: 116%; animation: meteorArtwork 2.1s cubic-bezier(.2, .65, .2, 1) infinite; }
+
 .meteor .previewTrail { left: 38%; top: -8%; width: 22px; height: 60px; rotate: -43deg; background: linear-gradient(180deg, transparent, rgba(255, 213, 103, .42), #ff6d24); filter: blur(6px); transform-origin: bottom; }
 .meteor .previewRing { border-color: #ff9a4f; box-shadow: 0 0 15px #ff652a; animation: meteorRing 1.9s ease-out infinite; }
 
 .detailVisual .previewCore { scale: 2; }
+.detailVisual .previewArtwork { inset: -2%; background-size: contain; }
 .detailVisual .previewRing { scale: 2.1; }
 .detailVisual .previewRingSecondary { scale: 2.1; }
 .detailVisual .previewTrail { scale: 1.7; transform-origin: top; }
@@ -274,9 +290,12 @@
 @keyframes modalRise { from { opacity: 0; transform: translateY(14px) scale(.97); } }
 @keyframes previewParticle { 50% { opacity: .22; transform: rotate(var(--particle-angle)) translateX(22px) scale(.5); } }
 @keyframes lightningPreview { 0%, 78%, 100% { opacity: .45; scale: .9 1; } 80%, 88% { opacity: 1; scale: 1.16 1; } 91% { opacity: .2; } }
+@keyframes lightningArtwork { 0%, 74%, 100% { opacity: .52; scale: .94; filter: contrast(1.06) saturate(1.08) brightness(.78) drop-shadow(0 0 6px var(--special-accent)); } 77%, 88% { opacity: 1; scale: 1.08; filter: contrast(1.12) saturate(1.3) brightness(1.28) drop-shadow(0 0 14px var(--special-accent)); } 90% { opacity: .26; } }
 @keyframes ringTurn { to { rotate: 360deg; } }
 @keyframes tornadoPreview { 50% { scale: 1.12 .92; rotate: 180deg; } 100% { rotate: 360deg; } }
+@keyframes tornadoArtwork { 0%, 100% { opacity: .72; scale: .93 1.02; translate: 0 2px; } 50% { opacity: 1; scale: 1.08 .96; translate: 0 -3px; filter: contrast(1.14) saturate(1.28) brightness(1.16) drop-shadow(0 0 13px var(--special-accent)); } }
 @keyframes meteorPreview { 0% { transform: translate(-38px, -32px) scale(.55); opacity: 0; } 40% { opacity: 1; } 62%, 100% { transform: translate(0, 0) scale(1); } }
+@keyframes meteorArtwork { 0%, 34% { opacity: .2; scale: .82; translate: -8px -8px; filter: contrast(1.05) saturate(1.05) brightness(.55) drop-shadow(0 0 5px var(--special-accent)); } 50%, 64% { opacity: 1; scale: 1.08; translate: 0; filter: contrast(1.14) saturate(1.35) brightness(1.25) drop-shadow(0 0 16px var(--special-accent)); } 100% { opacity: .38; scale: 1.16; translate: 2px 2px; } }
 @keyframes meteorRing { 0%, 52% { opacity: 0; scale: .3; } 68% { opacity: 1; } 100% { opacity: 0; scale: 1.45 .7; } }
 
 @media (max-width: 560px) {
@@ -300,6 +319,7 @@
   .modalBackdrop,
   .detailPanel,
   .previewParticles i,
+  .previewArtwork,
   .lightning .previewTrail,
   .tornado .previewCore,
   .tornado .previewRing,

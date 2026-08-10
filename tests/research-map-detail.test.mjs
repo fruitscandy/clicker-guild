@@ -47,9 +47,10 @@ test("documents every upgrade family and its purchase requirements", async () =>
 });
 
 test("mounts disconnected special attacks inside the same board and opens a purchase modal", async () => {
-  const [specialPanel, styles] = await Promise.all([
+  const [specialPanel, styles, researchMap] = await Promise.all([
     readFile(new URL("../app/guild-hub/SpecialResearchPanel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/guild-hub/SpecialResearchPanel.module.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/ResearchMap.tsx", import.meta.url), "utf8"),
   ]);
 
   assert.match(specialPanel, /useState<SpecialAttackKind \| null>\(null\)/);
@@ -63,7 +64,8 @@ test("mounts disconnected special attacks inside the same board and opens a purc
   assert.match(specialPanel, /createPortal\(nodeLayer, boardSlot\)/);
   assert.match(specialPanel, /role="dialog"/);
   assert.match(specialPanel, /aria-modal="true"/);
-  assert.match(specialPanel, /연결선 없는 독립 노드/);
+  assert.doesNotMatch(specialPanel, /연결선 없는 독립 노드|detailGlyph|selectedAttack\.glyph|鎖/);
+  assert.doesNotMatch(researchMap, /연결선 없는 특수 공격/);
   assert.doesNotMatch(specialPanel, /봉인 비술 제단|ritualGrid|satelliteViewport|selectionHint/);
   assert.match(styles, /\.nodeLayer/);
   assert.match(styles, /\.specialNode\[data-kind="lightning"\]/);
@@ -71,4 +73,14 @@ test("mounts disconnected special attacks inside the same board and opens a purc
   assert.match(styles, /\.specialNode\[data-kind="meteor"\]/);
   assert.doesNotMatch(styles, /outerOrbit|ritualGrid|satelliteField/);
   assert.match(styles, /\.detailPanel/);
+});
+
+test("removes redundant special-node and hall maximum labels", async () => {
+  const [researchMap, hallStyles] = await Promise.all([
+    readFile(new URL("../app/guild-hub/ResearchMap.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/GuildBuildingHub.module.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(researchMap, /연결선 없는 특수 공격|specialHint/);
+  assert.doesNotMatch(hallStyles, /MAX LV\.4|panel-title::after/);
 });

@@ -40,8 +40,8 @@ const BRANCH_LABELS: Record<BranchFamily, string> = {
 };
 
 const BRANCH_DETAILS: Record<BranchFamily, { summary: string; impact: string }> = {
-  range: { summary: "플레이어 공격이 닿는 원형 범위를 한 번에 넓힙니다.", impact: "밀집한 적을 더 빠르게 정리하지만 공격력 자체는 대장간 무기가 결정합니다." },
-  crit: { summary: "플레이어 공격이 두 배 피해를 줄 확률을 12% 확보합니다.", impact: "평균 화력을 보조하지만 치명타 없이도 모든 전투를 끝낼 수 있도록 설계했습니다." },
+  range: { summary: "두 단계에 걸쳐 플레이어 공격 반경을 단계마다 6씩 넓힙니다.", impact: "2단계 완료 시 반경이 총 12 늘어나지만 공격력 자체는 대장간 무기가 결정합니다." },
+  crit: { summary: "치명타 확률을 1단계 15%, 2단계 누적 30%까지 높입니다.", impact: "평균 화력을 보조하지만 치명타 없이도 모든 전투를 끝낼 수 있도록 설계했습니다." },
   shockwave: { summary: "6번째 플레이어 공격마다 165% 광역 충격파를 일으킵니다.", impact: "몬스터 무리 정리를 단축하는 선택 보너스이며 필수 공격 수단은 아닙니다." },
   auto: { summary: "현재 플레이어 무기로 4.5초마다 한 번 자동 공격합니다.", impact: "수동 공격보다 훨씬 느려 직접 조작의 화력 우위를 유지하면서 잠깐의 여유만 제공합니다." },
   time: { summary: "모든 원정의 전투 제한 시간을 8초 늘립니다.", impact: "기본 제한 시간 안에도 클리어할 수 있고, 이 연구는 실수를 만회할 여유를 줍니다." },
@@ -299,7 +299,6 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
             </div>
           )}
 
-          <span className={styles.specialHint} aria-hidden="true">✦ 연결선 없는 특수 공격</span>
           <div id="guild-special-node-slot" className={styles.specialNodeSlot} />
 
           {citadel && (

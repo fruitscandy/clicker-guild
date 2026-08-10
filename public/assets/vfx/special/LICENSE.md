@@ -21,3 +21,13 @@ The game combines these neutral particle masks with original CSS and SVG animati
 | `impact-ring.png` | `circle_03.png` |
 | `impact-scorch.png` | `scorch_02.png` |
 | `impact-flash.png` | `light_01.png` |
+
+## AI-assisted spell artwork
+
+The following WebP files are project-authored, AI-assisted spell illustrations generated with OpenAI image generation on 2026-08-10. They are not part of Kenney's CC0 pack.
+
+- `special-lightning-v2.webp`: white-blue lightning impact on a black VFX-compositing background
+- `special-tornado-v2.webp`: teal wind funnel and debris on a black VFX-compositing background
+- `special-meteor-v2.webp`: molten meteor impact on a black VFX-compositing background
+
+Each source was generated without text, logos, characters, or third-party game branding, then resized to a 640×640 WebP for the combat effect and matching upgrade thumbnail.

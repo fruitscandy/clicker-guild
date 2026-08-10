@@ -29,6 +29,7 @@ function LightningEffect() {
   return (
     <div className={styles.lightningStage}>
       <i className={styles.lightningSkyFlash} />
+      <i className={styles.lightningArtwork} />
       <i className={styles.lightningTexture} />
       <svg className={styles.lightningBolt} viewBox="0 0 100 120" preserveAspectRatio="none" aria-hidden="true">
         <defs>
@@ -52,6 +53,7 @@ function TornadoEffect() {
   return (
     <div className={styles.tornadoStage}>
       <i className={styles.tornadoAura} />
+      <i className={styles.tornadoArtwork} />
       <i className={styles.tornadoTextureBack} />
       <span className={styles.tornadoFunnel}>
         {Array.from({ length: 8 }, (_, index) => <i key={index} style={{ "--vortex-width": `${46 + index * 17}px`, "--vortex-height": `${15 + index * 1.8}px`, "--vortex-blur": `${index * 0.12}px`, "--vortex-top": `${9 + index * 10}%`, "--vortex-delay": `${index * -64}ms` } as CSSProperties} />)}
@@ -76,6 +78,7 @@ function MeteorEffect() {
       </span>
       <span className={styles.meteorImpact}>
         <i className={styles.meteorFlash} />
+        <i className={styles.meteorArtwork} />
         <i className={styles.meteorExplosion} />
         <i className={styles.meteorShockwave} />
         <i className={styles.meteorScorch} />
@@ -98,6 +101,7 @@ function EffectVisual({ effect }: { effect: SpecialAttackFx }) {
         "--effect-duration": `${attack.durationMs}ms`,
         "--effect-delay": `${attack.delayMs}ms`,
         "--effect-accent": attack.accent,
+        "--spell-art": `url("${attack.art}")`,
       } as CSSProperties}
       aria-hidden="true"
     >
@@ -130,8 +134,8 @@ export function SpecialAttackLayer({ effects, activeKinds, lastCastAt, now }: Sp
           const remaining = specialCooldownRemaining(kind, lastCastAt[kind] ?? 0, now);
           const casting = effects.some((effect) => effect.kind === kind && now < effect.expiresAt);
           return (
-            <span key={kind} className={`${styles.hudSpell} ${styles[`hud${kind[0].toUpperCase()}${kind.slice(1)}`]} ${casting ? styles.casting : ""}`} style={{ "--cooldown-progress": `${progress * 100}%`, "--effect-accent": attack.accent } as CSSProperties}>
-              <i className={styles.hudGlyph}>{attack.glyph}</i>
+            <span key={kind} className={`${styles.hudSpell} ${styles[`hud${kind[0].toUpperCase()}${kind.slice(1)}`]} ${casting ? styles.casting : ""}`} style={{ "--cooldown-progress": `${progress * 100}%`, "--effect-accent": attack.accent, "--spell-art": `url("${attack.art}")` } as CSSProperties}>
+              <i className={styles.hudArt} aria-hidden="true" />
               <span><small>{attack.title}</small><strong>{casting ? "발동!" : remaining <= 0 ? "준비 완료" : `${(remaining / 1000).toFixed(1)}초`}</strong></span>
               <b><i /></b>
             </span>
