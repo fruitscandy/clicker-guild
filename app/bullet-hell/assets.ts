@@ -88,7 +88,6 @@ export const FINALE_VFX_ASSETS = {
   meteorExplosion: "/assets/vfx/special/meteor-explosion.png",
   smokeWisp: "/assets/vfx/special/smoke-wisp.png",
   tornadoTwirl: "/assets/vfx/special/tornado-twirl.png",
-  voidCollapseStrip: "/assets/vfx/vivid/void-collapse-strip.png",
   steelSlash: "/assets/vfx/weapon/steel-slash.webp",
   spark: "/assets/vfx/kenney/spark_05.png",
 } as const;
