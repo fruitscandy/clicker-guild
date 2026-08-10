@@ -8,6 +8,9 @@ import {
   onePassCombatSeconds,
   shortRunStageGold,
 } from "../app/economy-balance.ts";
+import { PLAYER_WEAPON_BALANCE } from "../app/game-balance.ts";
+import { CITADEL_RESEARCH_COST, CORE_UPGRADE_NODES } from "../app/guild-upgrades.ts";
+import { GUILD_HALL_STAGES } from "../app/guild-hub/guild-progression.ts";
 import { allStageMaterials, REGION_MATERIAL_REWARDS, weaponMaterialRecipe } from "../app/stage-materials.ts";
 
 test("keeps the 30-wave combat budget below the 20-minute session cap", () => {
@@ -44,7 +47,20 @@ test("one clear preserves the compact but generous gold curve", () => {
     return shortRunStageGold(Math.floor(index / 3), (stage - 1) % 3 + 1);
   }).reduce((sum, gold) => sum + gold, 160);
 
+  const requiredPlayerProgressionCost = PLAYER_WEAPON_BALANCE.reduce((sum, weapon) => sum + weapon.cost, 0);
+  const optionalGuildProgressionCost = [
+    ...GUILD_HALL_STAGES.map((hall) => hall.upgradeCost ?? 0),
+    ...CORE_UPGRADE_NODES.map((node) => node.cost),
+    CITADEL_RESEARCH_COST,
+  ].reduce((sum, cost) => sum + cost, 0);
+
   assert.equal(onePassGold, 292660);
-  assert.ok(onePassGold >= 281255, "one clear should fund all core weapon, research, and hall costs");
+  assert.equal(GUILD_HALL_STAGES.length, 4);
+  assert.deepEqual(GUILD_HALL_STAGES.map((hall) => hall.requiredResearch), [3, 6, 10, null]);
+  assert.equal(requiredPlayerProgressionCost, 143380);
+  assert.equal(optionalGuildProgressionCost, 29950);
+  assert.ok(onePassGold >= requiredPlayerProgressionCost, "one clear should fund the player weapon route without guild research");
+  assert.ok(optionalGuildProgressionCost < onePassGold * 0.15, "optional guild research should remain a compact side path");
+  assert.ok(onePassGold - requiredPlayerProgressionCost >= optionalGuildProgressionCost, "guild research should accelerate a run, not gate it");
   assert.ok(onePassGold < 310000, "gold should still require choices during the run");
 });

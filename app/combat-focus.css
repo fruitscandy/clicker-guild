@@ -68,10 +68,28 @@
   box-shadow: 0 5px 15px rgba(10, 7, 5, .28);
 }
 
-.battle-mode .field-toolbar .eyebrow,
-.battle-mode .field-toolbar .permadeath-warning,
-.battle-mode .field-toolbar .retreat-button {
+.battle-mode .field-toolbar .eyebrow {
   display: none;
+}
+
+.battle-mode .field-toolbar .retreat-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  min-height: 42px;
+  padding: 8px 14px;
+  color: #ffe9d0;
+  background: #6b3027;
+  border-color: #b5684e;
+  white-space: nowrap;
+}
+
+.battle-mode .field-toolbar .retreat-button:hover:not(:disabled),
+.battle-mode .field-toolbar .retreat-button:focus-visible {
+  color: #fff8e7;
+  background: #884133;
 }
 
 .battle-mode .field-toolbar h2 {
@@ -209,10 +227,19 @@
   .battle-mode .battle-controls {
     width: auto;
     margin-left: auto;
+    align-items: center;
+    flex-direction: row;
   }
 
   .battle-mode .battle-timer {
     width: auto;
     min-width: 138px;
+  }
+
+  .battle-mode .field-toolbar .retreat-button {
+    width: auto;
+    min-width: 58px;
+    min-height: 38px;
+    padding: 7px 10px;
   }
 }

@@ -16,7 +16,7 @@ export const GUILD_HALL_STAGES: readonly GuildHallStage[] = [
     description: "작은 회관을 중심으로 첫 원정대가 모이는 단계",
     researchDepth: 1,
     upgradeCost: 600,
-    requiredResearch: 4,
+    requiredResearch: 3,
   },
   {
     level: 2,
@@ -24,7 +24,7 @@ export const GUILD_HALL_STAGES: readonly GuildHallStage[] = [
     description: "여관과 대장간이 자리를 잡고 전문 연구가 시작되는 거점",
     researchDepth: 2,
     upgradeCost: 2_400,
-    requiredResearch: 10,
+    requiredResearch: 6,
   },
   {
     level: 3,
@@ -32,29 +32,13 @@ export const GUILD_HALL_STAGES: readonly GuildHallStage[] = [
     description: "원정·전투·경영 연구가 균형 있게 확장되는 길드촌",
     researchDepth: 3,
     upgradeCost: 7_600,
-    requiredResearch: 20,
+    requiredResearch: 10,
   },
   {
     level: 4,
-    name: "번영 길드타운",
-    description: "고급 훈련과 장거리 원정을 지원하는 대형 본부",
-    researchDepth: 4,
-    upgradeCost: 21_000,
-    requiredResearch: 31,
-  },
-  {
-    level: 5,
     name: "명문 길드 요새",
-    description: "대륙의 강자들이 모여드는 방어형 길드 요새",
-    researchDepth: 5,
-    upgradeCost: 58_000,
-    requiredResearch: 39,
-  },
-  {
-    level: 6,
-    name: "전설의 길드 성채",
-    description: "모든 연구 계통을 완성할 수 있는 대륙 최고의 성채",
-    researchDepth: 7,
+    description: "선택 연구를 완성하고 마지막 특수 공격을 해금하는 최종 본관",
+    researchDepth: 4,
     upgradeCost: null,
     requiredResearch: null,
   },
@@ -69,7 +53,7 @@ export const GUILD_FACILITIES: ReadonlyArray<{
   { id: "hall", title: "길드 본관", subtitle: "건물 승급과 해금 관리", glyph: "G" },
   { id: "tavern", title: "방랑자의 잔", subtitle: "고용과 파티 편성", glyph: "잔" },
   { id: "forge", title: "불꽃 대장간", subtitle: "플레이어 무기 제작과 강화", glyph: "鍛" },
-  { id: "research", title: "길드 강화소", subtitle: "4방향 발전 연구", glyph: "✦" },
+  { id: "research", title: "길드 강화소", subtitle: "핵심 강화와 특수 공격", glyph: "✦" },
 ] as const;
 
 export function guildHallStage(level: number) {

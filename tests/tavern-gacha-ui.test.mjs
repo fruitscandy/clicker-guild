@@ -17,16 +17,21 @@ test("uses discounted one and ten contract recruitment with transparent rank odd
   assert.ok(tenCost < singleCost * 10);
 
   const rateRows = [...balance.matchAll(/\{ F: ([\d.]+), E: ([\d.]+), D: ([\d.]+), C: ([\d.]+), B: ([\d.]+), A: ([\d.]+), S: ([\d.]+) \}/g)];
-  assert.equal(rateRows.length, 4);
+  assert.equal(rateRows.length, 2);
   for (const row of rateRows) {
     const rates = row.slice(1).map(Number);
     assert.equal(rates.reduce((sum, rate) => sum + rate, 0), 100);
     for (let index = 1; index < rates.length; index += 1) assert.ok(rates[index - 1] > rates[index]);
   }
+  const highRankChance = (row) => row.slice(-3).map(Number).reduce((sum, rate) => sum + rate, 0);
+  assert.equal(highRankChance(rateRows[0]), 4);
+  assert.equal(highRankChance(rateRows[1]), 8);
 
   assert.match(tavern, /onRecruit\(1\)/);
   assert.match(tavern, /onRecruit\(10\)/);
   assert.match(tavern, /등급별 영입 확률/);
+  assert.match(tavern, /finn-portrait\.webp/);
+  assert.doesNotMatch(tavern, />契<|className=\{styles\.oddsSeal\}>%/);
   assert.match(tavern, /중복 정산/);
   assert.match(tavern, /REVEAL_STAGGER_MS/);
   assert.match(tavern, /playGuildRecruitRevealSound/);
@@ -38,6 +43,9 @@ test("uses discounted one and ten contract recruitment with transparent rank odd
   assert.doesNotMatch(saleFlow, /window\.confirm|장비/);
   assert.match(audio, /playGuildRecruitRevealSound/);
   assert.match(audio, /guild-recruit-reveal:/);
+  assert.match(audio, /const RECRUIT_OPEN_MIX_GAIN = 1\.35/);
+  assert.match(audio, /const RECRUIT_REVEAL_MIX_GAIN = 1\.32/);
+  assert.match(audio, /createSfxMixBus\(context, RECRUIT_OPEN_MIX_GAIN\)/);
   assert.match(styles, /\.rareResult/);
   assert.match(styles, /\.rankB/);
   assert.match(styles, /\.rankA/);
@@ -45,6 +53,7 @@ test("uses discounted one and ten contract recruitment with transparent rank odd
   assert.match(styles, /\.revealSlash/);
   assert.match(styles, /\.saleDialogBackdrop/);
   assert.match(styles, /\.rateBoardHeader/);
+  assert.match(styles, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(styles, /prefers-reduced-motion/);
 });
 

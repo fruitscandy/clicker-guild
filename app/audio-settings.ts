@@ -12,6 +12,12 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   sfxVolume: 0.75,
 };
 
+// Keep the saved sliders intuitive while balancing the final game mix.
+// BGM masters are comparatively loud, while the procedural effects need
+// extra presence to stay readable during combat and reward sequences.
+export const BGM_OUTPUT_GAIN = 0.62;
+export const SFX_OUTPUT_GAIN = 1.34;
+
 const AUDIO_SETTINGS_KEY = "clicker-guild-audio-settings-v2";
 const LEGACY_BGM_SETTINGS_KEY = "clicker-guild-bgm-settings-v1";
 const AUDIO_SETTINGS_EVENT = "clicker-guild:audio-settings";
@@ -75,6 +81,12 @@ export function subscribeAudioSettings(listener: (settings: AudioSettings) => vo
   return () => window.removeEventListener(AUDIO_SETTINGS_EVENT, handleSettings);
 }
 
+export function effectiveBgmVolume(settings: AudioSettings) {
+  return settings.bgmMuted ? 0 : Math.min(1, settings.bgmVolume * BGM_OUTPUT_GAIN);
+}
+
 export function effectiveSfxVolume(settings: AudioSettings) {
-  return settings.sfxMuted ? 0 : settings.sfxVolume;
+  // Web Audio gain nodes may safely exceed 1. Media elements cap this value
+  // at their own playback boundary (see OpeningGate).
+  return settings.sfxMuted ? 0 : settings.sfxVolume * SFX_OUTPUT_GAIN;
 }

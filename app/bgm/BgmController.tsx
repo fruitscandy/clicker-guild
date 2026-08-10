@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   DEFAULT_AUDIO_SETTINGS,
+  effectiveBgmVolume,
   readAudioSettings,
   saveAudioSettings,
   type AudioSettings,
@@ -130,7 +131,7 @@ export default function BgmController({ children }: { children: ReactNode }) {
 
     if (fadeTimer.current !== null) window.clearInterval(fadeTimer.current);
     fadeTimer.current = null;
-    const targetVolume = settingsRef.current.bgmMuted ? 0 : settingsRef.current.bgmVolume;
+    const targetVolume = effectiveBgmVolume(settingsRef.current);
     const source = BGM_TRACK_BY_ID[nextTrack].source;
     if (!to.src.endsWith(source)) {
       to.src = source;
@@ -209,7 +210,7 @@ export default function BgmController({ children }: { children: ReactNode }) {
     const generation = ++fadeGeneration.current;
     if (fadeTimer.current !== null) window.clearInterval(fadeTimer.current);
     fadeTimer.current = null;
-    const targetVolume = settingsRef.current.bgmMuted ? 0 : settingsRef.current.bgmVolume;
+    const targetVolume = effectiveBgmVolume(settingsRef.current);
     const fromVolume = player.volume;
     try {
       await player.play();
@@ -238,7 +239,7 @@ export default function BgmController({ children }: { children: ReactNode }) {
     if (settingsRef.current.bgmMuted || isFinaleSilenceSignal(finaleMusicSignalRef.current)) return;
     const player = players.current[activePlayer.current];
     if (playingTrack.current === desiredTrack.current && player?.src) {
-      player.volume = settingsRef.current.bgmVolume;
+      player.volume = effectiveBgmVolume(settingsRef.current);
       void player.play().catch(() => undefined);
     } else {
       void fadeTo(desiredTrack.current, true);
@@ -280,7 +281,7 @@ export default function BgmController({ children }: { children: ReactNode }) {
     const player = players.current[activePlayer.current];
     if (!player) return;
     if (isFinaleSilenceSignal(finaleMusicSignalRef.current)) return;
-    player.volume = settings.bgmMuted ? 0 : settings.bgmVolume;
+    player.volume = effectiveBgmVolume(settingsRef.current);
   }, [settings.bgmMuted, settings.bgmVolume]);
 
   useEffect(() => () => {
@@ -327,7 +328,7 @@ export default function BgmController({ children }: { children: ReactNode }) {
       return;
     }
     if (playingTrack.current === desiredTrack.current && player?.src) {
-      player.volume = next.bgmVolume;
+      player.volume = effectiveBgmVolume(next);
       void player.play().catch(() => undefined);
     } else {
       void fadeTo(desiredTrack.current, true);
@@ -343,7 +344,7 @@ export default function BgmController({ children }: { children: ReactNode }) {
       return;
     }
     if (playingTrack.current === desiredTrack.current && player?.src) {
-      player.volume = bgmVolume;
+      player.volume = effectiveBgmVolume(next);
       if (activated) void player.play().catch(() => undefined);
     } else if (activated) {
       void fadeTo(desiredTrack.current, true);

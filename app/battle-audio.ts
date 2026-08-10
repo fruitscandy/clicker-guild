@@ -14,13 +14,10 @@ let monsterHitVariation = 0;
 let lastCombatProcAt = -1;
 
 export type ProgressionSoundKind = "weapon-craft" | "research-unlock" | "guild-hall";
-export type RareRewardSoundKind = "gear" | "first-clear";
+export type RareRewardSoundKind = "first-clear";
 export type CombatProcSound = {
   critical?: boolean;
-  combo?: boolean;
   shockwave?: boolean;
-  execution?: boolean;
-  momentumMaxed?: boolean;
 };
 
 const GOLD_COIN_SAMPLE_URLS = [
@@ -31,9 +28,12 @@ const GOLD_COIN_SAMPLE_URLS = [
 // Reward cues and the victory fanfare compete with a dense stream of combat
 // transients. Boost only those semantic groups so the global SFX slider can
 // stay comfortable for weapon hits.
-const REWARD_MIX_GAIN = 1.6;
+const REWARD_MIX_GAIN = 1.85;
 const VICTORY_MIX_GAIN = 1.5;
-const RECRUIT_REVEAL_MIX_GAIN = 1.12;
+const WEAPON_CRAFT_MIX_GAIN = 1.5;
+const GUILD_HALL_MIX_GAIN = 1.55;
+const RECRUIT_OPEN_MIX_GAIN = 1.35;
+const RECRUIT_REVEAL_MIX_GAIN = 1.32;
 
 let goldCoinSampleBuffers: AudioBuffer[] = [];
 let goldCoinSamplePromise: Promise<void> | null = null;
@@ -233,10 +233,13 @@ export function playExpeditionStartSound(boss = false) {
 export function playGuildMemberHireSound(count: 1 | 10 = 1) {
   playWhenAudioIsReady((context) => {
     const start = context.currentTime;
+    const recruitMix = createSfxMixBus(context, RECRUIT_OPEN_MIX_GAIN);
+    window.setTimeout(() => recruitMix.disconnect(), 700);
     markEventSound(`guild-recruit-open:${count}`);
-    tone(context, count === 10 ? 92 : 116, start, 0.18, 0.03, "triangle", 73, 0.003);
-    noiseBurst(context, start + 0.015, 0.12, 0.018, 420, 2800);
-    tone(context, 392, start + 0.075, 0.14, 0.018, "triangle", count === 10 ? 659 : 523, 0.004);
+    tone(context, count === 10 ? 92 : 116, start, 0.2, 0.032, "triangle", 73, 0.003, recruitMix);
+    noiseBurst(context, start + 0.015, 0.13, 0.019, 420, 2800, recruitMix);
+    tone(context, 392, start + 0.075, 0.17, 0.021, "triangle", count === 10 ? 659 : 523, 0.004, recruitMix);
+    tone(context, count === 10 ? 784 : 659, start + 0.15, 0.2, 0.012, "sine", count === 10 ? 1047 : 784, 0.006, recruitMix);
   });
 }
 
@@ -334,18 +337,42 @@ export function playProgressionSound(kind: ProgressionSoundKind, tier = 1) {
     markEventSound(`progression:${kind}`);
 
     if (kind === "weapon-craft") {
-      noiseBurst(context, start, 0.052, 0.019, 2400 + tierLift * 120, 760);
-      tone(context, 132 + tierLift * 7, start, 0.16, 0.03, "square", 84 + tierLift * 5, 0.002);
-      tone(context, 880 + tierLift * 34, start + 0.055, 0.25, 0.018, "triangle", 1320 + tierLift * 48, 0.004);
+      const craftMix = createSfxMixBus(context, WEAPON_CRAFT_MIX_GAIN);
+      window.setTimeout(() => craftMix.disconnect(), 1100);
+
+      // Two forge blows land first, followed by a bright metal ring and a
+      // compact success chord. The tier lift makes later weapons sound denser
+      // without pushing the signal above the shared SFX mix.
+      noiseBurst(context, start, 0.09, 0.032, 1800 + tierLift * 120, 260, craftMix);
+      tone(context, 118 + tierLift * 6, start, 0.3, 0.042, "triangle", 62 + tierLift * 3, 0.002, craftMix);
+      noiseBurst(context, start + 0.11, 0.07, 0.022, 2300 + tierLift * 140, 420, craftMix);
+      tone(context, 104 + tierLift * 5, start + 0.105, 0.24, 0.034, "triangle", 58 + tierLift * 3, 0.002, craftMix);
+      tone(context, 980 + tierLift * 38, start + 0.02, 0.5, 0.026, "triangle", 1420 + tierLift * 54, 0.003, craftMix);
+      tone(context, 1560 + tierLift * 45, start + 0.045, 0.42, 0.014, "sine", 1120 + tierLift * 40, 0.003, craftMix);
+      [392, 523, 784].forEach((frequency, index) => {
+        tone(context, frequency + tierLift * 10, start + 0.2 + index * 0.075, 0.34, 0.019 + index * 0.002, index === 2 ? "sine" : "triangle", frequency * 1.02 + tierLift * 10, 0.008, craftMix);
+      });
+      noiseBurst(context, start + 0.25, 0.12, 0.009, 4200, 7600, craftMix);
       return;
     }
 
     if (kind === "guild-hall") {
-      noiseBurst(context, start, 0.16, 0.021, 440, 115);
-      tone(context, 73, start, 0.34, 0.037, "triangle", 49, 0.005);
-      [196, 262, 330].forEach((frequency, index) => {
-        tone(context, frequency, start + 0.08 + index * 0.075, 0.31, 0.017, "sine", frequency * 1.25, 0.01);
+      const hallMix = createSfxMixBus(context, GUILD_HALL_MIX_GAIN);
+      window.setTimeout(() => hallMix.disconnect(), 1400);
+
+      // Stone settles in three measured impacts, then a warm brass-like
+      // fanfare announces that the whole guild has advanced.
+      noiseBurst(context, start, 0.36, 0.032, 330, 58, hallMix);
+      tone(context, 65, start, 0.58, 0.048, "sine", 43, 0.004, hallMix);
+      [0.03, 0.15, 0.27].forEach((offset, index) => {
+        noiseBurst(context, start + offset, 0.1, 0.022 - index * 0.003, 620 - index * 90, 92, hallMix);
+        tone(context, 110 - index * 9, start + offset, 0.24, 0.027 - index * 0.002, "triangle", 62, 0.003, hallMix);
       });
+      [196, 247, 294, 392].forEach((frequency, index) => {
+        tone(context, frequency, start + 0.18 + index * 0.085, index === 3 ? 0.68 : 0.36, 0.021 + index * 0.0015, "triangle", frequency * 1.035, 0.012, hallMix);
+        if (index >= 2) tone(context, frequency * 2, start + 0.2 + index * 0.085, 0.34, 0.008, "sine", frequency * 2.02, 0.008, hallMix);
+      });
+      noiseBurst(context, start + 0.44, 0.18, 0.008, 3300, 6700, hallMix);
       return;
     }
 
@@ -356,18 +383,16 @@ export function playProgressionSound(kind: ProgressionSoundKind, tier = 1) {
   });
 }
 
+export function playWeaponCraftSound(tier = 1) {
+  playProgressionSound("weapon-craft", tier);
+}
+
+export function playGuildHallUpgradeSound(level = 1) {
+  playProgressionSound("guild-hall", level);
+}
+
 export function playCombatProcSound(proc: CombatProcSound) {
-  const primary = proc.execution
-    ? "execution"
-    : proc.shockwave
-      ? "shockwave"
-      : proc.critical
-        ? "critical"
-        : proc.combo
-          ? "combo"
-          : proc.momentumMaxed
-            ? "momentum-max"
-            : null;
+  const primary = proc.shockwave ? "shockwave" : proc.critical ? "critical" : null;
   if (!primary) return;
 
   playWhenAudioIsReady((context) => {
@@ -376,12 +401,6 @@ export function playCombatProcSound(proc: CombatProcSound) {
     lastCombatProcAt = start;
     markEventSound(`combat:${primary}`);
 
-    if (primary === "execution") {
-      noiseBurst(context, start, 0.075, 0.022, 6200, 780);
-      tone(context, 1480, start, 0.12, 0.02, "sawtooth", 185, 0.0015);
-      tone(context, 82, start + 0.025, 0.24, 0.031, "triangle", 46, 0.002);
-      return;
-    }
     if (primary === "shockwave") {
       noiseBurst(context, start, 0.18, 0.025, 760, 92);
       tone(context, 128, start, 0.25, 0.034, "sine", 43, 0.002);
@@ -394,15 +413,6 @@ export function playCombatProcSound(proc: CombatProcSound) {
       tone(context, 2520, start + 0.018, 0.09, 0.009, "triangle", 1380, 0.001);
       return;
     }
-    if (primary === "combo") {
-      tone(context, 420, start, 0.085, 0.019, "triangle", 260, 0.002);
-      tone(context, 620, start + 0.055, 0.11, 0.022, "triangle", 360, 0.002);
-      noiseBurst(context, start + 0.052, 0.048, 0.01, 3200, 940);
-      return;
-    }
-    [440, 659, 988].forEach((frequency, index) => {
-      tone(context, frequency, start + index * 0.042, 0.17, 0.014, "sine", frequency * 1.16, 0.004);
-    });
   });
 }
 
@@ -410,15 +420,6 @@ export function playRareRewardSound(kind: RareRewardSoundKind) {
   playWhenAudioIsReady((context) => {
     const start = context.currentTime;
     markEventSound(`reward:${kind}`);
-
-    if (kind === "gear") {
-      noiseBurst(context, start, 0.055, 0.009, 5200, 2800);
-      [740, 1110, 1660].forEach((frequency, index) => {
-        tone(context, frequency, start + index * 0.05, 0.28, 0.017, "triangle", frequency * 1.12, 0.004);
-      });
-      tone(context, 185, start, 0.31, 0.018, "sine", 247, 0.008);
-      return;
-    }
 
     tone(context, 392, start, 0.2, 0.015, "triangle", 523, 0.006);
     tone(context, 659, start + 0.07, 0.24, 0.017, "sine", 784, 0.006);

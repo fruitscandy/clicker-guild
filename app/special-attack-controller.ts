@@ -20,7 +20,7 @@ type SpecialAttackControllerOptions<T extends SpecialAttackMonster> = {
   monsters: readonly T[];
   playerDamage: number;
   weaponTier: number;
-  damageMonsters: (targetIds: string[], damage: number, allowExecution?: boolean, impactTier?: number) => void;
+  damageMonsters: (targetIds: string[], damage: number, impactTier?: number) => void;
   setMonsters: Dispatch<SetStateAction<T[]>>;
 };
 
@@ -105,14 +105,14 @@ export function useSpecialAttackController<T extends SpecialAttackMonster>({
     if (kind === "tornado") {
       Array.from({ length: attack.pulses }, (_, pulse) => {
         queueTimer(() => {
-          damageMonsters(targetIds, specialAttackDamage(kind, playerDamage, pulse), false, impactTier);
+          damageMonsters(targetIds, specialAttackDamage(kind, playerDamage, pulse), impactTier);
           moveTargets(kind, center, targetIds, pulse);
           playSpecialAttackSound(kind, "pulse");
         }, attack.delayMs + 220 + pulse * 520);
       });
     } else {
       queueTimer(() => {
-        damageMonsters(targetIds, specialAttackDamage(kind, playerDamage), false, impactTier);
+        damageMonsters(targetIds, specialAttackDamage(kind, playerDamage), impactTier);
         if (kind === "meteor") moveTargets(kind, center, targetIds, 0);
         playSpecialAttackSound(kind, "impact");
       }, attack.delayMs);

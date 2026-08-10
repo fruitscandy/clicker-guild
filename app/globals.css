@@ -64,8 +64,6 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
 .reset-button { color: var(--ink-soft); white-space: nowrap; }
 .reset-button:hover { background: var(--green-soft); }
 
-.toast { display: flex; align-items: center; gap: 9px; margin: 14px 5px 0; padding: 11px 15px; border: 2px dashed rgba(23, 63, 50, .42); border-radius: 13px; background: var(--yellow-soft); font-size: 13px; font-weight: 800; }
-.toast span { color: var(--coral); }
 .screen { padding: 24px 5px 6px; animation: screenIn .28s ease both; }
 @keyframes screenIn { from { opacity: 0; transform: translateY(8px); } }
 .section-heading, .field-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 22px; margin-bottom: 20px; }
@@ -274,7 +272,6 @@ button:focus-visible, input:focus-visible { outline: 4px solid rgba(240, 109, 94
 @media (max-width: 560px) {
   .game-shell { padding: 9px; }.topbar { padding: 3px 0 13px; }.brand-mark { width: 44px; height: 44px; }.brand h1 { font-size: 22px; }.eyebrow { font-size: 9px; }.reset-button { padding: 8px 9px; font-size: 10px; }
   .resources { gap: 5px; }.resources > span { min-height: 34px; padding: 5px; font-size: 8px; }.resources strong { font-size: 11px; }.resource-dot { width: 12px; height: 12px; }
-  .toast { font-size: 10px; }
   .screen { padding-top: 17px; }.section-heading h2, .field-toolbar h2 { font-size: 28px; }.section-heading p { font-size: 11px; }
   .territory { min-height: 340px; }.guild-hall { left: 29%; width: 150px; height: 140px; }.tavern-building { width: 95px; height: 90px; }.flag { left: calc(29% + 69px); bottom: 218px; }.territory-caption { align-items: flex-start; flex-direction: column; }
   .roster-section, .upgrade-panel { padding: 13px; }.member-card { grid-template-columns: 50px 1fr; }.portrait { width: 48px; height: 58px; }.party-check { position: absolute; right: 7px; top: 7px; }
@@ -410,17 +407,6 @@ body {
 .current-objective small { margin-bottom: 3px; color: #efc997; font-size: 9px; letter-spacing: .12em; }
 .current-objective strong { font-size: 13px; }
 
-.toast {
-  justify-content: center;
-  margin: 10px 0 0;
-  padding: 10px 15px;
-  color: #65452e;
-  background: linear-gradient(90deg,#f4e3b9,#ffefcb,#f4e3b9);
-  border: 1px solid #c9a366;
-  border-radius: 3px;
-  font-family: Georgia, "Noto Serif KR", serif;
-}
-.toast span { color: #a44926; }
 .screen { padding: 18px 0 8px; }
 .section-heading, .field-toolbar {
   align-items: center;
@@ -558,7 +544,6 @@ body {
 .battle-mode { width: min(1500px, calc(100% - 24px)); min-height: 100vh; padding-top: 0; }
 .battle-mode > .topbar,
 .battle-mode > .guild-rank-strip,
-.battle-mode > .toast,
 .battle-mode > .game-footer { display: none; }
 .battle-mode .field-screen { padding-top: 14px; }
 .battle-mode .field-screen:has(.victory-overlay) { animation: none; }
@@ -749,7 +734,6 @@ body {
 .tech-node .node-effect { display: -webkit-box; min-height: 23px; margin-top: 4px; overflow: hidden; color: #bcb6cd; font-size: 7px; font-weight: 800; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .tech-node.available .node-effect { color: #f4dfab; }.tech-node.purchased .node-effect { color: #355e4d; }
 
-.permadeath-warning { display: block; margin-top: 5px; color: #a93227; font-size: 9px; font-weight: 1000; letter-spacing: .03em; }
 .hack-arena { --click-primary: #d46a48; --click-secondary: #ffe0a0; --click-glow: rgba(255,190,103,.55); position: relative; cursor: crosshair; touch-action: manipulation; user-select: none; }
 @media (pointer: fine) { .hack-arena.has-forge-cursor, .hack-arena.has-command-cursor { cursor: none; } }
 .field-background-art { z-index: 0; object-fit: cover; object-position: var(--field-art-position, 50% 50%); filter: saturate(.92) contrast(1.035) brightness(.94); pointer-events: none; user-select: none; }
@@ -771,11 +755,62 @@ body {
 
 /* Equipped guild members are the weapons: no field character bodies or legacy weapon cursor. */
 .member-weapon-layer { position:absolute; inset:0; z-index:16; overflow:hidden; pointer-events:none; }
-.member-weapon-fx { --weapon-color:#f1c45f; position:absolute; width:1px; height:1px; color:var(--weapon-color); pointer-events:none; }
+.member-weapon-fx { --weapon-color:#f1c45f; --member-entry-x:-34px; --member-entry-y:-24px; --member-exit-x:8px; --member-exit-y:6px; --member-angle:-45deg; --member-art-rotate:0deg; position:absolute; width:1px; height:1px; color:var(--weapon-color); pointer-events:none; }
 .member-weapon-fx > b { position:absolute; left:-16px; top:-16px; z-index:4; display:grid; place-items:center; width:32px; height:32px; color:#fff8da; background:color-mix(in srgb,var(--weapon-color) 72%,#261d19); border:2px solid #fff2bd; border-radius:50%; box-shadow:0 0 16px var(--weapon-color); opacity:0; font-size:10px; animation:memberWeaponBadge .7s ease-out both; }
 .member-weapon-fx > small { position:absolute; left:50%; top:-56px; z-index:5; padding:4px 7px; color:#fff4d4; background:rgba(37,26,23,.9); border:1px solid var(--weapon-color); border-radius:4px; box-shadow:0 3px 9px rgba(0,0,0,.3); opacity:0; transform:translateX(-50%); white-space:nowrap; font-size:7px; font-weight:1000; animation:memberWeaponLabel .72s ease-out both; }
 .member-projectile,.member-weapon-impact { position:absolute; left:0; top:0; display:block; opacity:0; }
-.member-weapon-fx.is-skill { filter:brightness(1.18) saturate(1.2); }.member-weapon-fx.is-skill > b { width:40px; height:40px; margin:-4px; font-size:13px; }
+.member-weapon-fx.is-skill { filter:brightness(1.04) saturate(1.08); }
+.member-weapon-fx.is-skill > small { top:-52px; z-index:7; border-color:color-mix(in srgb,var(--weapon-color) 58%,#fff3bd); background:rgba(24,20,25,.82); box-shadow:0 4px 12px rgba(0,0,0,.38),0 0 9px color-mix(in srgb,var(--weapon-color) 38%,transparent); animation-duration:.84s; }
+.member-skill-vfx-trail,.member-skill-vfx-bloom,.member-skill-vfx-impact,.member-skill-vfx-echo,.member-skill-vfx-art { position:absolute; left:0; top:0; display:block; pointer-events:none; user-select:none; }
+.member-skill-vfx-trail { z-index:2; width:92px; height:10px; margin:-5px 0 0 -92px; background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--weapon-color) 22%,transparent) 28%,color-mix(in srgb,var(--weapon-color) 82%,#fff) 78%,#fff); border-radius:99px; box-shadow:0 0 9px color-mix(in srgb,var(--weapon-color) 60%,transparent); opacity:0; transform-origin:right center; animation:memberSkillVfxTrail .84s cubic-bezier(.18,.72,.2,1) both; }
+.member-skill-vfx-bloom { z-index:1; width:84px; height:84px; margin:-42px; background:radial-gradient(circle,rgba(255,255,255,.72) 0 3%,color-mix(in srgb,var(--weapon-color) 42%,transparent) 19%,transparent 63%); border:1px solid color-mix(in srgb,var(--weapon-color) 62%,#fff); border-radius:50%; box-shadow:0 0 20px color-mix(in srgb,var(--weapon-color) 50%,transparent),inset 0 0 13px color-mix(in srgb,var(--weapon-color) 28%,transparent); opacity:0; animation:memberSkillVfxBloom .84s ease-out both; }
+.member-skill-vfx-impact { z-index:5; width:76px; height:40px; margin:-20px -38px; border:3px solid color-mix(in srgb,var(--weapon-color) 68%,#fff); border-left-color:transparent; border-right-color:transparent; border-radius:50%; box-shadow:0 0 11px color-mix(in srgb,var(--weapon-color) 62%,transparent); opacity:0; animation:memberSkillVfxImpact .84s ease-out both; }
+.member-skill-vfx-echo,.member-skill-vfx-art { z-index:3; width:clamp(105px,15vw,158px); max-width:none; height:auto; transform-origin:center; mix-blend-mode:screen; }
+.member-skill-vfx-echo { z-index:2; opacity:0; filter:blur(4px) saturate(1.25) drop-shadow(0 0 16px var(--weapon-color)); animation:memberSkillVfxEcho .84s cubic-bezier(.16,.7,.18,1) both; }
+.member-skill-vfx-art { z-index:4; opacity:0; filter:drop-shadow(0 0 5px rgba(255,255,255,.62)) drop-shadow(0 0 12px color-mix(in srgb,var(--weapon-color) 60%,transparent)); animation:memberSkillVfxArt .84s cubic-bezier(.16,.75,.2,1) both; }
+.member-weapon-fx.is-basic { filter:brightness(.98) saturate(.98); }
+.member-weapon-fx.is-basic > small { display:none; }
+.member-weapon-fx.is-basic .member-skill-vfx-trail { width:54px; height:5px; margin:-2px 0 0 -54px; box-shadow:0 0 6px color-mix(in srgb,var(--weapon-color) 48%,transparent); animation:memberBasicVfxTrail .52s cubic-bezier(.16,.75,.2,1) both; }
+.member-weapon-fx.is-basic .member-skill-vfx-bloom { width:42px; height:42px; margin:-21px; border-width:1px; box-shadow:0 0 10px color-mix(in srgb,var(--weapon-color) 38%,transparent),inset 0 0 7px color-mix(in srgb,var(--weapon-color) 22%,transparent); animation:memberBasicVfxBloom .52s ease-out both; }
+.member-weapon-fx.is-basic .member-skill-vfx-impact { width:46px; height:24px; margin:-12px -23px; border-width:2px; box-shadow:0 0 7px color-mix(in srgb,var(--weapon-color) 50%,transparent); animation:memberBasicVfxImpact .52s ease-out both; }
+.member-weapon-fx.is-basic .member-skill-vfx-art { width:clamp(58px,8vw,86px); filter:drop-shadow(0 0 3px rgba(255,255,255,.48)) drop-shadow(0 0 8px color-mix(in srgb,var(--weapon-color) 50%,transparent)); animation:memberBasicVfxArt .52s cubic-bezier(.12,.72,.18,1) both; }
+
+.weapon-style-vanguard { --member-art-rotate:-14deg; }
+.weapon-style-marksman { --member-art-rotate:-5deg; }
+.weapon-style-assassin { --member-art-rotate:18deg; }
+.weapon-style-breaker { --member-art-rotate:8deg; }
+.weapon-style-marksman .member-skill-vfx-impact { width:54px; height:54px; margin:-27px; border:2px dashed color-mix(in srgb,var(--weapon-color) 70%,#fff); border-radius:50%; }
+.weapon-style-assassin .member-skill-vfx-impact { width:66px; height:66px; margin:-33px; background:conic-gradient(from 30deg,transparent 0 18%,rgba(255,255,255,.78) 19% 21%,transparent 23% 49%,var(--weapon-color) 50% 53%,transparent 55%); border:0; border-radius:50%; }
+.weapon-style-arcane .member-skill-vfx-impact { width:70px; height:70px; margin:-35px; border-style:double; border-radius:50%; }
+.weapon-style-support .member-skill-vfx-impact { width:62px; height:30px; margin:-15px -31px; border-radius:50%; }
+.weapon-style-breaker .member-skill-vfx-impact { width:64px; height:36px; margin:-18px -32px; border-width:5px; }
+.member-weapon-fx.is-basic.weapon-style-marksman .member-skill-vfx-impact { width:34px; height:34px; margin:-17px; }
+.member-weapon-fx.is-basic.weapon-style-assassin .member-skill-vfx-impact { width:42px; height:42px; margin:-21px; }
+.member-weapon-fx.is-basic.weapon-style-arcane .member-skill-vfx-impact { width:38px; height:38px; margin:-19px; }
+.member-weapon-fx.is-basic.weapon-style-support .member-skill-vfx-impact { width:38px; height:18px; margin:-9px -19px; }
+.member-weapon-fx.is-basic.weapon-style-breaker .member-skill-vfx-impact { width:40px; height:22px; margin:-11px -20px; border-width:3px; }
+
+@keyframes memberSkillVfxTrail { 0%{opacity:0;transform:translate(var(--member-entry-x),var(--member-entry-y)) rotate(var(--member-angle)) scaleX(.08)} 12%{opacity:.65} 34%{opacity:.9;transform:translate(0,0) rotate(var(--member-angle)) scaleX(1)} 58%{opacity:.22;transform:translate(var(--member-exit-x),var(--member-exit-y)) rotate(var(--member-angle)) scaleX(.35)} 100%{opacity:0;transform:translate(var(--member-exit-x),var(--member-exit-y)) rotate(var(--member-angle)) scaleX(.08)} }
+@keyframes memberSkillVfxArt { 0%{opacity:0;transform:translate(calc(-50% + var(--member-entry-x)),calc(-50% + var(--member-entry-y))) scale(.46) rotate(calc(var(--member-art-rotate) - 9deg));filter:blur(6px) brightness(1.5) saturate(1.2)} 20%{opacity:.55} 34%{opacity:1;transform:translate(-50%,-50%) scale(.84) rotate(var(--member-art-rotate));filter:blur(0) brightness(1.28) saturate(1.12) drop-shadow(0 0 10px var(--weapon-color))} 48%{opacity:.9;transform:translate(-50%,-50%) scale(.96) rotate(calc(var(--member-art-rotate) + 3deg));filter:brightness(1.12) saturate(1.08) drop-shadow(0 0 7px var(--weapon-color))} 70%{opacity:.28;transform:translate(calc(-50% + var(--member-exit-x)),calc(-50% + var(--member-exit-y))) scale(.72) rotate(calc(var(--member-art-rotate) + 7deg));filter:blur(1px) brightness(1.02)} 100%{opacity:0;transform:translate(calc(-50% + var(--member-exit-x)),calc(-50% + var(--member-exit-y))) scale(.58) rotate(calc(var(--member-art-rotate) + 10deg));filter:blur(3px) brightness(.9)} }
+@keyframes memberSkillVfxEcho { 0%{opacity:0;transform:translate(calc(-50% + var(--member-entry-x)),calc(-50% + var(--member-entry-y))) scale(.52) rotate(var(--member-art-rotate))} 16%{opacity:.28} 40%{opacity:.16;transform:translate(-50%,-50%) scale(1.02) rotate(calc(var(--member-art-rotate) - 4deg))} 68%,100%{opacity:0;transform:translate(calc(-50% - var(--member-exit-x)),calc(-50% - var(--member-exit-y))) scale(1.12) rotate(calc(var(--member-art-rotate) - 7deg))} }
+@keyframes memberSkillVfxBloom { 0%,16%{opacity:0;transform:scale(.18)} 34%{opacity:.72;transform:scale(.7)} 58%{opacity:.3;transform:scale(1.08)} 100%{opacity:0;transform:scale(1.48)} }
+@keyframes memberSkillVfxImpact { 0%,24%{opacity:0;transform:scale(.18) rotate(-18deg)} 38%{opacity:.95;transform:scale(.78) rotate(0)} 64%{opacity:.25;transform:scale(1.18) rotate(12deg)} 100%{opacity:0;transform:scale(1.5) rotate(20deg)} }
+@keyframes memberBasicVfxTrail { 0%{opacity:0;transform:translate(var(--member-entry-x),var(--member-entry-y)) rotate(var(--member-angle)) scaleX(.08)} 18%{opacity:.62} 42%{opacity:.8;transform:translate(0,0) rotate(var(--member-angle)) scaleX(.92)} 72%{opacity:.14;transform:translate(var(--member-exit-x),var(--member-exit-y)) rotate(var(--member-angle)) scaleX(.25)} 100%{opacity:0} }
+@keyframes memberBasicVfxArt { 0%{opacity:0;transform:translate(calc(-50% + var(--member-entry-x)),calc(-50% + var(--member-entry-y))) scale(.38) rotate(calc(var(--member-art-rotate) - 7deg));filter:blur(4px) brightness(1.35)} 24%{opacity:.58} 42%{opacity:.9;transform:translate(-50%,-50%) scale(.78) rotate(var(--member-art-rotate));filter:blur(0) brightness(1.18) saturate(1.06) drop-shadow(0 0 7px var(--weapon-color))} 60%{opacity:.65;transform:translate(-50%,-50%) scale(.86) rotate(calc(var(--member-art-rotate) + 3deg));filter:brightness(1.06)} 82%{opacity:.12;transform:translate(calc(-50% + var(--member-exit-x)),calc(-50% + var(--member-exit-y))) scale(.62) rotate(calc(var(--member-art-rotate) + 6deg));filter:blur(1px)} 100%{opacity:0} }
+@keyframes memberBasicVfxBloom { 0%,24%{opacity:0;transform:scale(.2)} 44%{opacity:.46;transform:scale(.68)} 100%{opacity:0;transform:scale(1.28)} }
+@keyframes memberBasicVfxImpact { 0%,30%{opacity:0;transform:scale(.2)} 46%{opacity:.72;transform:scale(.72)} 100%{opacity:0;transform:scale(1.35)} }
+
+@media (prefers-reduced-motion: reduce) {
+  .member-skill-vfx-trail,.member-skill-vfx-echo { display:none; }
+  .member-skill-vfx-art { animation:memberSkillVfxArtReduced .84s ease-out both; }
+  .member-skill-vfx-bloom,.member-skill-vfx-impact { animation:memberSkillVfxBloomReduced .84s ease-out both; }
+  .member-weapon-fx.is-basic .member-skill-vfx-art { animation:memberBasicVfxArtReduced .52s ease-out both; }
+  .member-weapon-fx.is-basic :is(.member-skill-vfx-bloom,.member-skill-vfx-impact) { animation:memberBasicVfxBloomReduced .52s ease-out both; }
+}
+@keyframes memberSkillVfxArtReduced { 0%,100%{opacity:0;transform:translate(-50%,-50%) scale(.78) rotate(var(--member-art-rotate))} 20%,62%{opacity:.82;transform:translate(-50%,-50%) scale(.78) rotate(var(--member-art-rotate))} }
+@keyframes memberSkillVfxBloomReduced { 0%,100%{opacity:0} 24%,58%{opacity:.5} }
+@keyframes memberBasicVfxArtReduced { 0%,100%{opacity:0;transform:translate(-50%,-50%) scale(.68) rotate(var(--member-art-rotate))} 20%,58%{opacity:.72;transform:translate(-50%,-50%) scale(.68) rotate(var(--member-art-rotate))} }
+@keyframes memberBasicVfxBloomReduced { 0%,100%{opacity:0} 24%,54%{opacity:.34} }
 
 .weapon-style-vanguard .member-projectile { width:13px; height:112px; margin:-56px -6px; background:linear-gradient(90deg,transparent,#fff 25% 48%,var(--weapon-color) 70%,transparent); clip-path:polygon(50% 0,100% 17%,68% 82%,91% 89%,50% 100%,9% 89%,32% 82%,0 17%); filter:drop-shadow(0 0 7px #fff) drop-shadow(0 0 15px var(--weapon-color)); transform-origin:center; }
 .weapon-style-vanguard .member-projectile.primary { animation:memberSwordOne .58s cubic-bezier(.12,.72,.18,1) both; }.weapon-style-vanguard .member-projectile.secondary { animation:memberSwordTwo .58s .08s cubic-bezier(.12,.72,.18,1) both; }
@@ -1152,7 +1187,6 @@ body {
 }
 
 @media (max-width: 560px) {
-  .permadeath-warning { line-height: 1.4; }
   .field-click-guide { top: 15%; width: max-content; max-width: 78%; }
   .field-click-guide span { display: none; }
   .swarm-hud { left:8px; top:54px; width:124px; padding:6px 8px; }.swarm-hud strong { font-size:16px; }

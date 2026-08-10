@@ -89,7 +89,7 @@ export function ForgeWorkshop({ weapons, currentLevel, gold, materials, formatNu
           </div>
           <small>{canAffordNext ? "골드와 재료 준비 완료" : gold < preview.cost ? `${formatNumber(preview.cost - gold)} G 부족` : firstShortage ? `${firstShortage.material.name} ${firstShortage.amount - firstShortage.owned}개 부족 · STAGE ${firstShortage.material.firstStage}~${firstShortage.material.lastStage}` : "제작 조건 확인 중"}</small>
         </div>}
-        {previewCraftable && next && <button className={styles.craftButton} onClick={craftNextWeapon} disabled={!canAffordNext}>
+        {previewCraftable && next && <button className={styles.craftButton} onClick={craftNextWeapon} disabled={!canAffordNext} data-tutorial="forge-upgrade">
           <span>FORGE NEXT WEAPON</span>
           <strong>{canAffordNext ? "다음 무기 제작" : "제작 재료 확인"}</strong>
           <small>{canAffordNext ? "완성 즉시 장착됩니다" : "부족한 자원을 모아 다시 찾아오세요"}</small>

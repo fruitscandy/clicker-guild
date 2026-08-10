@@ -42,6 +42,7 @@ export function TerritoryHuntingGround({ active, stageLabel, onOpen, children }:
         type="button"
         className={`${styles.gate} ${active ? styles.active : ""}`}
         onClick={onOpen}
+        data-tutorial="hunting-ground"
         aria-pressed={active}
         aria-label={`사냥터 열기 · 현재 목표 ${stageLabel}`}
       >

@@ -93,7 +93,7 @@
   transform: translateY(-5px) scale(1.02);
 }
 
-.hallSprite.upgrading { animation: hallUpgrade 1.1s cubic-bezier(.16, .78, .2, 1) both; }
+.hallSprite.upgrading { animation: hallUpgrade 1.35s cubic-bezier(.16, .78, .2, 1) both; }
 
 .facility {
   width: 150px;
@@ -260,8 +260,9 @@
 .active .buildingLabel small { color: #5f4422; }
 
 @keyframes hallUpgrade {
-  0% { opacity: .3; filter: brightness(2) drop-shadow(0 0 26px #ffe17d); transform: translateY(18px) scale(.88); }
-  38% { opacity: 1; filter: brightness(1.55) drop-shadow(0 0 40px #ffe17d); transform: translateY(-9px) scale(1.05); }
+  0% { opacity: .3; background-position: var(--hub-transition-x) var(--hub-transition-y); filter: brightness(2) drop-shadow(0 0 26px #ffe17d); transform: translateY(18px) scale(.88); }
+  44% { opacity: 1; background-position: var(--hub-transition-x) var(--hub-transition-y); filter: brightness(1.55) drop-shadow(0 0 40px #ffe17d); transform: translateY(-9px) scale(1.05); }
+  44.01% { background-position: var(--hub-sprite-x) var(--hub-sprite-y); }
   100% { opacity: 1; filter: drop-shadow(0 15px 9px rgba(15, 21, 17, .42)); transform: none; }
 }
 
@@ -350,10 +351,7 @@
 }
 
 :global(.facility-hall .hall-upgrade-panel .level-chip) {
-  color: #ffe5a4;
-  background: linear-gradient(#65452e, #39281f);
-  border: 1px solid #a67643;
-  box-shadow: inset 0 1px rgba(255, 230, 172, .12);
+  display: none;
 }
 
 :global(.facility-hall .hall-current-stage) {

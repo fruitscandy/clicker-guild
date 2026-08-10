@@ -3,8 +3,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("combat focus mode keeps a minimal stage, timer, and resource HUD", async () => {
-  const [page, focusStyles, weaponStyles] = await Promise.all([
+  const [page, game, focusStyles, weaponStyles] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/combat-focus.css", import.meta.url), "utf8"),
     readFile(new URL("../app/guild-hub/WeaponArt.module.css", import.meta.url), "utf8"),
   ]);
@@ -23,6 +24,12 @@ test("combat focus mode keeps a minimal stage, timer, and resource HUD", async (
   assert.match(focusStyles, /\.battle-mode > \.topbar \.resources \{[\s\S]*?justify-content: flex-end;/, "resource HUD should use the existing resource row");
   assert.match(focusStyles, /\.battle-mode \.field-toolbar \{[\s\S]*?position: relative;/);
   assert.match(focusStyles, /\.battle-mode \.battle-timer \{[\s\S]*?min-width:/);
+  assert.match(game, /className="retreat-button"[\s\S]*?>후퇴<\/button>/);
+  assert.match(focusStyles, /\.battle-mode \.field-toolbar \.retreat-button \{[\s\S]*?display: inline-flex;/);
+  assert.match(game, /`골드 \$\{compactNumber\(penalty\)\} G를 잃었습니다\.`/);
+  assert.doesNotMatch(game, /lostMembers|permadeath-warning|길드원은 모두 보존되었습니다|부상만 입고|회복 완료/);
+  const retreatFlow = game.slice(game.indexOf("function retreatBattle"), game.indexOf("function toggleDeveloperMode"));
+  assert.doesNotMatch(retreatFlow, /owned|party|progress/);
   assert.doesNotMatch(focusStyles, /\.battle-mode \.loot-tally,[\s\S]*?display: none;/);
   assert.match(focusStyles, /\.battle-mode \.battle-layout \{\s*display: block;/);
   assert.match(focusStyles, /\.battle-mode \.arena \{[\s\S]*?min-height: max\(560px, calc\(100svh - 114px\)\);/);

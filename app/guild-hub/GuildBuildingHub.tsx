@@ -22,14 +22,25 @@ const facilityStatus: Record<Exclude<GuildFacility, "hall">, (props: GuildBuildi
   research: (props) => `연구 ${props.researchCount}/${props.researchTotal}`,
 };
 
+const HALL_SETTLED_SPRITES = [0, 2, 4, 5] as const;
+const HALL_TRANSITION_SPRITES = [0, 1, 3, 4] as const;
+
+function hallSpritePosition(spriteIndex: number) {
+  return {
+    x: `${(spriteIndex % 3) * 50}%`,
+    y: `${Math.floor(spriteIndex / 3) * 100}%`,
+  };
+}
+
 export function GuildBuildingHub(props: GuildBuildingHubProps) {
   const hall = guildHallStage(props.hallLevel);
-  const spriteIndex = hall.level - 1;
-  const spriteColumn = spriteIndex % 3;
-  const spriteRow = Math.floor(spriteIndex / 3);
+  const settledSprite = hallSpritePosition(HALL_SETTLED_SPRITES[hall.level - 1] ?? HALL_SETTLED_SPRITES.at(-1)!);
+  const transitionSprite = hallSpritePosition(HALL_TRANSITION_SPRITES[hall.level - 1] ?? HALL_TRANSITION_SPRITES.at(-1)!);
   const sceneStyle = {
-    "--hub-sprite-x": `${spriteColumn * 50}%`,
-    "--hub-sprite-y": `${spriteRow * 100}%`,
+    "--hub-sprite-x": settledSprite.x,
+    "--hub-sprite-y": settledSprite.y,
+    "--hub-transition-x": transitionSprite.x,
+    "--hub-transition-y": transitionSprite.y,
   } as CSSProperties;
 
   return (
@@ -49,6 +60,7 @@ export function GuildBuildingHub(props: GuildBuildingHubProps) {
             key={facility.id}
             className={`${styles.facility} ${styles[facility.id]} ${props.activeFacility === facility.id ? styles.active : ""}`}
             onClick={() => props.onSelect(facility.id)}
+            data-tutorial={facility.id === "tavern" ? "facility-tavern" : facility.id === "forge" ? "facility-forge" : undefined}
             aria-pressed={props.activeFacility === facility.id}
           >
             {facility.id === "tavern"

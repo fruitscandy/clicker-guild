@@ -26,8 +26,9 @@ test("특수 연구는 본관 2·3·4단계에서 독립 해금되는 세 비술
   ]);
   assert.deepEqual(Object.values(special.SPECIAL_ATTACKS).map((attack) => attack.hallLevel), [2, 3, 4]);
   assert.deepEqual(special.unlockedSpecialAttacks(["foundation", "special-tornado-3"]), ["tornado"]);
-  assert.ok(special.SPECIAL_ATTACKS.lightning.cooldownMs < special.SPECIAL_ATTACKS.tornado.cooldownMs);
-  assert.ok(special.SPECIAL_ATTACKS.tornado.cooldownMs < special.SPECIAL_ATTACKS.meteor.cooldownMs);
+  assert.deepEqual(Object.values(special.SPECIAL_ATTACKS).map((attack) => attack.cooldownMs), [2_000, 4_000, 6_000]);
+  assert.deepEqual(Object.values(special.SPECIAL_ATTACKS).map((attack) => attack.cost), [1_300, 3_600, 8_400]);
+  assert.equal(Object.values(special.SPECIAL_ATTACKS).every((attack) => !/[\u3400-\u9fff]/u.test(attack.glyph)), true);
 });
 
 test("번개는 밀집 지점을 선택하고 최대 7체만 연쇄 감전시킨다", () => {
@@ -76,6 +77,7 @@ test("CC0 파티클 원본과 서로 다른 세 전장 연출이 연결된다", 
   const assets = [
     "lightning-arc.png", "lightning-spark.png", "tornado-twirl.png", "smoke-cloud.png", "smoke-wisp.png",
     "meteor-explosion.png", "meteor-flame.png", "impact-ring.png", "impact-scorch.png", "impact-flash.png",
+    "special-lightning-v2.webp", "special-tornado-v2.webp", "special-meteor-v2.webp",
   ];
   for (const file of assets) {
     const url = new URL(`../public/assets/vfx/special/${file}`, import.meta.url);
@@ -86,8 +88,13 @@ test("CC0 파티클 원본과 서로 다른 세 전장 연출이 연결된다", 
   assert.match(layer, /LightningEffect/);
   assert.match(layer, /TornadoEffect/);
   assert.match(layer, /MeteorEffect/);
+  assert.match(layer, /lightningArtwork/);
+  assert.match(layer, /tornadoArtwork/);
+  assert.match(layer, /meteorArtwork/);
   assert.match(layer, /specialMonsterClassName/);
-  assert.match(panel, /특수 비술/);
+  assert.match(panel, /특수 공격/);
+  assert.match(panel, /previewArtwork/);
+  assert.doesNotMatch(panel, /연결선 없는 독립 노드|detailGlyph/);
   assert.match(audio, /playLightning/);
   assert.match(audio, /playTornado/);
   assert.match(audio, /playMeteor/);

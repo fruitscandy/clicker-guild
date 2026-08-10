@@ -1,11 +1,11 @@
 export const BASE_CLICK_DAMAGE = 18;
-export const BASE_ATTACK_RANGE = 14;
+export const BASE_ATTACK_RANGE = 11;
 export const MEMBER_ASSIST_FACTOR = 0.68;
 
 export const TARGET_RUN_MINUTES = { min: 10, max: 20 } as const;
 export const TARGET_CLEAR_SECONDS = {
   pressure: { min: 18, max: 25 },
-  massacre: { min: 5, max: 8 },
+  massacre: { min: 5, max: 10 },
   boss: { min: 15, max: 20 },
 } as const;
 

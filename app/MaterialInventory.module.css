@@ -17,8 +17,7 @@
 }
 
 .trigger:hover { background: rgba(224, 163, 73, .1); filter: brightness(1.1); }
-.trigger > span:not(.iconStack) { display: grid; gap: 1px; font-size: 11px; font-weight: 900; white-space: nowrap; }
-.trigger small { color: #bda78c; font-size: 7px; }
+.trigger > span:not(.iconStack) { font-size: 11px; font-weight: 900; white-space: nowrap; }
 .trigger > strong { min-width: 28px; color: #ffd265; font-size: 17px; text-align: right; }
 
 .iconStack { position: relative; width: 46px; height: 30px; }
@@ -52,13 +51,8 @@
 
 .dialog header { display: flex; justify-content: space-between; gap: 20px; padding: 22px 24px 16px; border-bottom: 1px solid #5d4634; }
 .dialog h2 { margin: 4px 0; color: #fff0cf; font: 900 28px Georgia, "Noto Serif KR", serif; }
-.dialog header p { margin: 0; color: #bda98e; font-size: 11px; }
 .eyebrow { color: #dda350; font-size: 8px; font-weight: 1000; letter-spacing: .14em; }
 .close { align-self: start; width: 38px; height: 38px; color: #f8dfb5; background: #352820; border: 1px solid #876444; border-radius: 9px; cursor: pointer; font: 700 25px/1 sans-serif; }
-
-.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 13px 24px; background: rgba(10, 8, 7, .22); border-bottom: 1px solid #4c392c; }
-.summary span { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; color: #aa9781; background: #171310; border: 1px solid #4f3b2e; border-radius: 7px; font-size: 8px; font-weight: 900; }
-.summary strong { color: #f5d890; font-size: 12px; }
 
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; padding: 18px 24px 24px; }
 .card { position: relative; display: grid; grid-template-columns: 58px 1fr auto; align-items: center; gap: 10px; min-width: 0; padding: 11px; background: linear-gradient(145deg, #30251e, #191512); border: 1px solid #674d38; border-radius: 9px; }
@@ -80,7 +74,6 @@
   .dialog { max-height: calc(100vh - 16px); border-radius: 11px; }
   .dialog header { padding: 16px; }
   .dialog h2 { font-size: 22px; }
-  .summary { grid-template-columns: 1fr; padding: 10px 16px; }
   .grid { grid-template-columns: 1fr; padding: 12px 16px 18px; }
   .trigger { grid-template-columns: 40px auto auto; flex: 1; justify-content: center; padding: 4px 6px; }
   .iconStack { width: 40px; transform: scale(.86); transform-origin: left center; }
