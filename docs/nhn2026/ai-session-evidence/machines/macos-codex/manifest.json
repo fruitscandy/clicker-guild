@@ -1,0 +1,68 @@
+{
+  "schema_version": "nhn2026-ai-session-summary/v1",
+  "machine_alias": "macos-codex",
+  "project": "Clicker Guild",
+  "generated_on": "2026-08-10",
+  "timezone": "Asia/Seoul",
+  "source_cutoff": "2026-08-10T20:44:45+09:00",
+  "source_stats": {
+    "logical_sessions": 9,
+    "substantive_user_prompts": 151,
+    "assistant_visible_messages": 795
+  },
+  "ai_environment": {
+    "product": "Codex Desktop",
+    "observed_client_build": "0.147.0-alpha.6.5",
+    "image_generation": "OpenAI built-in ImageGen was used in multiple summarized asset workflows.",
+    "note": "Observed environment values describe the collection sources and do not prove that every turn used an identical model configuration."
+  },
+  "selection": {
+    "included": "User-visible sessions on this macOS device devoted to Clicker Guild planning, asset production, implementation, QA, source research, or repository coordination before the cutoff.",
+    "excluded": [
+      "The current and preceding evidence-collection sessions",
+      "A separate non-Clicker-Guild game prototype",
+      "Unrelated source-analysis work",
+      "A duplicated copy of the initial game-planning request",
+      "Standalone subagent, fork, approval-review, and compaction transcripts",
+      "System and developer instructions",
+      "Internal reasoning and raw tool traffic",
+      "Original image, audio, and other binary attachments"
+    ]
+  },
+  "privacy": {
+    "raw_transcript_embedded": false,
+    "source_session_identifiers_embedded": false,
+    "personal_identifiers_embedded": false,
+    "local_paths_embedded": false,
+    "credential_material_embedded": false,
+    "public_provenance_urls_embedded": true,
+    "method": "Allowlist-based paraphrase of project goals, human feedback, AI activity, outcomes, verification, and public provenance only."
+  },
+  "submission_readiness": {
+    "technical_architecture": "draft-ready",
+    "major_prompts": "draft-ready-with-labeled-reconstructions",
+    "external_asset_and_open_source_provenance": "incomplete",
+    "blocking_gaps_documented_in": "external-sources.md"
+  },
+  "records": [
+    "macos-codex-001",
+    "macos-codex-002",
+    "macos-codex-003",
+    "macos-codex-004",
+    "macos-codex-005",
+    "macos-codex-006",
+    "macos-codex-007",
+    "macos-codex-008",
+    "macos-codex-009"
+  ],
+  "package_files": [
+    "README.md",
+    "summary.md",
+    "technical-notes.md",
+    "prompt-catalog.md",
+    "external-sources.md",
+    "session-summaries.jsonl",
+    "manifest.json",
+    "validation-report.md"
+  ]
+}
