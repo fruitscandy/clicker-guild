@@ -6,7 +6,6 @@ import { playGuildRecruitRevealSound } from "../battle-audio";
 import { combatTraitFor, RANK_COLORS, RANK_ORDER, type MemberDefinition } from "../game-data";
 import {
   formatRecruitRate,
-  highRankRecruitChance,
   MEMBER_SALE_PRICES,
   RECRUIT_COSTS,
   recruitRatesForLevel,
@@ -86,9 +85,7 @@ function RecruitReveal({ sequence, results, members, formatNumber }: RecruitReve
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [members, results, sequence]);
 
-  if (!results.length) return <div className={styles.emptyResult}>
-    <span>♢</span><strong>아직 울리지 않은 계약 종</strong><small>1명 또는 10명 영입을 선택하면 이곳에 카드형 초상화가 펼쳐집니다.</small>
-  </div>;
+  if (!results.length) return null;
 
   const visibleResults = results.slice(0, revealedCount);
   const latestResult = visibleResults.at(-1);
@@ -97,8 +94,7 @@ function RecruitReveal({ sequence, results, members, formatNumber }: RecruitReve
 
   return <div className={`${styles.resultStage} ${revealing ? styles.revealing : styles.revealComplete}`}>
     {latestMember && <span key={`${sequence}-${revealedCount}`} className={`${styles.revealSlash} ${isRare(latestMember) ? styles.rareRevealSlash : ""}`} aria-hidden="true" />}
-    <div className={styles.revealProgress} aria-label={`계약 공개 ${revealedCount}/${results.length}`}>
-      <span>{revealing ? "CONTRACT REVEAL" : "ALL CONTRACTS REVEALED"}</span>
+    <div className={styles.revealProgress} aria-label={`영입 결과 공개 ${revealedCount}/${results.length}`}>
       <div>{results.map((result, index) => {
         const member = members.find((candidate) => candidate.id === result.memberId);
         const revealed = index < revealedCount;
@@ -132,7 +128,6 @@ export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel,
   const partyMembers = partyIds.map((id) => members.find((member) => member.id === id)).filter((member): member is MemberDefinition => Boolean(member));
   const pendingSaleMember = members.find((member) => member.id === pendingSaleId) ?? null;
   const rates = recruitRatesForLevel(tavernLevel);
-  const highRankChance = highRankRecruitChance(tavernLevel);
 
   useEffect(() => {
     if (!pendingSaleId) return;
@@ -146,58 +141,42 @@ export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel,
   return <section className={`${styles.tavern} panel facility-first-panel`} aria-label="방랑자의 잔 여관 길드원 영입과 편성">
     <header className={styles.header}>
       <div>
-        <span className="eyebrow">THE WANDERING MUG · RANDOM CONTRACTS</span>
+        <span className="eyebrow">THE WANDERING MUG</span>
         <h3>방랑자의 잔 여관</h3>
-        <p>계약 종을 울려 새로운 길드원을 영입하세요. 모든 등급이 등장하며, 여관 증축은 상위 등급을 만날 확률을 높입니다.</p>
-      </div>
-      <div className={styles.headerStats}>
-        <span><small>여관 단계</small><strong>Lv.{tavernLevel}</strong></span>
-        <span><small>B 이상 확률</small><strong>{formatRecruitRate(highRankChance)}</strong></span>
-        <span><small>길드 명부</small><strong>{ownedIds.length}/{members.length}명</strong></span>
-        <span><small>보유 골드</small><strong>{formatNumber(gold)} G</strong></span>
       </div>
     </header>
 
     <div className={styles.interior}>
       <div className={styles.recruitCounter}>
         <div className={styles.recruitPitch}>
-          <span className={styles.contractSeal} aria-hidden="true">✦</span>
-          <span className="eyebrow">RANDOM GUILD CONTRACT</span>
           <h4>길드원 영입</h4>
-          <p>낮은 등급일수록 자주, 높은 등급일수록 드물게 등장합니다. 이미 보유한 길드원은 등급별 판매가로 즉시 정산됩니다.</p>
           <div className={styles.recruitActions}>
             <button type="button" onClick={() => onRecruit(1)} disabled={gold < RECRUIT_COSTS.single}>
-              <small>SINGLE CONTRACT</small><strong>1명 영입</strong><em>{formatNumber(RECRUIT_COSTS.single)} G</em>
+              <strong>1명 영입</strong><em>{formatNumber(RECRUIT_COSTS.single)} G</em>
             </button>
             <button type="button" className={styles.tenRecruitButton} onClick={() => onRecruit(10)} disabled={!tutorialFreeTenRecruit && gold < RECRUIT_COSTS.ten} data-tutorial="recruit-ten">
-              <small>{tutorialFreeTenRecruit ? "FIRST CONTRACT GIFT" : "10% BUNDLE DISCOUNT"}</small><strong>{tutorialFreeTenRecruit ? "무료 10명 영입" : "10명 영입"}</strong><em>{tutorialFreeTenRecruit ? "튜토리얼 최초 1회 · 0 G" : `${formatNumber(RECRUIT_COSTS.ten)} G · 1명당 270 G`}</em>
+              <strong>{tutorialFreeTenRecruit ? "무료 10명 영입" : "10명 영입"}</strong><em>{tutorialFreeTenRecruit ? "최초 1회 · 0 G" : `${formatNumber(RECRUIT_COSTS.ten)} G`}</em>
             </button>
           </div>
         </div>
 
         <div className={styles.rateBoard}>
-          <div className={styles.rateBoardHeader}>
-            <span className={styles.oddsSeal} aria-hidden="true"><i /><i /><i /><i /><i /></span>
-            <div><small>CONTRACT PROBABILITY</small><strong>등급별 영입 확률</strong><em>여관 Lv.{tavernLevel} 적용 중</em></div>
-            <b>B+ {formatRecruitRate(highRankChance)}</b>
-          </div>
-          <div className={styles.rateLegend}><span>COMMON</span><i /><span>LEGENDARY</span></div>
+          <h4 className={styles.rateBoardTitle}>등급별 영입 확률</h4>
           <ol>
             {RANK_ORDER.map((rank) => <li key={rank} style={{ "--rank-color": RANK_COLORS[rank] } as CSSProperties}>
-              <b><span>{rank}</span><small>RANK</small></b><span><i style={{ width: `${Math.max(5, rates[rank] / 52 * 100)}%` }} /></span><strong>{formatRecruitRate(rates[rank])}</strong>
+              <b>{rank}</b><strong>{formatRecruitRate(rates[rank])}</strong>
             </li>)}
           </ol>
-          <p><b>모든 등급 등장</b><span>각 계약은 독립 추첨 · B·A·S 등급은 특별 연출</span></p>
         </div>
       </div>
 
-      <section className={styles.resultSection} aria-labelledby="latest-recruit-title" aria-live="polite" data-tutorial="recruit-results">
+      {recruitResults.length > 0 && <section className={styles.resultSection} aria-labelledby="latest-recruit-title" aria-live="polite" data-tutorial="recruit-results">
         <div className={styles.resultHeading}>
-          <div><span>LATEST CONTRACTS</span><strong id="latest-recruit-title">최신 영입 결과</strong></div>
-          {recruitResults.length > 0 && <b>{recruitResults.length} CONTRACTS OPENED</b>}
+          <strong id="latest-recruit-title">영입 결과</strong>
+          <b>{recruitResults.length}명</b>
         </div>
         <RecruitReveal key={recruitSequence} sequence={recruitSequence} results={recruitResults} members={members} formatNumber={formatNumber} />
-      </section>
+      </section>}
     </div>
 
     <div className={styles.partySection}>
