@@ -27,6 +27,8 @@ import {
 } from "./battle-loot";
 import { fieldAssetForRegion } from "./field-assets";
 import { BOSS_BATTLE_SECONDS, NORMAL_BATTLE_SECONDS } from "./economy-balance";
+import { BulletHellFinale } from "./bullet-hell/BulletHellFinale";
+import type { FinaleLoadout } from "./bullet-hell/engine";
 import { BASE_ATTACK_RANGE, BASE_CLICK_DAMAGE, failureSalvageFor, MEMBER_ASSIST_FACTOR, PLAYER_WEAPON_BALANCE } from "./game-balance";
 import { combatTraitFor, compactNumber, getStage, MEMBERS, RANK_ORDER, STAGE_COUNT, STAGES_PER_REGION, type CombatStyle, type MemberDefinition } from "./game-data";
 import { maximumUpgradeLevels, UPGRADE_CAPS, UPGRADE_KEYS, type UpgradeKey, type UpgradeLevels } from "./developer-upgrades";
@@ -126,6 +128,7 @@ type SaveState = {
   upgrades: Record<UpgradeKey, number>;
   nodes: string[];
   autoAdvance: boolean;
+  finaleCleared: boolean;
 };
 
 const SAVE_KEY = "guildmaster-clicker-save-v1";
@@ -180,6 +183,7 @@ const initialState: SaveState = {
   upgrades: { range: 0, critical: 0, combo: 0, execution: 0, shockwave: 0, momentum: 0, time: 0, scout: 0, guild: 0, gold: 0, tavern: 0, loot: 0 },
   nodes: ["foundation"],
   autoAdvance: true,
+  finaleCleared: false,
 };
 
 function cloneSaveState(state: SaveState): SaveState {
@@ -421,6 +425,7 @@ export default function Game() {
   const [developerStage, setDeveloperStage] = useState<number | null>(null);
   const [developerClickLevel, setDeveloperClickLevel] = useState(CLICK_ATTACK_PATTERNS.length - 1);
   const [developerUpgrades, setDeveloperUpgrades] = useState<UpgradeLevels>(() => maximumUpgradeLevels());
+  const [finaleMode, setFinaleMode] = useState(false);
   const [clicks, setClicks] = useState(0);
   const [momentumStacks, setMomentumStacks] = useState(0);
   const [hitFx, setHitFx] = useState<ClickAttackFx | null>(null);
@@ -474,6 +479,12 @@ export default function Game() {
   const goldMultiplier = Math.pow(1.1, effectiveUpgrades.gold);
   const battleSeconds = (developerMode ? DEV_BATTLE_SECONDS : stage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + effectiveUpgrades.time * 5 + traitCounts.support * 3;
   const battleTimeLeft = battleDeadline ? Math.max(0, Math.ceil((battleDeadline - now) / 1000)) : battleSeconds;
+  const finaleLoadout = useMemo<FinaleLoadout>(() => ({
+    upgrades: effectiveUpgrades,
+    weaponLevel: clickVisualLevel,
+    hallLevel: developerMode ? GUILD_HALL_STAGES.length : save.guildHallLevel,
+    partySize: developerMode ? 4 : Math.max(1, partyMembers.length),
+  }), [clickVisualLevel, developerMode, effectiveUpgrades, partyMembers.length, save.guildHallLevel]);
   const lootCollecting = lootPhase === "collecting";
   const combatLocked = battleActive || lootCollecting || victory || defeat;
   const aliveMonsters = useMemo(() => fieldMonsters.filter((monster) => monster.hp > 0), [fieldMonsters]);
@@ -563,9 +574,11 @@ export default function Game() {
     setVictory(true);
     playStageClearSound(stage.boss);
     if (developerMode) {
+      if (stage.stage === STAGE_COUNT) setFinaleMode(true);
       setToast("개발자 토벌 성공! 보상과 진행도는 저장되지 않습니다.");
       return;
     }
+    if (stage.stage === STAGE_COUNT) setFinaleMode(true);
     const firstClear = !save.cleared.includes(stage.stage);
     const earnedGold = Math.round(stage.gold * goldMultiplier);
     const earnedMaterial = stageMaterial.rewardAmount;
@@ -1108,6 +1121,7 @@ export default function Game() {
     setDeveloperMode(false);
     setDeveloperStage(null);
     setDeveloperClickLevel(CLICK_ATTACK_PATTERNS.length - 1);
+    setFinaleMode(false);
     setFieldMonsters([]);
     setHitFx(null);
     setActiveHitFxs([]);
@@ -1144,6 +1158,30 @@ export default function Game() {
     });
   }
 
+  function leaveFinale() {
+    setFinaleMode(false);
+    returnToGuild(developerMode
+      ? "개발자 글리치 탄막 시험을 종료했습니다. 저장 진행도는 바뀌지 않습니다."
+      : "글리치 코어에서 이탈해 길드 영지로 귀환했습니다.");
+  }
+
+  function completeFinale() {
+    if (!developerMode) setSave((current) => ({ ...current, finaleCleared: true }));
+    setFinaleMode(false);
+    returnToGuild(developerMode
+      ? "개발자 글리치 보스 격파 완료! 시험 결과는 저장되지 않습니다."
+      : "CODEX NULL을 격파했습니다. 길드의 마지막 기록이 새로 쓰였습니다.");
+  }
+
+  if (finaleMode) {
+    return <BulletHellFinale
+      loadout={finaleLoadout}
+      mode={developerMode ? "preview" : "campaign"}
+      onExit={leaveFinale}
+      onVictory={completeFinale}
+    />;
+  }
+
   return (
     <main className={`game-shell ${combatLocked ? "battle-mode" : ""} ${developerMode ? "developer-mode" : ""}`}>
       <header className="topbar">
@@ -1156,6 +1194,7 @@ export default function Game() {
           <MaterialInventory materials={save.materials} unlockedStage={save.unlockedStage} weaponLevel={save.weaponLevel} />
         </div>
         {developerToolsAvailable && <button className={`small-button developer-toggle ${developerMode ? "active" : ""}`} onClick={toggleDeveloperMode}>DEV {developerMode ? "ON" : "OFF"}</button>}
+        {developerToolsAvailable && developerMode && <button className="small-button" onClick={() => setFinaleMode(true)}>탄막 TEST</button>}
         <button className="small-button reset-button" onClick={resetGame}>새 게임</button>
       </header>
 
