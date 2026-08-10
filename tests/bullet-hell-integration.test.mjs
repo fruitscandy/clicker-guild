@@ -276,6 +276,18 @@ test("makes shield absorption, defeat, retry, destruction, and victory whiteout 
   assert.doesNotMatch(component, /탄막이 멈췄습니다/);
 });
 
+test("hands embedded victory straight to the ending while standalone preview keeps its result controls", async () => {
+  const component = await readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8");
+
+  assert.match(component, /const onVictoryRef = useRef\(onVictory\)/);
+  assert.match(component, /onVictoryRef\.current = onVictory/);
+  assert.match(
+    component,
+    /if \(presentation === "embedded"\) \{[\s\S]*?sceneRef\.current = "departing";[\s\S]*?setScene\("departing"\);[\s\S]*?onVictoryRef\.current\(\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?setScene\("victory"\)/,
+  );
+  assert.match(component, /scene === "victory" \? <button[\s\S]*?시험 설정으로 돌아가기[\s\S]*?처음부터 다시 보기/);
+});
+
 test("connects existing boss-stage music and preview scene jumps", async () => {
   const component = await readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8");
 
