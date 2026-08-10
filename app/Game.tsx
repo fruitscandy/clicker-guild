@@ -1258,15 +1258,15 @@ export default function Game() {
 
               <div className="member-weapon-layer" aria-hidden="true">
                 {memberWeaponFx.map((effect) => {
-                  const skillVfxSource = effect.skill ? guildMemberSkillVfxSource(effect.memberId) : null;
+                  const memberVfxSource = guildMemberSkillVfxSource(effect.memberId);
                   return <span
-                    className={`member-weapon-fx weapon-style-${effect.style} ${effect.skill ? "is-skill" : ""}`}
+                    className={`member-weapon-fx weapon-style-${effect.style} ${effect.skill ? "is-skill" : "is-basic"}`}
                     key={effect.id}
                     style={{ left: `${effect.x}%`, top: `${effect.y}%`, "--weapon-color": effect.color } as React.CSSProperties}
                   >
-                    {skillVfxSource ? <>
+                    {memberVfxSource ? <>
                       <i className="member-skill-vfx-bloom" />
-                      <Image className="member-skill-vfx-art" src={skillVfxSource} alt="" width={512} height={512} unoptimized draggable={false} />
+                      <Image className="member-skill-vfx-art" src={memberVfxSource} alt="" width={512} height={512} unoptimized draggable={false} />
                     </> : <>
                       <i className="member-projectile primary" />
                       <i className="member-projectile secondary" />
