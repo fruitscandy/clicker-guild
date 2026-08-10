@@ -8,8 +8,8 @@ export const FINALE_DODGE_MS = 6_000;
 export const FINALE_OPENING_MS = 2_500;
 export const FINALE_COLLAPSE_MS = 1_800;
 export const FINALE_DESTRUCTION_MS = 1_600;
-export const FINALE_BOSS_REVEAL_MS = 1_800;
-export const FINALE_BOSS_ATTACKABLE_MS = 1_700;
+export const FINALE_BOSS_REVEAL_MS = 3_600;
+export const FINALE_BOSS_ATTACKABLE_MS = 3_450;
 export const FINALE_BOSS_CLICK_RADIUS = 78;
 
 const FIXED_STEP_MS = 16;

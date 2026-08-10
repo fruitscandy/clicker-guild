@@ -73,11 +73,14 @@ test("keeps the equipped sword cursor while narrowing attacks to the assembled b
 });
 
 test("assembles an original archivist silhouette from ominous energy before it becomes attackable", async () => {
-  const component = await readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8");
-  const engine = await readFile(new URL("app/bullet-hell/engine.ts", root), "utf8");
+  const [component, engine, css] = await Promise.all([
+    readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8"),
+    readFile(new URL("app/bullet-hell/engine.ts", root), "utf8"),
+    readFile(new URL("app/bullet-hell/BulletHellFinale.module.css", root), "utf8"),
+  ]);
 
-  assert.match(engine, /FINALE_BOSS_REVEAL_MS = 1_800/);
-  assert.match(engine, /FINALE_BOSS_ATTACKABLE_MS = 1_700/);
+  assert.match(engine, /FINALE_BOSS_REVEAL_MS = 3_600/);
+  assert.match(engine, /FINALE_BOSS_ATTACKABLE_MS = 3_450/);
   assert.match(engine, /mode === "field" && next\.modeElapsedMs < FINALE_BOSS_ATTACKABLE_MS/);
   assert.match(component, /function drawBossEntranceEnergy/);
   assert.match(component, /world\.modeElapsedMs \/ FINALE_BOSS_REVEAL_MS/);
@@ -86,11 +89,19 @@ test("assembles an original archivist silhouette from ominous energy before it b
   assert.match(component, /drawArchivistSilhouette/);
   assert.match(component, /const cyan = field/);
   assert.match(component, /const magenta = field/);
-  assert.match(component, /const attackableVisual = world\.mode === "field" \|\| world\.mode === "bulletHell"/);
+  assert.match(component, /data-boss-summoning=\{hud\.mode === "field" && hud\.modeElapsedMs < FINALE_BOSS_REVEAL_MS/);
+  assert.match(component, /smoothstep\(\(progress - \.12\) \/ \.68\)/);
+  assert.match(component, /smoothstep\(\(revealProgress - \.5\) \/ \.38\)/);
+  assert.match(component, /smoothstep\(\(revealProgress - \.84\) \/ \.12\)/);
+  assert.match(component, /const attackableVisual = world\.mode === "bulletHell"[\s\S]*?world\.modeElapsedMs >= FINALE_BOSS_ATTACKABLE_MS/);
   assert.match(component, /context\.arc\(0, 0, FINALE_BOSS_CLICK_RADIUS/);
   assert.doesNotMatch(component, /FINALE_BOSS_CLICK_RADIUS \+ 6/);
   assert.doesNotMatch(component, /context\.fillText\(field \? "消"/);
   assert.doesNotMatch(component, /context\.fillText\("CLICK DAMAGE ×2"/);
+  assert.match(css, /\.standaloneSurface\[data-boss-summoning="true"\][\s\S]*?finaleSurfaceFracture 1\.25s steps\(8, end\) 2\.35s both/);
+  assert.match(css, /finale-active\[data-finale-mode="field"\][\s\S]*?arena:has\(> \[data-boss-summoning="true"\]\)/);
+  assert.match(css, /@keyframes finaleBossSummonFractureMobile/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?data-boss-summoning/);
 
   const energyLayer = component.indexOf("drawBossEntranceEnergy(context, world, reducedMotion);");
   const bossLayer = component.indexOf("drawBoss(context, world, reducedMotion);");

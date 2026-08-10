@@ -895,6 +895,12 @@
   min-height: max(560px, calc(100svh - 132px));
 }
 
+.standaloneSurface[data-boss-summoning="true"],
+:global(.game-shell.finale-active[data-finale-mode="field"] .arena:has(> [data-boss-summoning="true"])) {
+  transform-origin: 50% 35%;
+  animation: finaleSurfaceFracture 1.25s steps(8, end) 2.35s both;
+}
+
 .battleSurface[data-finale-mode="collapse"] {
   background: radial-gradient(circle at 50% 35%, rgba(9, 12, 18, .25), rgba(0, 0, 0, .88));
   animation: finaleSurfaceFracture 1.8s steps(8, end) both;
@@ -1253,10 +1259,16 @@
   .bossOverlay em { font-size: 6px; }
   .guildOverlay { width: 150px; }
   .pauseButton { top: 7px; right: 7px; width: 27px; height: 27px; }
+  .standaloneSurface[data-boss-summoning="true"],
+  :global(.game-shell.finale-active[data-finale-mode="field"] .arena:has(> [data-boss-summoning="true"])) {
+    animation-name: finaleBossSummonFractureMobile;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .battleSurface[data-finale-mode="collapse"],
+  .standaloneSurface[data-boss-summoning="true"],
+  :global(.game-shell.finale-active[data-finale-mode="field"] .arena:has(> [data-boss-summoning="true"])),
   :global(.game-shell.finale-active[data-finale-mode="collapse"] > .topbar),
   :global(.game-shell.finale-active[data-finale-mode="collapse"] .field-toolbar),
   :global(.game-shell.finale-active[data-finale-mode="collapse"] .battle-sidebar),
@@ -1264,6 +1276,14 @@
   :global(.game-shell.finale-active[data-finale-mode="collapse"] .battle-banner) {
     animation: none !important;
   }
+}
+
+@keyframes finaleBossSummonFractureMobile {
+  0%, 100% { transform: none; }
+  18% { transform: translateX(-1px); }
+  22% { transform: translateX(1px); }
+  47% { transform: translate(-1px, 1px); }
+  51% { transform: translate(1px, -1px); }
 }
 
 @supports (height: 100dvh) {

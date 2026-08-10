@@ -276,7 +276,7 @@ function drawBossEntranceEnergy(context: CanvasRenderingContext2D, world: Finale
   const progress = clamp(world.modeElapsedMs / FINALE_BOSS_REVEAL_MS, 0, 1);
   if (progress >= 1) return;
   const energy = Math.sin(progress * Math.PI);
-  const converge = smoothstep((progress - .08) / .7);
+  const converge = smoothstep((progress - .12) / .68);
   const entranceConverge = reducedMotion ? 1 : converge;
   const { x, y } = world.boss;
 
@@ -343,8 +343,8 @@ function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reduced
   const revealProgress = world.mode === "field"
     ? clamp(world.modeElapsedMs / FINALE_BOSS_REVEAL_MS, 0, 1)
     : 1;
-  const assembly = smoothstep((revealProgress - .2) / .62);
-  const eyeIgnition = smoothstep((revealProgress - .7) / .3);
+  const assembly = smoothstep((revealProgress - .5) / .38);
+  const eyeIgnition = smoothstep((revealProgress - .84) / .12);
   const collapseProgress = world.mode === "collapse"
     ? clamp(world.modeElapsedMs / world.stats.collapseDurationMs, 0, 1)
     : 0;
@@ -364,7 +364,8 @@ function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reduced
   const magenta = field ? "#9f4778" : "#ff2b8c";
   const bodyOpacity = assembly * (1 - collapseProgress * .5) * (1 - destructionProgress * .76);
   const destructionMotion = reducedMotion ? 0 : destructionProgress;
-  const attackableVisual = world.mode === "field" || world.mode === "bulletHell";
+  const attackableVisual = world.mode === "bulletHell"
+    || (world.mode === "field" && world.modeElapsedMs >= FINALE_BOSS_ATTACKABLE_MS);
 
   context.save();
   context.translate(x + signalJitter, y);
@@ -1344,6 +1345,7 @@ export function BulletHellFinale({
     className={`${styles.battleSurface} ${presentation === "embedded" ? styles.embeddedSurface : styles.standaloneSurface}`}
     data-finale-scene={scene}
     data-finale-mode={hud.mode}
+    data-boss-summoning={hud.mode === "field" && hud.modeElapsedMs < FINALE_BOSS_REVEAL_MS ? "true" : undefined}
     data-finale-music={musicSignal}
     role="application"
     aria-label="기록 말소자 최종 결전"

@@ -120,7 +120,13 @@ test("boss reveal locks damage without consuming a click or cooldown", () => {
   assert.equal(world.clicksRejected, 0);
   assert.equal(world.nextAttackSerial, initialSerial);
 
-  world = advance(world, engine.FINALE_BOSS_ATTACKABLE_MS + 16);
+  world = advance(world, engine.FINALE_BOSS_ATTACKABLE_MS - 1);
+  const boundarySerial = world.nextAttackSerial;
+  world = bossClick(world, 0);
+  assert.equal(world.boss.hp, initialHp, "the gathering animation remains protected immediately before the boundary");
+  assert.equal(world.nextAttackSerial, boundarySerial);
+
+  world = advance(world, 32);
   world = bossClick(world, 0);
   assert.equal(world.boss.hp, initialHp - world.stats.clickDamage);
 
