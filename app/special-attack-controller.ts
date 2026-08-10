@@ -105,15 +105,15 @@ export function useSpecialAttackController<T extends SpecialAttackMonster>({
     if (kind === "tornado") {
       Array.from({ length: attack.pulses }, (_, pulse) => {
         queueTimer(() => {
-          damageMonsters(targetIds, specialAttackDamage(kind, playerDamage, pulse), impactTier);
           moveTargets(kind, center, targetIds, pulse);
+          damageMonsters(targetIds, specialAttackDamage(kind, playerDamage, pulse), impactTier);
           playSpecialAttackSound(kind, "pulse");
         }, attack.delayMs + 220 + pulse * 520);
       });
     } else {
       queueTimer(() => {
-        damageMonsters(targetIds, specialAttackDamage(kind, playerDamage), impactTier);
         if (kind === "meteor") moveTargets(kind, center, targetIds, 0);
+        damageMonsters(targetIds, specialAttackDamage(kind, playerDamage), impactTier);
         playSpecialAttackSound(kind, "impact");
       }, attack.delayMs);
     }

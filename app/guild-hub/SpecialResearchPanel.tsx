@@ -25,23 +25,37 @@ function SpellPreview({ kind }: { kind: SpecialAttackKind }) {
   return (
     <span
       className={`${styles.spellPreview} ${styles[kind]}`}
-      style={{ "--spell-art": `url("${attack.art}")`, "--special-accent": attack.accent } as CSSProperties}
+      style={{ "--special-accent": attack.accent } as CSSProperties}
       aria-hidden="true"
     >
       <i className={styles.previewField} />
-      <i className={styles.previewArtwork} />
-      <i className={styles.previewCore} />
-      <i className={styles.previewRing} />
-      <i className={styles.previewRingSecondary} />
-      <i className={styles.previewTrail} />
+      {kind === "lightning" ? (
+        <>
+          <i className={styles.previewLightningCloud} />
+          <span className={styles.previewLightningBolt}><i /><i /><i /></span>
+          <i className={styles.previewLightningImpact} />
+        </>
+      ) : kind === "tornado" ? (
+        <>
+          <i className={styles.previewTornadoCore} />
+          <span className={styles.previewTornadoBands}><i /><i /><i /><i /></span>
+          <i className={styles.previewTornadoBase} />
+        </>
+      ) : (
+        <>
+          <i className={styles.previewMeteorTrail} />
+          <i className={styles.previewMeteorRock} />
+          <i className={styles.previewMeteorImpact} />
+        </>
+      )}
       <span className={styles.previewParticles}>
         {Array.from({ length: 8 }, (_, index) => (
           <i
             key={index}
             style={{
               "--particle-angle": `${index * 45}deg`,
-              "--particle-distance": `${32 + index * 1.4}px`,
-              "--particle-index": index,
+              "--particle-distance": `${31 + index % 3 * 7}px`,
+              "--particle-delay": `${index * -115}ms`,
             } as CSSProperties}
           />
         ))}
@@ -126,7 +140,7 @@ export function SpecialResearchPanel({
             key={kind}
             data-kind={kind}
             className={`${styles.specialNode} ${styles[kind]} ${isPurchased ? styles.purchased : ""} ${available ? styles.available : ""} ${hallLocked || !prerequisitesMet ? styles.locked : ""} ${isSelected ? styles.selected : ""}`}
-            style={{ "--special-accent": attack.accent, "--spell-art": `url("${attack.art}")` } as CSSProperties}
+            style={{ "--special-accent": attack.accent } as CSSProperties}
             onClick={() => setSelectedKind(kind)}
             aria-label={`${attack.title} 특수 공격 상세보기: ${attack.description}. ${status}. 선택만으로는 구매되지 않습니다.`}
             aria-pressed={isSelected}

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import ts from "typescript";
 
@@ -44,15 +44,25 @@ test("번개는 밀집 지점을 선택하고 최대 7체만 연쇄 감전시킨
 test("토네이도는 몬스터를 회전시키며 중심 쪽으로 세 차례 끌어당긴다", () => {
   const center = { x: 50, y: 46 };
   const before = monsters.find((monster) => monster.id === "monster-0");
-  const moved = special.displacedSpecialTargets(monsters, "tornado", center, 2)[before.id];
-  assert.ok(moved);
-  assert.ok(special.fieldDistance(moved, center) < special.fieldDistance(before, center));
+  let current = before;
+  const pulseDistances = [0, 1, 2].map((pulse) => {
+    const field = monsters.map((monster) => monster.id === current.id ? current : monster);
+    current = { ...current, ...special.displacedSpecialTargets(field, "tornado", center, pulse)[current.id] };
+    return special.fieldDistance(current, center);
+  });
+  assert.ok(pulseDistances[0] < special.fieldDistance(before, center));
+  assert.ok(pulseDistances[1] < pulseDistances[0]);
+  assert.ok(pulseDistances[2] < pulseDistances[1]);
   const pulseDamage = [0, 1, 2].map((pulse) => special.specialAttackDamage("tornado", 100, pulse));
   assert.deepEqual(pulseDamage, [51, 64, 80]);
   assert.equal(pulseDamage.reduce((sum, damage) => sum + damage, 0), 195);
 });
 
 test("운석 넉백은 충돌점 바깥으로 밀되 전장 경계를 절대 넘지 않는다", () => {
+  const center = { x: 50, y: 50 };
+  const close = { id: "close", x: 54, y: 50, hp: 100 };
+  const knocked = special.displacedSpecialTargets([close], "meteor", center)[close.id];
+  assert.ok(special.fieldDistance(knocked, center) > special.fieldDistance(close, center) + 14);
   const edgeMonsters = [
     { id: "left", x: 7.2, y: 50, hp: 100 },
     { id: "right", x: 92.8, y: 50, hp: 100 },
@@ -68,49 +78,34 @@ test("운석 넉백은 충돌점 바깥으로 밀되 전장 경계를 절대 넘
 });
 
 test("새 특수공격 원화만으로 전장 연출을 구성하고 기존 합성 레이어는 제거한다", async () => {
-  const [layer, layerStyles, panel, audio, license] = await Promise.all([
+  const [layer, layerStyles, panel, panelStyles, audio] = await Promise.all([
     readFile(new URL("../app/SpecialAttackLayer.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/SpecialAttackLayer.module.css", import.meta.url), "utf8"),
     readFile(new URL("../app/guild-hub/SpecialResearchPanel.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/guild-hub/SpecialResearchPanel.module.css", import.meta.url), "utf8"),
     readFile(new URL("../app/special-attack-audio.ts", import.meta.url), "utf8"),
-    readFile(new URL("../public/assets/vfx/special/LICENSE.md", import.meta.url), "utf8"),
   ]);
-  const assets = [
-    "lightning-arc.png", "lightning-spark.png", "tornado-twirl.png", "smoke-cloud.png", "smoke-wisp.png",
-    "meteor-explosion.png", "meteor-flame.png", "impact-ring.png", "impact-scorch.png", "impact-flash.png",
-    "special-lightning-v2.webp", "special-tornado-v2.webp", "special-meteor-v2.webp",
-  ];
-  for (const file of assets) {
-    const url = new URL(`../public/assets/vfx/special/${file}`, import.meta.url);
-    await access(url);
-    assert.ok((await stat(url)).size > 10_000, file);
-  }
-  assert.match(license, /Creative Commons Zero|CC0 1\.0/);
   assert.match(layer, /LightningEffect/);
   assert.match(layer, /TornadoEffect/);
   assert.match(layer, /MeteorEffect/);
-  assert.match(layer, /lightningArtwork/);
-  assert.match(layer, /tornadoArtwork/);
-  assert.match(layer, /meteorArtwork/);
-  for (const removedLayer of [
-    "lightningTexture", "lightningBolt", "electricSparks", "tornadoTextureBack", "tornadoTextureFront",
-    "tornadoFunnel", "tornadoDebris", "meteorTelegraph", "meteorProjectile", "meteorCore", "meteorFlame",
-    "meteorSmoke", "meteorExplosion", "meteorScorch", "meteorFragments",
-  ]) {
-    assert.doesNotMatch(layer, new RegExp(`styles\\.${removedLayer}\\b`), removedLayer);
-  }
-  assert.doesNotMatch(
-    layerStyles,
-    /\/assets\/vfx\/special\/(?:lightning-arc|lightning-spark|tornado-twirl|meteor-flame|smoke-wisp|impact-flash|meteor-explosion|impact-scorch)\.png/,
-  );
-  assert.match(layerStyles, /@keyframes lightningArtworkStrike/);
-  assert.match(layerStyles, /@keyframes tornadoArtworkSurge/);
-  assert.match(layerStyles, /@keyframes meteorArtworkStrike/);
-  assert.match(layerStyles, /animation: meteorArtworkStrike 1\.7s/);
-  assert.doesNotMatch(layerStyles, /meteorArtworkStrike calc\(var\(--effect-delay\)/);
+  assert.match(layer, /lightningBolt/);
+  assert.match(layer, /tornadoBands/);
+  assert.match(layer, /meteorFlight/);
+  assert.match(layer, /specialMonsterEffectStyle/);
+  assert.doesNotMatch(layer, /effectTitle|--spell-art|attack\.art/);
+  assert.doesNotMatch(panel, /previewArtwork|--spell-art|attack\.art/);
+  assert.doesNotMatch(`${layer}\n${layerStyles}\n${panel}\n${panelStyles}`, /\/assets\/vfx\/special\//);
+  assert.match(layerStyles, /@keyframes lightningBoltForm/);
+  assert.match(layerStyles, /@keyframes tornadoBandSpin/);
+  assert.match(layerStyles, /@keyframes meteorFlight/);
+  assert.match(layerStyles, /monsterElectricCage/);
+  assert.match(layerStyles, /monsterTornadoPull/);
+  assert.match(layerStyles, /monsterMeteorKnockback/);
   assert.match(layer, /specialMonsterClassName/);
   assert.match(panel, /특수 공격/);
-  assert.match(panel, /previewArtwork/);
+  assert.match(panel, /previewLightningBolt/);
+  assert.match(panel, /previewTornadoBands/);
+  assert.match(panel, /previewMeteorRock/);
   assert.doesNotMatch(panel, /연결선 없는 독립 노드|detailGlyph/);
   assert.match(audio, /playLightning/);
   assert.match(audio, /playTornado/);
@@ -126,7 +121,9 @@ test("길드 연구와 전투 화면이 특수 비술 모듈을 실제로 사용
   assert.match(game, /<SpecialResearchPanel/);
   assert.match(game, /<SpecialAttackLayer/);
   assert.match(game, /specialMonsterClassName/);
+  assert.match(game, /specialMonsterEffectStyle/);
   assert.match(controller, /displacedSpecialTargets/);
+  assert.match(controller, /moveTargets\(kind, center, targetIds, pulse\);\s+damageMonsters/);
   assert.match(controller, /playSpecialAttackSound/);
   assert.match(controller, /FIRST_CAST_DELAY/);
 });

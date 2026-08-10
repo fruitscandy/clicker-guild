@@ -66,7 +66,7 @@ import { WeaponCursor } from "./guild-hub/WeaponArt";
 import { monsterAssetForStage } from "./monster-assets";
 import { OPENING_RESTART_EVENT } from "./opening/opening-events";
 import { MaterialInventory } from "./MaterialInventory";
-import { SpecialAttackLayer, specialMonsterClassName } from "./SpecialAttackLayer";
+import { SpecialAttackLayer, specialMonsterClassName, specialMonsterEffectStyle } from "./SpecialAttackLayer";
 import { WeaponAttackEffect } from "./WeaponAttackEffect";
 import { useSpecialAttackController } from "./special-attack-controller";
 import { SPECIAL_RESEARCH_NODES } from "./special-attacks";
@@ -1462,8 +1462,9 @@ export default function Game() {
                   const hitDuration = monster.lastHitTier >= 4 ? 940 : monster.lastHitTier >= 3 ? 700 : 500;
                   const struck = monster.hp > 0 && monster.lastHitAt > 0 && now - monster.lastHitAt < hitDuration;
                   const specialClassName = specialMonsterClassName(monster.id, specialAttackEffects, now);
+                  const specialEffectStyle = specialMonsterEffectStyle(monster, specialAttackEffects, now);
                   const artScale = (monsterAsset?.scale ?? 1) * (monster.kind === "leader" ? 1.08 : 1);
-                  return <span key={`${monster.id}-${monster.hitId}`} className={`pack-monster monster-${monster.kind} ${monsterAsset ? "has-pack-art" : ""} ${monster.hp <= 0 ? "is-defeated" : ""} ${struck ? `is-struck click-recoil-tier-${monster.lastHitTier}` : ""} ${specialClassName}`} style={{ left: `${monster.x}%`, top: `${monster.y}%`, "--monster-scale": monster.scale, "--monster-art-scale": artScale, zIndex: Math.round(monster.y) } as React.CSSProperties}>
+                  return <span key={`${monster.id}-${monster.hitId}`} className={`pack-monster monster-${monster.kind} ${monsterAsset ? "has-pack-art" : ""} ${monster.hp <= 0 ? "is-defeated" : ""} ${struck ? `is-struck click-recoil-tier-${monster.lastHitTier}` : ""} ${specialClassName}`} style={{ left: `${monster.x}%`, top: `${monster.y}%`, "--monster-scale": monster.scale, "--monster-art-scale": artScale, zIndex: Math.round(monster.y), ...specialEffectStyle } as React.CSSProperties}>
                     <i className="pack-shadow" />
                     {monsterAsset ? (
                       <span className="pack-monster-art-frame">

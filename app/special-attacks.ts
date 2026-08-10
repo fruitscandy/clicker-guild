@@ -7,7 +7,6 @@ export type SpecialAttackDefinition = {
   subtitle: string;
   description: string;
   glyph: string;
-  art: string;
   cost: number;
   hallLevel: number;
   cooldownMs: number;
@@ -59,7 +58,6 @@ export const SPECIAL_ATTACKS: Record<SpecialAttackKind, SpecialAttackDefinition>
     subtitle: "천뢰의 인장",
     description: "2초마다 밀집한 적에게 연쇄 번개가 떨어져 최대 7체를 감전시킵니다.",
     glyph: "⚡",
-    art: "/assets/vfx/special/special-lightning-v2.webp",
     cost: 1_300,
     hallLevel: 2,
     cooldownMs: 2_000,
@@ -78,7 +76,6 @@ export const SPECIAL_ATTACKS: Record<SpecialAttackKind, SpecialAttackDefinition>
     subtitle: "폭풍의 감옥",
     description: "4초마다 회오리가 적을 끌어당기며 세 차례 광역 피해를 줍니다.",
     glyph: "◉",
-    art: "/assets/vfx/special/special-tornado-v2.webp",
     cost: 3_600,
     hallLevel: 3,
     cooldownMs: 4_000,
@@ -97,7 +94,6 @@ export const SPECIAL_ATTACKS: Record<SpecialAttackKind, SpecialAttackDefinition>
     subtitle: "운석 충돌",
     description: "6초마다 메테오가 낙하해 대폭발 피해를 주고 적을 전장 안쪽으로 날려 보냅니다.",
     glyph: "☄",
-    art: "/assets/vfx/special/special-meteor-v2.webp",
     cost: 8_400,
     hallLevel: 4,
     cooldownMs: 6_000,
@@ -202,8 +198,8 @@ export function displacedSpecialTargets(
     const angle = distance > 0.01 ? Math.atan2(dy, dx) : stableAngle(monster.id);
 
     if (kind === "tornado") {
-      const orbitAngle = angle + 0.82 + pulse * 0.62;
-      const pulledDistance = Math.max(2.5, distance * (0.72 - pulse * 0.11));
+      const orbitAngle = angle + 1.04 + pulse * 0.74;
+      const pulledDistance = Math.max(1.6, distance * (0.58 - pulse * 0.12));
       positions[monster.id] = clampFieldPoint({
         x: center.x + Math.cos(orbitAngle) * pulledDistance,
         y: center.y + Math.sin(orbitAngle) * pulledDistance / 0.72,
@@ -212,7 +208,7 @@ export function displacedSpecialTargets(
     }
 
     const launchAngle = distance > 0.01 ? angle : stableAngle(`${monster.id}-meteor`);
-    const push = 10.5 + Math.max(0, 1 - distance / SPECIAL_ATTACKS.meteor.radius) * 7.5;
+    const push = 15 + Math.max(0, 1 - distance / SPECIAL_ATTACKS.meteor.radius) * 12;
     positions[monster.id] = clampFieldPoint({
       x: monster.x + Math.cos(launchAngle) * push,
       y: monster.y + Math.sin(launchAngle) * push / 0.72,
