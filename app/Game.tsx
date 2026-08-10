@@ -26,6 +26,7 @@ import {
   type BattleLootDrop,
 } from "./battle-loot";
 import { fieldAssetForRegion } from "./field-assets";
+import { GameNoticeDialog, type GameNotice } from "./game-notice/GameNoticeDialog";
 import { BOSS_BATTLE_SECONDS, NORMAL_BATTLE_SECONDS } from "./economy-balance";
 import { BASE_ATTACK_RANGE, BASE_CLICK_DAMAGE, failureSalvageFor, MEMBER_ASSIST_FACTOR, PLAYER_WEAPON_BALANCE } from "./game-balance";
 import { combatTraitFor, compactNumber, getStage, MEMBERS, RANK_ORDER, STAGE_COUNT, STAGES_PER_REGION, type CombatStyle, type MemberDefinition } from "./game-data";
@@ -56,6 +57,7 @@ import { TavernHall } from "./guild-hub/TavernHall";
 import { GUILD_HALL_STAGES, guildHallStage, inferHallLevelFromNodes, requiredHallLevelForNode, type GuildFacility } from "./guild-hub/guild-progression";
 import { WeaponCursor } from "./guild-hub/WeaponArt";
 import { monsterAssetForStage } from "./monster-assets";
+import { OPENING_RESTART_EVENT } from "./opening/opening-events";
 import { MaterialInventory } from "./MaterialInventory";
 import { SpecialAttackLayer, specialMonsterClassName } from "./SpecialAttackLayer";
 import { WeaponAttackEffect } from "./WeaponAttackEffect";
@@ -343,7 +345,7 @@ export default function Game() {
   const [fieldMonsters, setFieldMonsters] = useState<FieldMonster[]>([]);
   const [now, setNow] = useState(0);
   const [stagePicker, setStagePicker] = useState(false);
-  const [toast, setToast] = useState("");
+  const [notice, setNotice] = useState<GameNotice | null>(null);
   const [recruitResults, setRecruitResults] = useState<RecruitResult[]>([]);
   const [recruitSequence, setRecruitSequence] = useState(0);
   const [pendingSaleId, setPendingSaleId] = useState<string | null>(null);
@@ -359,7 +361,6 @@ export default function Game() {
   const [hitFx, setHitFx] = useState<ClickAttackFx | null>(null);
   const [activeHitFxs, setActiveHitFxs] = useState<ClickAttackFx[]>([]);
   const [memberWeaponFx, setMemberWeaponFx] = useState<MemberWeaponFx[]>([]);
-  const [lostMembers, setLostMembers] = useState<string[]>([]);
   const [territoryPulse, setTerritoryPulse] = useState(0);
   const [lootDrops, setLootDrops] = useState<BattleLootDrop[]>([]);
   const [lootPhase, setLootPhase] = useState<LootPhase>("idle");
@@ -381,6 +382,11 @@ export default function Game() {
   const revealedLootIds = useRef(new Set<string>());
   const lootTimers = useRef<number[]>([]);
   const developerEntrySave = useRef<SaveState | null>(null);
+  const closeNotice = useCallback(() => setNotice(null), []);
+
+  function showNotice(title: string, message: string, options: Omit<GameNotice, "title" | "message"> = {}) {
+    setNotice({ title, message, ...options });
+  }
 
   const stageNumber = developerMode && developerStage ? developerStage : save.selectedStage;
   const effectiveUpgrades = developerMode ? developerUpgrades : save.upgrades;
@@ -481,11 +487,14 @@ export default function Game() {
           nodes: migratedNodes,
           upgrades: migratedUpgrades,
         });
-        if (completedLegacyCitadel) setToast("기존 성채 완성 기록을 새 핵심 강화 8종과 특수 공격 완성 상태로 이전했습니다.");
-        else if (researchRefund || convertedGear) setToast(`강화 체계 개편 완료 · 폐기 연구 ${compactNumber(researchRefund)} G 환급${convertedGear ? ` · 장비 ${convertedGear}개를 길드원 경험치로 전환` : ""}`);
+        if (completedLegacyCitadel) {
+          setNotice({ title: "저장 데이터 이전 완료", message: "기존 성채 완성 기록을 새 핵심 강화 8종과 특수 공격 완성 상태로 이전했습니다." });
+        } else if (researchRefund || convertedGear) {
+          setNotice({ title: "강화 체계 개편 완료", message: `폐기 연구 ${compactNumber(researchRefund)} G 환급${convertedGear ? ` · 장비 ${convertedGear}개를 길드원 경험치로 전환` : ""}` });
+        }
       }
     } catch {
-      setToast("저장 데이터를 불러오지 못해 새 게임으로 시작합니다.");
+      setNotice({ title: "저장 데이터를 복구하지 못했습니다", message: "저장 데이터를 불러오지 못해 새 게임으로 시작합니다.", tone: "warning" });
     }
     setHydrated(true);
     setDeveloperToolsAvailable(["localhost", "127.0.0.1"].includes(window.location.hostname));
@@ -515,10 +524,7 @@ export default function Game() {
     setLootPhase("complete");
     setVictory(true);
     playStageClearSound(stage.boss);
-    if (developerMode) {
-      setToast("개발자 토벌 성공! 보상과 진행도는 저장되지 않습니다.");
-      return;
-    }
+    if (developerMode) return;
     const firstClear = !save.cleared.includes(stage.stage);
     const earnedGold = Math.round(stage.gold * goldMultiplier);
     const earnedMaterial = stageMaterial.rewardAmount;
@@ -547,7 +553,6 @@ export default function Game() {
     });
 
     if (firstClear) playRareRewardSound("first-clear");
-    setToast(`토벌 성공! 골드 ${compactNumber(earnedGold)} · ${stageMaterial.name} ${earnedMaterial}개 · 길드원 경험치 지급`);
   }, [developerMode, save.cleared, stage, stageMaterial, goldMultiplier]);
 
   const beginLootSweep = useCallback((drops: BattleLootDrop[]) => {
@@ -560,10 +565,6 @@ export default function Game() {
     setCollectedGold(0);
     setCollectedMaterial(0);
     setLootPhase("collecting");
-    const sweepGold = drops.reduce((sum, drop) => sum + (drop.kind === "gold" ? drop.amount : 0), 0);
-    const sweepMaterial = drops.reduce((sum, drop) => sum + (drop.kind === "material" ? drop.amount : 0), 0);
-    setToast(`토벌 완료! 골드 ${compactNumber(sweepGold)}와 ${stageMaterial.name} ${sweepMaterial}개를 회수합니다.`);
-
     const stagger = goldLootStaggerMs(drops.length);
     drops.forEach((drop, index) => {
       const timer = window.setTimeout(() => {
@@ -579,7 +580,7 @@ export default function Game() {
       finalizeVictory();
     }, goldLootSweepDuration(drops.length));
     lootTimers.current.push(completeTimer);
-  }, [clearLootTimers, finalizeVictory, stageMaterial.name]);
+  }, [clearLootTimers, finalizeVictory]);
 
   const awardVictory = useCallback(() => {
     const revealedById = new Map(lootDropsRef.current.map((drop) => [drop.id, drop]));
@@ -638,9 +639,7 @@ export default function Game() {
     lootPlan.current = [];
     lootDropsRef.current = [];
     revealedLootIds.current.clear();
-    setLostMembers([...save.party]);
-    setToast(developerMode ? "개발자 전투 실패 · 진행도는 저장되지 않습니다." : `원정 실패 · 쓰러뜨린 적의 전리품에서 골드 ${compactNumber(defeatSalvage.gold)} · ${stageMaterial.name} ${defeatSalvage.material}개를 회수했습니다.`);
-  }, [clearLootTimers, developerMode, save.party, defeatSalvage, stageMaterial.id, stageMaterial.name]);
+  }, [clearLootTimers, developerMode, defeatSalvage, stageMaterial.id]);
 
   useEffect(() => {
     if (!battleActive || !battleDeadline || !aliveMonsters.length) return;
@@ -777,7 +776,7 @@ export default function Game() {
   function startStage(stageNumber = stage.stage) {
     unlockBattleAudio();
     if (!save.party.length && !developerMode) {
-      setToast("출전할 길드원이 없습니다. 여관에서 새 길드원을 고용하고 파티에 편성하세요.");
+      showNotice("출전 준비가 필요합니다", "출전할 길드원이 없습니다. 여관에서 새 길드원을 고용하고 파티에 편성하세요.", { tone: "warning" });
       return;
     }
     const nextStage = getStage(stageNumber);
@@ -800,7 +799,6 @@ export default function Game() {
     clickCount.current = 0;
     lastPlayerAutoAttackAt.current = Date.now();
     setClicks(0);
-    setLostMembers([]);
     setLootDrops([]);
     setLootPhase("fighting");
     setCollectedGold(0);
@@ -816,10 +814,9 @@ export default function Game() {
     else setSave((current) => ({ ...current, selectedStage: stageNumber }));
     setStagePicker(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
-    setToast(`${nextStage.region.name} ${nextStage.localStage}웨이브 진입 · 몬스터 ${monsters.length}마리가 몰려옵니다! 길드 조합으로 전장을 쓸어내세요.`);
   }
 
-  function returnToGuild(message = "파티를 영지로 복귀시켰습니다.") {
+  function returnToGuild() {
     clearLootTimers();
     victoryLock.current = true;
     rewardLock.current = true;
@@ -840,14 +837,18 @@ export default function Game() {
     lootPlan.current = [];
     lootDropsRef.current = [];
     revealedLootIds.current.clear();
-    setToast(message);
   }
 
   function retreatBattle() {
     if (!battleActive) return;
     const penalty = Math.min(save.gold, Math.max(10, Math.floor(save.gold * 0.1)));
     if (!developerMode) setSave((current) => ({ ...current, gold: Math.max(0, current.gold - penalty) }));
-    returnToGuild(developerMode ? "개발자 토벌에서 후퇴했습니다. 골드 패널티는 저장되지 않습니다." : `토벌에서 후퇴해 골드 ${compactNumber(penalty)}을(를) 잃었습니다.`);
+    returnToGuild();
+    showNotice(
+      "원정에서 후퇴했습니다",
+      developerMode ? "개발자 토벌 기록은 저장되지 않았고 골드도 차감되지 않았습니다." : `골드 ${compactNumber(penalty)} G를 잃었습니다.`,
+      { tone: "warning" },
+    );
   }
 
   function toggleDeveloperMode() {
@@ -861,29 +862,26 @@ export default function Game() {
     setDeveloperMode(next);
     setDeveloperStage(next ? save.selectedStage : null);
     if (next) setDeveloperClickLevel(CLICK_ATTACK_PATTERNS.length - 1);
-    setToast(next ? "개발자 모드 ON · 자원·구매·업그레이드 시험값과 전체 웨이브가 임시 해금됩니다. 결과는 저장되지 않습니다." : "개발자 모드 OFF · 진입 전 저장 진행도로 돌아왔습니다.");
   }
 
   function previewClickPattern(level: number) {
-    const pattern = clickAttackPattern(level);
     setDeveloperClickLevel(level);
     setHitFx(null);
     setActiveHitFxs([]);
-    setToast(`플레이어 무기 ${pattern.tier + 1}/15 · ${pattern.weaponName} · ${pattern.title} 미리보기입니다.`);
   }
 
   function purchaseWeaponUpgrade() {
     const nextLevel = save.weaponLevel + 1;
-    if (nextLevel > WEAPON_MAX_LEVEL) return setToast("모든 플레이어 무기를 완성했습니다. 길드마스터 신검이 최종 단계입니다!");
+    if (nextLevel > WEAPON_MAX_LEVEL) return showNotice("최종 무기 완성", "모든 플레이어 무기를 완성했습니다. 길드마스터 신검이 최종 단계입니다.");
     const nextWeapon = clickAttackPattern(nextLevel);
     const recipe = weaponMaterialRecipe(nextLevel);
-    if (save.gold < nextWeapon.cost) return setToast(`${nextWeapon.weaponName}을(를) 제작할 골드가 부족합니다.`);
+    if (save.gold < nextWeapon.cost) return showNotice("골드가 부족합니다", `${nextWeapon.weaponName}을(를) 제작하려면 골드가 더 필요합니다.`, { tone: "warning" });
     if (!canAffordWeaponRecipe(save.materials, recipe) && recipe) {
       const shortages = recipe.ingredients
         .filter(({ material, amount }) => (save.materials[material.id] ?? 0) < amount)
         .map(({ material, amount }) => `${material.name} ${amount - (save.materials[material.id] ?? 0)}개`)
         .join(" · ");
-      return setToast(`${nextWeapon.weaponName} 제작 재료가 부족합니다: ${shortages}. 다음 지역 원정을 진행하세요.`);
+      return showNotice("제작 재료가 부족합니다", `${nextWeapon.weaponName} 제작에 ${shortages}가 더 필요합니다. 다음 지역 원정을 진행하세요.`, { tone: "warning" });
     }
     setSave((current) => {
       const materials = consumeWeaponRecipe(current.materials, recipe);
@@ -892,37 +890,35 @@ export default function Game() {
     });
     setTerritoryPulse((current) => current + 1);
     playProgressionSound("weapon-craft", nextLevel);
-    setToast(`${nextWeapon.weaponName} 완성! 플레이어 클릭 공격력이 ${Math.round(nextWeapon.damageScale * 100)}%로 상승했습니다.`);
   }
 
   function purchaseGuildHallUpgrade() {
     if (!nextHallStage || hallStage.upgradeCost === null || hallStage.requiredResearch === null) {
-      setToast("길드 본관이 이미 전설의 성채 단계에 도달했습니다.");
+      showNotice("본관 승급 완료", "길드 본관이 이미 전설의 성채 단계에 도달했습니다.");
       return;
     }
     if (save.nodes.length < hallStage.requiredResearch) {
-      setToast(`본관 승급을 위해 현재 해금 구간의 연구를 ${hallStage.requiredResearch - save.nodes.length}개 더 완료해야 합니다.`);
+      showNotice("연구가 더 필요합니다", `본관 승급을 위해 현재 해금 구간의 연구를 ${hallStage.requiredResearch - save.nodes.length}개 더 완료해야 합니다.`, { tone: "warning" });
       return;
     }
     if (save.gold < hallStage.upgradeCost) {
-      setToast(`${nextHallStage.name} 승급에 필요한 골드가 부족합니다.`);
+      showNotice("골드가 부족합니다", `${nextHallStage.name} 승급에 필요한 골드가 부족합니다.`, { tone: "warning" });
       return;
     }
     setSave((current) => ({ ...current, gold: current.gold - hallStage.upgradeCost!, guildHallLevel: current.guildHallLevel + 1 }));
     setTerritoryPulse((current) => current + 1);
     playProgressionSound("guild-hall", nextHallStage.level);
-    setToast(`${nextHallStage.name} 완성! 길드 강화 연구가 ${nextHallStage.researchDepth}단계까지 확장되었습니다.`);
   }
 
   function purchaseNode(node: UpgradeNode) {
     if (save.nodes.includes(node.id)) return;
     const requiredHallLevel = requiredHallLevelForNode(node.id);
     if (save.guildHallLevel < requiredHallLevel) {
-      setToast(`${node.title} 연구에는 길드 본관 Lv.${requiredHallLevel}이 필요합니다. 본관을 먼저 승급하세요.`);
+      showNotice("본관 승급이 필요합니다", `${node.title} 연구에는 길드 본관 Lv.${requiredHallLevel}이 필요합니다. 본관을 먼저 승급하세요.`, { tone: "warning" });
       return;
     }
-    if (!node.prerequisites.every((id) => save.nodes.includes(id))) return setToast("앞선 성장 노드를 먼저 해금해야 합니다.");
-    if (save.gold < node.cost) return setToast("노드를 해금할 골드가 부족합니다. 필드에서 토벌을 반복하세요.");
+    if (!node.prerequisites.every((id) => save.nodes.includes(id))) return showNotice("선행 연구가 필요합니다", "앞선 성장 노드를 먼저 해금해야 합니다.", { tone: "warning" });
+    if (save.gold < node.cost) return showNotice("골드가 부족합니다", "연구를 해금할 골드가 부족합니다. 필드에서 토벌을 반복하세요.", { tone: "warning" });
     setSave((current) => ({
       ...current,
       gold: current.gold - node.cost,
@@ -931,12 +927,11 @@ export default function Game() {
     }));
     setTerritoryPulse((current) => current + 1);
     playProgressionSound("research-unlock", node.target ? save.upgrades[node.target] + 1 : save.nodes.length + 1);
-    setToast(`${node.title} 노드를 해금했습니다. 새로운 성장 경로가 발견됩니다!`);
   }
 
   function recruitGuildMembers(count: 1 | 10) {
     const cost = count === 1 ? RECRUIT_COSTS.single : RECRUIT_COSTS.ten;
-    if (save.gold < cost) return setToast(`${count}명 영입에 필요한 골드가 부족합니다.`);
+    if (save.gold < cost) return showNotice("골드가 부족합니다", `${count}명 영입에 필요한 골드가 부족합니다.`, { tone: "warning" });
 
     const rolls = rollRecruitMembers(MEMBERS, count, effectiveUpgrades.tavern);
     const settlement = settleRecruitment(save.owned, rolls);
@@ -955,17 +950,12 @@ export default function Game() {
       };
     });
     playGuildMemberHireSound(count);
-
-    const bestRoll = rolls.reduce((best, member) => RANK_ORDER.indexOf(member.rank) > RANK_ORDER.indexOf(best.rank) ? member : best);
-    const rareCallout = RANK_ORDER.indexOf(bestRoll.rank) >= RANK_ORDER.indexOf("B") ? `${bestRoll.rank}등급 ${bestRoll.name}! ` : "";
-    const refundCallout = settlement.refund > 0 ? ` · 중복 정산 +${compactNumber(settlement.refund)} G` : "";
-    setToast(`${rareCallout}${count}명 영입 완료 · 신규 ${settlement.newMemberIds.length}명${refundCallout}`);
   }
 
   function requestMemberSale(id: string) {
     const member = memberById(id);
-    if (save.party.includes(id)) return setToast("편성 중인 길드원은 파티에서 해제한 뒤 판매할 수 있습니다.");
-    if (save.owned.length <= 1) return setToast("길드를 지킬 마지막 길드원은 판매할 수 없습니다.");
+    if (save.party.includes(id)) return showNotice("판매할 수 없습니다", "편성 중인 길드원은 파티에서 해제한 뒤 판매할 수 있습니다.", { tone: "warning" });
+    if (save.owned.length <= 1) return showNotice("판매할 수 없습니다", "길드를 지킬 마지막 길드원은 판매할 수 없습니다.", { tone: "warning" });
     setPendingSaleId(member.id);
   }
 
@@ -974,7 +964,7 @@ export default function Game() {
     const member = memberById(pendingSaleId);
     if (save.party.includes(member.id) || save.owned.length <= 1 || !save.owned.includes(member.id)) {
       setPendingSaleId(null);
-      return setToast("현재 상태에서는 이 길드원을 판매할 수 없습니다.");
+      return showNotice("판매할 수 없습니다", "길드원 상태가 변경되어 판매를 진행할 수 없습니다. 편성 상태를 다시 확인하세요.", { tone: "warning" });
     }
     const salePrice = MEMBER_SALE_PRICES[member.rank];
 
@@ -989,7 +979,6 @@ export default function Game() {
       };
     });
     setPendingSaleId(null);
-    setToast(`${member.name} 계약 해지 · ${compactNumber(salePrice)} G를 돌려받았습니다.`);
   }
 
   function selectGuildFacility(facility: GuildFacility) {
@@ -1004,24 +993,26 @@ export default function Game() {
   }
 
   function toggleParty(id: string) {
-    setSave((current) => {
-      if (current.party.includes(id)) {
-        if (current.party.length === 1) {
-          setToast("토벌 파티에는 최소 한 명이 필요합니다.");
-          return current;
-        }
-        return { ...current, party: current.party.filter((memberId) => memberId !== id) };
-      }
-      if (current.party.length >= 4) {
-        setToast("현재 파티에는 최대 4명까지 편성할 수 있습니다.");
-        return current;
-      }
-      return { ...current, party: [...current.party, id] };
-    });
+    if (save.party.includes(id)) {
+      if (save.party.length === 1) return showNotice("파티를 비울 수 없습니다", "토벌 파티에는 최소 한 명이 필요합니다.", { tone: "warning" });
+      setSave((current) => ({ ...current, party: current.party.filter((memberId) => memberId !== id) }));
+      return;
+    }
+    if (save.party.length >= 4) return showNotice("파티가 가득 찼습니다", "현재 파티에는 최대 4명까지 편성할 수 있습니다.", { tone: "warning" });
+    setSave((current) => ({ ...current, party: [...current.party, id] }));
   }
 
   function resetGame() {
-    if (!window.confirm("모든 진행 상황을 지우고 새 게임을 시작할까요?")) return;
+    showNotice("새 게임을 시작할까요?", "모든 진행 상황과 저장 데이터를 지웁니다. 이 작업은 되돌릴 수 없습니다.", {
+      eyebrow: "NEW GUILD CONFIRMATION",
+      confirmLabel: "새 게임 시작",
+      cancelLabel: "취소",
+      tone: "danger",
+      action: "reset",
+    });
+  }
+
+  function performReset() {
     localStorage.removeItem(SAVE_KEY);
     developerEntrySave.current = null;
     setSave(initialState);
@@ -1047,9 +1038,14 @@ export default function Game() {
     lootPlan.current = [];
     lootDropsRef.current = [];
     revealedLootIds.current.clear();
-    setLostMembers([]);
     setActiveFacility("hall");
-    setToast("새로운 길드가 창설되었습니다. 파티를 편성하고 첫 토벌을 준비하세요.");
+    window.dispatchEvent(new Event(OPENING_RESTART_EVENT));
+  }
+
+  function confirmNotice() {
+    const action = notice?.action;
+    setNotice(null);
+    if (action === "reset") performReset();
   }
 
   function attackField(event: React.PointerEvent<HTMLDivElement>) {
@@ -1095,7 +1091,6 @@ export default function Game() {
         <div className="current-objective"><small>현재 목표</small><strong>{stage.boss ? `${stage.name} 군주전` : `${stage.region.name} ${stage.localStage}웨이브 돌파`}</strong></div>
       </section>
 
-      {toast && <div className="toast" role="status"><span aria-hidden="true">✦</span>{toast}</div>}
       {developerMode && <div className="developer-banner" role="status"><strong>개발자 모드</strong><span>자원·구매 진행 임시 조정 · 30개 웨이브 해금 · 업그레이드·무기 비교 · DEV 종료 시 원상 복귀</span></div>}
 
       {!combatLocked && (
@@ -1207,12 +1202,12 @@ export default function Game() {
       {combatLocked && (
         <section className={`screen field-screen biome-${stage.region.hue}`} aria-label="필드 전투">
           <div className="field-toolbar">
-            <div><span className="eyebrow">CURRENT EXPEDITION · GUILD SURVIVOR</span><h2>{stage.region.name} <b>{stage.localStage}/{STAGES_PER_REGION}</b></h2><small className="permadeath-warning">시간 내에 군세를 쓸어내세요 · 실패해도 길드원은 보존됩니다</small></div>
+            <div><span className="eyebrow">CURRENT EXPEDITION · GUILD SURVIVOR</span><h2>{stage.region.name} <b>{stage.localStage}/{STAGES_PER_REGION}</b></h2></div>
             <div className="field-actions battle-controls">
               {lootCollecting
                 ? <div className="battle-timer loot-sweep-timer"><span>전리품 회수</span><strong>{compactNumber(collectedGold)} G · {collectedMaterial}/{plannedMaterial} 재료</strong><i><b style={{ width: `${lootSweepProgress}%` }} /></i></div>
                 : <div className={`battle-timer ${battleTimeLeft <= 10 ? "urgent" : ""}`}><span>남은 시간</span><strong>{battleTimeLeft}초</strong><i><b style={{ width: `${battleTimeLeft / battleSeconds * 100}%` }} /></i></div>}
-              <button className="retreat-button" onClick={retreatBattle} disabled={!battleActive}>안전 후퇴 · 길드원 보존</button>
+              <button className="retreat-button" onClick={retreatBattle} disabled={!battleActive}>후퇴</button>
             </div>
           </div>
 
@@ -1345,8 +1340,8 @@ export default function Game() {
             </aside>
           </div>
 
-          {victory && <div className="victory-overlay" role="dialog" aria-modal="true" aria-labelledby="victory-title"><div className="victory-card"><div className="victory-crest" aria-hidden="true"><span>★</span></div><div className="victory-heading"><p>EXPEDITION COMPLETE</p><span className="victory-divider" aria-hidden="true"><i>◆</i></span><h2 id="victory-title">{fieldMonsters.length}마리 처치 완료!</h2><small>{stage.region.name}의 위협을 몰아냈습니다</small></div><div className="outcome-rewards" aria-label="획득 보상"><span>{developerMode ? <><i className="reward-glyph">◇</i><small>전투 기록</small><b>저장 안 됨</b></> : <><i className="reward-glyph">●</i><small>골드</small><b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span className="material-victory-reward"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} /><small>{stageMaterial.name}</small><b>+{stageMaterial.rewardAmount}</b></span>}{!developerMode && <span><i className="reward-glyph reward-xp">✦</i><small>경험치</small><b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span className="boss-clear-reward"><i className="reward-glyph">♜</i><small>군주 토벌</small><b>완료</b></span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? STAGE_COUNT : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(STAGE_COUNT, stage.stage + 1))}><small>모험 계속하기</small><span>다음 지역</span><b aria-hidden="true">›</b></button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}><small>같은 지역</small><span>재전투</span></button><button className="text-button" onClick={() => returnToGuild("토벌을 마치고 영지로 복귀했습니다.")}>영지로 복귀</button></div></div></div>}
-          {defeat && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">⚑</span><p>EXPEDITION FAILED</p><h2>공세 실패</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드 전투가 종료되었습니다." : "길드원은 모두 부상만 입고 여관으로 복귀합니다."}</strong>{lostMembers.map((id) => <span key={id}>＋ {memberById(id).name} · 회복 완료</span>)}{!developerMode && <span>회수 전리품 · 골드 +{compactNumber(defeatSalvage.gold)} · {stageMaterial.name} +{defeatSalvage.material}</span>}<span>이번 전리품으로 바로 강화하거나 같은 웨이브를 재도전하세요.</span></div><button className="primary-button" onClick={() => returnToGuild(developerMode ? "개발자 전투에서 복귀했습니다." : "길드원과 함께 영지로 복귀했습니다. 회수한 전리품으로 강화한 뒤 다시 출정하세요.")}>길드원과 귀환</button></div></div>}
+          {victory && <div className="victory-overlay" role="dialog" aria-modal="true" aria-labelledby="victory-title"><div className="victory-card"><div className="victory-crest" aria-hidden="true"><span>★</span></div><div className="victory-heading"><p>EXPEDITION COMPLETE</p><span className="victory-divider" aria-hidden="true"><i>◆</i></span><h2 id="victory-title">{fieldMonsters.length}마리 처치 완료!</h2><small>{stage.region.name}의 위협을 몰아냈습니다</small></div><div className="outcome-rewards" aria-label="획득 보상"><span>{developerMode ? <><i className="reward-glyph">◇</i><small>전투 기록</small><b>저장 안 됨</b></> : <><i className="reward-glyph">●</i><small>골드</small><b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span className="material-victory-reward"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} /><small>{stageMaterial.name}</small><b>+{stageMaterial.rewardAmount}</b></span>}{!developerMode && <span><i className="reward-glyph reward-xp">✦</i><small>경험치</small><b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span className="boss-clear-reward"><i className="reward-glyph">♜</i><small>군주 토벌</small><b>완료</b></span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? STAGE_COUNT : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(STAGE_COUNT, stage.stage + 1))}><small>모험 계속하기</small><span>다음 지역</span><b aria-hidden="true">›</b></button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}><small>같은 지역</small><span>재전투</span></button><button className="text-button" onClick={returnToGuild}>영지로 복귀</button></div></div></div>}
+          {defeat && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">⚑</span><p>EXPEDITION FAILED</p><h2>공세 실패</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드 전투가 종료되었습니다." : "제한 시간 안에 적을 모두 처치하지 못했습니다."}</strong>{!developerMode && <span>회수 전리품 · 골드 +{compactNumber(defeatSalvage.gold)} · {stageMaterial.name} +{defeatSalvage.material}</span>}<span>이번 전리품으로 바로 강화하거나 같은 웨이브를 재도전하세요.</span></div><button className="primary-button" onClick={returnToGuild}>영지로 복귀</button></div></div>}
         </section>
       )}
 
@@ -1361,6 +1356,7 @@ export default function Game() {
           title="사냥터 지도 · 토벌 목표 선택"
         />
       )}
+      <GameNoticeDialog notice={notice} onClose={closeNotice} onConfirm={confirmNotice} />
       <footer className="game-footer"><span>GUILDMASTER CHRONICLE · LOCAL BUILD</span><span>작은 길드가 전설이 되는 곳</span></footer>
     </main>
   );
