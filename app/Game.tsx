@@ -29,6 +29,7 @@ import {
 } from "./battle-loot";
 import { fieldAssetForRegion } from "./field-assets";
 import { GameNoticeDialog, type GameNotice } from "./game-notice/GameNoticeDialog";
+import { requestEnding } from "./ending/ending-events";
 import { BOSS_BATTLE_SECONDS, NORMAL_BATTLE_SECONDS } from "./economy-balance";
 import { BulletHellFinale } from "./bullet-hell/BulletHellFinale";
 import { FinaleDefeatWave, type FinaleDefeatWavePhase } from "./bullet-hell/FinaleDefeatWave";
@@ -1253,15 +1254,18 @@ export default function Game() {
   }
 
   function completeFinale() {
-    if (!developerMode) setSave((current) => ({ ...current, finaleCleared: true }));
-    setFinaleMode(false);
-    returnToGuild();
-    showNotice(
-      developerMode ? "개발자 글리치 보스 격파" : "기록 말소자 격파",
-      developerMode
-        ? "시험 결과는 저장되지 않았습니다."
-        : "길드의 마지막 기록이 새로 쓰였습니다.",
-    );
+    requestEnding({
+      mode: developerMode ? "preview" : "campaign",
+      onComplete: () => {
+        if (!developerMode) setSave((current) => ({ ...current, finaleCleared: true }));
+        setFinaleMode(false);
+        returnToGuild();
+        window.requestAnimationFrame(() => guildHeadingRef.current?.focus({ preventScroll: true }));
+        if (developerMode) {
+          showNotice("개발자 글리치 보스 격파", "시험 결과는 저장되지 않았습니다.");
+        }
+      },
+    });
   }
 
   return (

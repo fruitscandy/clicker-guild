@@ -1,0 +1,610 @@
+.ending {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  overflow: hidden;
+  isolation: isolate;
+  color: #f8e9c8;
+  background: #030504;
+  font-family: Georgia, "Noto Serif KR", serif;
+  animation: endingFromWhite .9s ease-out both;
+}
+
+.ending::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background: #fffdf1;
+  animation: whiteRecordRelease 1.05s ease-out both;
+}
+
+.announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.world,
+.worldImage,
+.mapGrid,
+.worldShadow,
+.restorationLight,
+.erasureCore,
+.coreFragments,
+.pathField,
+.pathLights,
+.guildArt,
+.fog,
+.letterbox {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.world {
+  z-index: -4;
+  overflow: hidden;
+  background: #030504;
+}
+
+.worldImage {
+  inset: -6%;
+  opacity: .7;
+  background: url("/assets/guild/guild-territory-backdrop-v1.png") center 58% / cover no-repeat;
+  filter: grayscale(1) brightness(.14) saturate(.4) contrast(1.22);
+  transform: scale(1.1);
+  transition: opacity 1.5s ease, filter 1.8s ease, transform 2.5s cubic-bezier(.2,.72,.15,1);
+  will-change: opacity, filter, transform;
+}
+
+.mapGrid {
+  opacity: .1;
+  background:
+    linear-gradient(rgba(225,193,130,.13) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(225,193,130,.13) 1px, transparent 1px);
+  background-size: 8vw 8vw;
+  mask-image: radial-gradient(ellipse at 50% 54%, #000, transparent 76%);
+  transform: perspective(700px) rotateX(61deg) scale(1.55) translateY(18%);
+  transition: opacity 1.5s ease;
+}
+
+.worldShadow {
+  background:
+    radial-gradient(circle at 50% 48%, transparent 0 13%, rgba(2,4,3,.24) 38%, rgba(1,2,2,.86) 88%),
+    linear-gradient(180deg, rgba(2,3,3,.62), transparent 30% 63%, rgba(1,2,2,.82));
+  transition: opacity 1.5s ease, background 1.8s ease;
+}
+
+.restorationLight {
+  opacity: 0;
+  background:
+    radial-gradient(circle at 52% 55%, rgba(255,221,150,.25), transparent 9%),
+    radial-gradient(ellipse at 52% 57%, rgba(213,163,86,.18), transparent 48%);
+  transform: scale(.42);
+  transition: opacity 1.5s ease, transform 2.4s cubic-bezier(.17,.76,.16,1);
+}
+
+.erasureCore {
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  width: clamp(110px, 14vw, 190px);
+  aspect-ratio: 1;
+  opacity: 1;
+  border: 1px solid rgba(250,80,178,.7);
+  border-radius: 50%;
+  background:
+    repeating-conic-gradient(from 12deg, rgba(255,69,178,.58) 0 2deg, transparent 2deg 19deg),
+    radial-gradient(circle, #f9f5e8 0 4%, #ef4aaa 5% 9%, #26091c 24%, #040305 65%);
+  box-shadow: 0 0 24px rgba(245,63,169,.62), 0 0 90px rgba(196,31,128,.28), inset 0 0 34px #000;
+  transform: translate(-50%,-50%);
+  transition: opacity 1s ease, filter 1.2s ease, transform 1.4s cubic-bezier(.66,.03,.86,.2);
+  animation: coreFailure .52s steps(5,end) 3;
+}
+
+.erasureCore i {
+  position: absolute;
+  inset: -18%;
+  border: 2px dashed rgba(242,81,179,.44);
+  border-radius: 50%;
+  animation: coreOrbit 3.8s linear infinite;
+}
+
+.coreFragments i {
+  position: absolute;
+  width: clamp(30px,4vw,62px);
+  aspect-ratio: 1.6;
+  opacity: 0;
+  background:
+    linear-gradient(90deg, transparent 0 11%, #ee4aaa 12% 18%, #0a050a 19% 64%, #fff 65% 68%, transparent 69%),
+    linear-gradient(#020203 0 45%, transparent 46% 57%, #aa1d73 58%);
+  clip-path: polygon(0 14%, 88% 0, 100% 72%, 23% 100%);
+  filter: drop-shadow(0 0 9px rgba(238,55,164,.72));
+}
+
+.pathField {
+  inset: 24% 7% 5%;
+  opacity: 0;
+  background:
+    linear-gradient(153deg, transparent 0 29%, rgba(237,180,91,.08) 29.2% 29.5%, rgba(241,190,102,.5) 29.7% 30%, transparent 30.2% 100%),
+    linear-gradient(18deg, transparent 0 43%, rgba(237,180,91,.08) 43.2% 43.5%, rgba(241,190,102,.4) 43.7% 44%, transparent 44.2% 100%),
+    linear-gradient(176deg, transparent 0 61%, rgba(240,194,112,.44) 61.2% 61.5%, transparent 61.7% 100%);
+  filter: drop-shadow(0 0 8px rgba(239,182,89,.42));
+  transform: scale(.72);
+  transition: opacity 1.4s ease, transform 2.1s ease;
+}
+
+.pathLights i {
+  position: absolute;
+  width: clamp(9px,1vw,15px);
+  aspect-ratio: 1;
+  opacity: 0;
+  background: #ffe2a0;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #ffc66f, 0 0 28px rgba(243,172,73,.78);
+}
+
+.guildArt {
+  left: auto;
+  top: auto;
+  right: 7vw;
+  bottom: 0;
+  width: min(40vw,540px);
+  aspect-ratio: 1;
+  opacity: .22;
+  background: url("/assets/guild/guild-growth-sprites-v1.png") 0 0 / 300% 200% no-repeat;
+  filter: grayscale(.75) brightness(.46) drop-shadow(0 28px 22px rgba(0,0,0,.72));
+  transform: translateY(18%) scale(.87);
+  transition: opacity 1.5s ease, filter 1.7s ease, transform 2.1s cubic-bezier(.16,.78,.2,1);
+}
+
+.guildArt i {
+  position: absolute;
+  left: 32%;
+  top: 41%;
+  width: 9%;
+  aspect-ratio: 1;
+  opacity: .3;
+  background: #ffd77c;
+  border-radius: 50%;
+  box-shadow: 0 0 18px #e69b45, 0 0 58px rgba(231,147,57,.74);
+  transition: opacity 1.3s ease;
+  animation: guildHeartbeat 1.8s ease-in-out infinite;
+}
+
+.fog {
+  inset: auto -15% 0;
+  height: 40%;
+  opacity: .34;
+  filter: blur(13px);
+}
+
+.fog i {
+  position: absolute;
+  width: 58%;
+  height: 54%;
+  background: radial-gradient(ellipse, rgba(203,210,200,.13), transparent 68%);
+  animation: fogDrift 14s ease-in-out infinite alternate;
+}
+
+.fog i:nth-child(1) { left: -2%; bottom: -2%; }
+.fog i:nth-child(2) { left: 34%; bottom: 12%; animation-delay: -5s; animation-duration: 17s; }
+.fog i:nth-child(3) { right: -8%; bottom: -10%; animation-delay: -9s; animation-duration: 20s; }
+
+.letterbox { z-index: 50; }
+.letterbox::before,
+.letterbox::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: clamp(16px,3vh,38px);
+  background: #030403;
+  box-shadow: 0 0 28px rgba(0,0,0,.68);
+}
+.letterbox::before { top: 0; }
+.letterbox::after { bottom: 0; }
+
+.topRail {
+  position: absolute;
+  top: clamp(27px,4.8vh,58px);
+  left: clamp(22px,4vw,70px);
+  right: clamp(22px,4vw,70px);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brandMark {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: rgba(247,226,179,.88);
+}
+
+.brandMark > span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 39px;
+  color: #472c16;
+  background: linear-gradient(145deg,#ffe7a0,#be7733);
+  clip-path: polygon(50% 0,100% 19%,88% 83%,50% 100%,12% 83%,0 19%);
+  font-size: 18px;
+  font-weight: 900;
+  box-shadow: 0 0 18px rgba(231,172,71,.28);
+}
+
+.brandMark > div { display: grid; gap: 2px; }
+.brandMark b { font-size: 12px; letter-spacing: .08em; }
+.brandMark small { color: rgba(210,192,160,.58); font: 700 8px/1.2 Arial,sans-serif; letter-spacing: .06em; }
+
+.skipButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 0 13px 0 16px;
+  color: rgba(247,234,209,.82);
+  background: rgba(12,14,12,.52);
+  border: 1px solid rgba(238,211,159,.36);
+  border-radius: 4px;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  font: 800 10px/1 Arial,sans-serif;
+  transition: color .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.skipButton:hover,
+.skipButton:focus-visible {
+  color: #fff1cf;
+  background: rgba(102,68,35,.42);
+  border-color: #e1ad62;
+  outline: none;
+}
+
+.skipButton kbd {
+  padding: 3px 5px;
+  color: #bcae96;
+  background: rgba(0,0,0,.38);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 2px;
+  font: 700 7px/1 Arial,sans-serif;
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+}
+
+.beat {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  padding: 7vh clamp(42px,10vw,180px) 9vh;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .68s ease, visibility .68s ease;
+}
+
+.storyCopy {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  justify-items: start;
+  max-width: min(920px,74vw);
+}
+
+.storyCopy p,
+.finalCopy p {
+  margin: 0 0 10px;
+  color: #cf9d56;
+  font-size: clamp(15px,1.5vw,22px);
+}
+
+.storyCopy h2,
+.finalCopy h2 {
+  margin: 0;
+  color: #f9e9c6;
+  font-size: clamp(43px,5.8vw,86px);
+  line-height: 1.02;
+  letter-spacing: -.055em;
+  text-shadow: 0 5px 22px rgba(0,0,0,.72);
+}
+
+.storyCopy h2 em,
+.finalCopy h2 em {
+  color: #f2bd69;
+  font-style: normal;
+}
+
+.longLine {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: .82em;
+  letter-spacing: -.07em;
+}
+
+.erasureStoppedBeat,
+.erasureStoppedBeat .storyCopy {
+  justify-items: end;
+  text-align: right;
+}
+
+.erasureStoppedBeat .storyCopy { justify-self: end; }
+.erasureStoppedBeat .storyCopy h2 em { color: #e9ddc3; }
+
+.newPathsBeat { align-content: end; padding-bottom: 16vh; }
+
+.firstGuildBeat {
+  align-content: center;
+  justify-items: center;
+  gap: clamp(18px,3vh,30px);
+  padding: 10vh 20px 9vh;
+  text-align: center;
+}
+
+.finalCopy {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  justify-items: center;
+}
+
+.finalCopy h2 {
+  font-size: clamp(34px,4.5vw,66px);
+  line-height: 1.08;
+}
+
+.finalRoute {
+  position: relative;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(900px,86vw);
+  margin-top: 3px;
+}
+
+.finalRoute::before {
+  content: "";
+  position: absolute;
+  left: 17%;
+  right: 17%;
+  top: 25px;
+  height: 2px;
+  background: linear-gradient(90deg,#a86734,#e0b567 50%,#ffe39e);
+  box-shadow: 0 0 12px rgba(226,155,62,.46);
+}
+
+.routeLast,
+.routeLight,
+.routeFirst {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  width: 30%;
+  color: #f5dfb6;
+}
+
+.routeLast b,
+.routeLight b,
+.routeFirst b {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  background: #33231a;
+  border: 2px solid #d5964a;
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px rgba(198,132,57,.12),0 0 20px rgba(224,155,68,.26);
+  font: 900 18px/1 Arial,sans-serif;
+}
+
+.routeLast b { color: #e7c68a; background: #2b241c; }
+.routeLight b { color: #fff1b9; background: radial-gradient(circle,#f4ba5e,#70401f 66%); font-size: 23px; }
+.routeFirst b { color: #4b2c17; background: linear-gradient(145deg,#fff0ad,#d79543); box-shadow: 0 0 0 5px rgba(229,171,82,.18),0 0 32px rgba(255,206,111,.5); }
+
+.routeLast small,
+.routeLight small,
+.routeFirst small {
+  font: 700 9px/1 Arial,sans-serif;
+  letter-spacing: .04em;
+}
+
+.completeButton {
+  min-width: min(270px,78vw);
+  min-height: 58px;
+  padding: 0 28px;
+  color: #fff0ca;
+  background: linear-gradient(145deg,rgba(119,61,33,.97),rgba(66,35,24,.98));
+  border: 1px solid #d09049;
+  border-radius: 6px;
+  box-shadow: 0 6px 0 rgba(24,14,10,.82),0 0 30px rgba(219,143,58,.2),inset 0 1px rgba(255,224,167,.18);
+  cursor: pointer;
+  font: 800 16px/1 Georgia,"Noto Serif KR",serif;
+  transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
+}
+
+.completeButton:hover,
+.completeButton:focus-visible {
+  filter: brightness(1.12);
+  outline: none;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 0 rgba(24,14,10,.82),0 0 42px rgba(231,154,66,.32),inset 0 1px rgba(255,224,167,.22);
+}
+
+.sequenceLine {
+  position: absolute;
+  left: 10vw;
+  right: 10vw;
+  bottom: clamp(21px,4.2vh,52px);
+  z-index: 60;
+  height: 1px;
+  overflow: hidden;
+  background: rgba(231,203,153,.16);
+}
+
+.sequenceLine i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,transparent,#d69a4b 16%,#f0ca83);
+  box-shadow: 0 0 9px rgba(235,174,83,.6);
+  transform: translateX(-75%);
+  transition: transform .75s ease;
+}
+
+[data-phase="aiDefeated"] .aiDefeatedBeat {
+  opacity: 1;
+  visibility: visible;
+}
+[data-phase="aiDefeated"] .aiDefeatedBeat .storyCopy { animation: copyIn .8s .12s both; }
+[data-phase="aiDefeated"] .coreFragments i { animation: fragmentBurst 1.45s ease-out both; }
+
+[data-phase="erasureStopped"] .erasureStoppedBeat {
+  opacity: 1;
+  visibility: visible;
+}
+[data-phase="erasureStopped"] .erasureStoppedBeat .storyCopy { animation: copyIn .8s .12s both; }
+[data-phase="erasureStopped"] .erasureCore,
+[data-phase="newPaths"] .erasureCore,
+[data-phase="firstGuild"] .erasureCore {
+  opacity: 0;
+  filter: blur(12px);
+  transform: translate(-50%,-50%) scale(.08);
+  animation: none;
+}
+[data-phase="erasureStopped"] .sequenceLine i { transform: translateX(-50%); }
+
+[data-phase="newPaths"] .newPathsBeat {
+  opacity: 1;
+  visibility: visible;
+}
+[data-phase="newPaths"] .newPathsBeat .storyCopy { animation: copyIn .8s .12s both; }
+[data-phase="newPaths"] .worldImage,
+[data-phase="firstGuild"] .worldImage {
+  opacity: .9;
+  filter: grayscale(.15) brightness(.31) saturate(.86) contrast(1.08);
+  transform: scale(1.03);
+}
+[data-phase="newPaths"] .restorationLight,
+[data-phase="firstGuild"] .restorationLight {
+  opacity: 1;
+  transform: scale(1.2);
+}
+[data-phase="newPaths"] .pathField,
+[data-phase="firstGuild"] .pathField {
+  opacity: 1;
+  transform: scale(1);
+}
+[data-phase="newPaths"] .pathLights i,
+[data-phase="firstGuild"] .pathLights i { animation: pathLightIn .8s ease-out both, pathLightPulse 1.8s .8s ease-in-out infinite alternate; }
+[data-phase="newPaths"] .guildArt,
+[data-phase="firstGuild"] .guildArt {
+  opacity: .9;
+  filter: grayscale(0) brightness(.88) drop-shadow(0 28px 22px rgba(0,0,0,.7)) drop-shadow(0 0 32px rgba(238,168,65,.22));
+  transform: translateY(5%) scale(.96);
+}
+[data-phase="newPaths"] .guildArt i,
+[data-phase="firstGuild"] .guildArt i { opacity: 1; }
+[data-phase="newPaths"] .sequenceLine i { transform: translateX(-25%); }
+
+[data-phase="firstGuild"] .firstGuildBeat {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+[data-phase="firstGuild"] .firstGuildBeat .finalCopy { animation: copyIn .75s both; }
+[data-phase="firstGuild"] .finalRoute { animation: routeIn .9s .3s both; }
+[data-phase="firstGuild"] .completeButton { animation: fadeUp .7s .65s both; }
+[data-phase="firstGuild"] .guildArt { opacity: .38; transform: translateY(12%) scale(.92); }
+[data-phase="firstGuild"] .worldShadow { opacity: .64; }
+[data-phase="firstGuild"] .sequenceLine i { transform: translateX(0); }
+
+@keyframes endingFromWhite { from { background: #fffdf1; } }
+@keyframes whiteRecordRelease { 0%,20% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes coreFailure { 0%,100% { translate: 0 0; } 25% { translate: -3px 2px; } 50% { translate: 4px -2px; } 75% { translate: -2px -1px; } }
+@keyframes coreOrbit { to { transform: rotate(360deg); } }
+@keyframes fragmentBurst { 0% { opacity: 0; transform: translate(0,0) scale(.5); } 18% { opacity: .9; } 100% { opacity: 0; transform: translate(var(--fragment-x),var(--fragment-y)) scale(1.45); } }
+@keyframes pathLightIn { from { opacity: 0; transform: scale(.25); } to { opacity: 1; transform: scale(1); } }
+@keyframes pathLightPulse { to { opacity: .55; transform: scale(.78); } }
+@keyframes guildHeartbeat { 0%,100% { transform: scale(.78); } 15% { transform: scale(1.22); } 28% { transform: scale(.92); } 42% { transform: scale(1.08); } 65% { transform: scale(.8); } }
+@keyframes fogDrift { to { transform: translate3d(14%,-7%,0) scale(1.12); } }
+@keyframes copyIn { from { opacity: 0; filter: blur(7px); transform: translateY(24px); } }
+@keyframes routeIn { from { opacity: 0; transform: translateY(18px) scale(.96); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } }
+
+@media (max-width: 800px) {
+  .topRail { top: 31px; left: 18px; right: 18px; }
+  .brandMark b { font-size: 10px; }
+  .brandMark small { font-size: 6px; }
+  .brandMark > span { width: 27px; height: 33px; font-size: 15px; }
+  .skipButton { min-height: 34px; padding: 0 10px; }
+  .beat { padding: 8vh 8vw 12vh; }
+  .storyCopy { max-width: 76vw; }
+  .guildArt { right: -3vw; bottom: 1vh; width: 57vw; }
+  .finalRoute { width: 94vw; }
+}
+
+@media (max-width: 520px) {
+  .letterbox::before,
+  .letterbox::after { height: 13px; }
+  .topRail { top: 22px; }
+  .brandMark > div { display: none; }
+  .skipButton { gap: 6px; font-size: 8px; }
+  .beat { align-content: start; padding: 19vh 7vw 6vh; }
+  .erasureStoppedBeat,
+  .erasureStoppedBeat .storyCopy { justify-items: start; text-align: left; }
+  .erasureStoppedBeat .storyCopy { justify-self: start; }
+  .newPathsBeat { align-content: start; padding-bottom: 6vh; }
+  .storyCopy { max-width: 92vw; }
+  .storyCopy p { font-size: 14px; }
+  .storyCopy h2 { font-size: clamp(31px,9.5vw,44px); }
+  .longLine { font-size: .72em; }
+  .guildArt { right: 1vw; bottom: 0; width: 84vw; }
+  .erasureCore { top: 58%; width: 122px; }
+  .firstGuildBeat { align-content: start; gap: 18px; padding: 15vh 10px 7vh; }
+  .finalCopy p { font-size: 12px; }
+  .finalCopy h2 { font-size: clamp(25px,7.6vw,34px); }
+  .finalRoute { width: 100vw; transform: scale(.92); }
+  .finalRoute::before { left: 17%; right: 17%; top: 21px; }
+  .routeLast b,
+  .routeLight b,
+  .routeFirst b { width: 44px; height: 44px; }
+  .routeLast small,
+  .routeLight small,
+  .routeFirst small { font-size: 7px; }
+  .completeButton { min-height: 52px; font-size: 15px; }
+  .sequenceLine { left: 6vw; right: 6vw; bottom: 19px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ending,
+  .ending::before,
+  .worldImage,
+  .restorationLight,
+  .erasureCore,
+  .pathField,
+  .guildArt,
+  .sequenceLine i { animation-duration: .01ms !important; transition-duration: .12s !important; }
+  .fog i,
+  .erasureCore i,
+  .guildArt i,
+  .pathLights i { animation: none !important; }
+  .beat *,
+  .coreFragments i { animation-duration: .01ms !important; animation-delay: 0ms !important; }
+}

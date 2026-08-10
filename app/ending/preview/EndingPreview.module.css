@@ -1,0 +1,58 @@
+.preview {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #f5e4bf;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(199,139,67,.2), transparent 36%),
+    url("/assets/guild/guild-territory-backdrop-v1.png") center / cover,
+    #090a08;
+  font-family: Georgia, "Noto Serif KR", serif;
+}
+
+.guildCard {
+  width: min(480px,92vw);
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: clamp(28px,6vw,52px);
+  text-align: center;
+  background: rgba(8,9,7,.86);
+  border: 1px solid rgba(222,173,91,.56);
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(0,0,0,.62),inset 0 1px rgba(255,235,190,.12);
+  backdrop-filter: blur(12px);
+}
+
+.seal {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 64px;
+  color: #4c2e19;
+  background: linear-gradient(145deg,#ffe8a1,#bd7733);
+  clip-path: polygon(50% 0,100% 19%,88% 83%,50% 100%,12% 83%,0 19%);
+  font-size: 27px;
+  font-weight: 900;
+}
+
+.guildCard p { margin: 5px 0 0; color: #d5a760; font: 800 10px/1 Arial,sans-serif; letter-spacing: .18em; }
+.guildCard h1 { margin: 0; font-size: clamp(28px,6vw,46px); }
+.guildCard > span:not(.seal),
+.guildCard small { color: #bdb09a; font-size: 13px; }
+.guildCard strong { color: #f0c77b; }
+
+.guildCard button {
+  min-height: 48px;
+  margin-top: 8px;
+  padding: 0 24px;
+  color: #fff0ca;
+  background: linear-gradient(145deg,#784023,#46271c);
+  border: 1px solid #d09049;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.guildCard button:focus-visible { outline: 2px solid #ffe2a0; outline-offset: 3px; }
