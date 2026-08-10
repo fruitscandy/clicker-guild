@@ -36,9 +36,8 @@
   pointer-events: none;
 }
 
-.lightningCanvas { filter: saturate(1.14) contrast(1.08); }
-.tornadoCanvas { z-index: 5; filter: saturate(1.08) drop-shadow(0 0 12px rgba(63, 214, 183, .32)); }
-.meteorCanvas { z-index: 9; filter: saturate(1.12) contrast(1.06); }
+.tornadoCanvas { z-index: 5; }
+.meteorCanvas { z-index: 9; }
 
 /* Lightning keeps only atmospheric CSS layers; the strike and spreading ground discharge are redrawn every canvas frame. */
 .lightningStage {
@@ -251,11 +250,10 @@
   z-index: 0;
   left: 50%;
   bottom: -30px;
-  width: 980px;
-  height: 520px;
+  width: 720px;
+  height: 440px;
   translate: -50% 0;
   background: radial-gradient(ellipse at 50% 82%, rgba(85, 225, 195, .22), rgba(8, 43, 44, .18) 40%, transparent 70%);
-  mix-blend-mode: screen;
   animation: tornadoPressure var(--effect-duration) ease-in-out both;
 }
 
@@ -438,20 +436,6 @@
   width: 760px;
   height: 620px;
   translate: -50% -78%;
-}
-
-.meteorStage::after {
-  position: absolute;
-  z-index: 7;
-  left: 50%;
-  bottom: -45px;
-  width: 1260px;
-  height: 720px;
-  translate: -50% 0;
-  content: "";
-  background: radial-gradient(ellipse at 50% 82%, rgba(255, 251, 219, .92), rgba(255, 146, 49, .42) 16%, rgba(255, 57, 16, .15) 34%, transparent 67%);
-  mix-blend-mode: screen;
-  animation: meteorFieldFlash 1.3s var(--effect-delay) ease-out both;
 }
 
 .meteorFlight {

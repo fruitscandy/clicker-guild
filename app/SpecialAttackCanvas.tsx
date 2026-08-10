@@ -47,6 +47,11 @@ type MeteorModel = {
   rockShape: number[];
 };
 
+type MeteorAssets = {
+  smoke: HTMLCanvasElement;
+  trail: HTMLCanvasElement;
+};
+
 type Props = {
   kind: SpecialAttackKind;
   width: number;
@@ -57,6 +62,8 @@ type Props = {
 };
 
 const TAU = Math.PI * 2;
+const MAX_CANVAS_RATIO = 1.25;
+let cachedMeteorAssets: MeteorAssets | null = null;
 
 function clamp(value: number, minimum = 0, maximum = 1) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -94,25 +101,19 @@ function randomBetween(random: () => number, minimum: number, maximum: number) {
   return mix(minimum, maximum, random());
 }
 
-function partialPoints(points: readonly Point[], progress: number) {
-  if (points.length < 2 || progress <= 0) return [];
-  if (progress >= 1) return [...points];
-  const scaled = progress * (points.length - 1);
-  const complete = Math.floor(scaled);
-  const result = points.slice(0, complete + 1);
-  const next = points[Math.min(points.length - 1, complete + 1)];
-  const current = points[complete];
-  result.push({ x: mix(current.x, next.x, scaled - complete), y: mix(current.y, next.y, scaled - complete) });
-  return result;
-}
-
 function strokePolyline(context: CanvasRenderingContext2D, points: readonly Point[], progress: number, color: string, width: number, blur: number) {
-  const visible = partialPoints(points, progress);
-  if (visible.length < 2) return;
+  if (points.length < 2 || progress <= 0) return;
+  const scaled = clamp(progress) * (points.length - 1);
+  const complete = Math.floor(scaled);
+  const current = points[complete];
+  const next = points[Math.min(points.length - 1, complete + 1)];
   context.save();
   context.beginPath();
-  context.moveTo(visible[0].x, visible[0].y);
-  visible.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+  context.moveTo(points[0].x, points[0].y);
+  for (let index = 1; index <= complete; index += 1) context.lineTo(points[index].x, points[index].y);
+  if (complete < points.length - 1) {
+    context.lineTo(mix(current.x, next.x, scaled - complete), mix(current.y, next.y, scaled - complete));
+  }
   context.lineCap = "round";
   context.lineJoin = "round";
   context.strokeStyle = color;
@@ -152,7 +153,7 @@ function createLightningModel(width: number, height: number, random: () => numbe
     branches.push({ points, delay: index * 0.018 });
   });
 
-  const groundBranches: LightningBranch[] = Array.from({ length: 20 }, (_, index) => {
+  const groundBranches: LightningBranch[] = Array.from({ length: 14 }, (_, index) => {
     const direction = index % 2 === 0 ? -1 : 1;
     const distance = randomBetween(random, 86, 224);
     const segments = 6 + Math.floor(random() * 5);
@@ -167,7 +168,7 @@ function createLightningModel(width: number, height: number, random: () => numbe
     return { points, delay: index * 0.012 + randomBetween(random, 0, 0.07) };
   });
 
-  const sparks = Array.from({ length: 44 }, () => ({
+  const sparks = Array.from({ length: 30 }, () => ({
     angle: randomBetween(random, Math.PI * 1.05, Math.PI * 1.95),
     delay: randomBetween(random, 0, 240),
     distance: randomBetween(random, 48, 210),
@@ -253,7 +254,7 @@ function drawLightning(context: CanvasRenderingContext2D, model: LightningModel,
 }
 
 function createTornadoModel(random: () => number): TornadoModel {
-  const particles = Array.from({ length: 250 }, () => ({
+  const particles = Array.from({ length: 150 }, () => ({
     angle: randomBetween(random, 0, TAU),
     height: randomBetween(random, 0.02, 1),
     radiusScale: randomBetween(random, 0.72, 1.24),
@@ -261,14 +262,14 @@ function createTornadoModel(random: () => number): TornadoModel {
     thickness: randomBetween(random, 0.65, 2.8),
     brightness: randomBetween(random, 0.38, 1),
   }));
-  const inflow = Array.from({ length: 92 }, () => ({
+  const inflow = Array.from({ length: 58 }, () => ({
     angle: randomBetween(random, 0, TAU),
     delay: randomBetween(random, 0, 0.86),
     radius: randomBetween(random, 220, 430),
     speed: randomBetween(random, 2.2, 5.1),
     width: randomBetween(random, 0.7, 2.3),
   }));
-  const debris = Array.from({ length: 42 }, () => ({
+  const debris = Array.from({ length: 28 }, () => ({
     angle: randomBetween(random, 0, TAU),
     height: randomBetween(random, 0.04, 0.92),
     radiusScale: randomBetween(random, 0.72, 1.18),
@@ -304,32 +305,10 @@ function drawTornado(context: CanvasRenderingContext2D, model: TornadoModel, wid
   context.restore();
 
   context.save();
-  context.globalCompositeOperation = "source-over";
-  context.filter = "blur(6px)";
-  context.lineCap = "round";
-  model.particles.forEach((particle, index) => {
-    if (index % 2 !== 0) return;
-    const heightRatio = particle.height * build;
-    const radius = (18 + heightRatio ** 1.42 * 186) * particle.radiusScale * build;
-    const angle = particle.angle + seconds * particle.speed * (1.16 - particle.height * 0.28);
-    const previousAngle = angle - 0.16 * particle.speed;
-    const x = centerX + Math.cos(angle) * radius;
-    const y = groundY - heightRatio * 368 + Math.sin(angle) * radius * 0.17;
-    const previousX = centerX + Math.cos(previousAngle) * radius;
-    const previousY = groundY - heightRatio * 368 + Math.sin(previousAngle) * radius * 0.17;
-    context.globalAlpha = strength * (0.045 + particle.brightness * 0.055);
-    context.strokeStyle = particle.height > 0.52 ? "#2ca891" : "#a4ead8";
-    context.lineWidth = 8 + heightRatio * 13;
-    context.beginPath();
-    context.moveTo(previousX, previousY);
-    context.quadraticCurveTo((previousX + x) / 2, (previousY + y) / 2 - 6, x, y);
-    context.stroke();
-  });
-  context.restore();
-
-  context.save();
   context.globalCompositeOperation = "lighter";
   context.lineCap = "round";
+  context.shadowColor = "#5ce0c5";
+  context.shadowBlur = 3;
   model.inflow.forEach((particle) => {
     const cycle = (seconds * 0.46 * particle.speed + particle.delay) % 1;
     const radius = mix(particle.radius, 32, easeInCubic(cycle));
@@ -341,14 +320,14 @@ function drawTornado(context: CanvasRenderingContext2D, model: TornadoModel, wid
     context.globalAlpha = strength * Math.sin(cycle * Math.PI) * 0.62;
     context.strokeStyle = particle.width > 1.5 ? "#d9fff4" : "#65d7c1";
     context.lineWidth = particle.width;
-    context.shadowColor = "#5ce0c5";
-    context.shadowBlur = 6;
     context.beginPath();
     context.moveTo(x - Math.cos(tangent) * length, y - Math.sin(tangent) * length * 0.32);
     context.quadraticCurveTo(x, y - 5, x + Math.cos(tangent) * length, y + Math.sin(tangent) * length * 0.32);
     context.stroke();
   });
 
+  context.shadowColor = "#59d9bf";
+  context.shadowBlur = 2;
   model.particles.forEach((particle, index) => {
     const heightRatio = particle.height * build;
     const radius = (16 + heightRatio ** 1.42 * 188) * particle.radiusScale * build;
@@ -364,14 +343,14 @@ function drawTornado(context: CanvasRenderingContext2D, model: TornadoModel, wid
     context.globalAlpha = strength * particle.brightness * front * flicker * 0.68;
     context.strokeStyle = particle.brightness > 0.74 ? "#e9fff8" : particle.height > 0.55 ? "#63d8c3" : "#a5f6df";
     context.lineWidth = particle.thickness * (0.66 + heightRatio * 0.7);
-    context.shadowColor = "#59d9bf";
-    context.shadowBlur = 4 + particle.thickness * 2;
     context.beginPath();
     context.moveTo(previousX, previousY);
     context.quadraticCurveTo((previousX + x) / 2 + Math.sin(angle) * 8, (previousY + y) / 2 - 4, x, y);
     context.stroke();
   });
 
+  context.shadowColor = "#65dfc5";
+  context.shadowBlur = 5;
   for (let ring = 0; ring < 17; ring += 1) {
     const heightRatio = (ring + 0.5) / 17 * build;
     const radius = (24 + heightRatio ** 1.35 * 178) * build;
@@ -380,8 +359,6 @@ function drawTornado(context: CanvasRenderingContext2D, model: TornadoModel, wid
     context.globalAlpha = strength * (0.1 + heightRatio * 0.12);
     context.strokeStyle = ring % 3 === 0 ? "#effff8" : "#70e1c9";
     context.lineWidth = 1.1 + heightRatio * 1.15;
-    context.shadowColor = "#65dfc5";
-    context.shadowBlur = 7;
     context.beginPath();
     context.ellipse(centerX, y, radius, 9 + radius * 0.13, Math.sin(seconds + ring) * 0.08, spin, spin + 1.55 + Math.sin(ring) * 0.35);
     context.stroke();
@@ -418,6 +395,38 @@ function drawTornado(context: CanvasRenderingContext2D, model: TornadoModel, wid
   context.restore();
 }
 
+function createEffectSprite(size: number, stops: readonly (readonly [number, string])[]) {
+  const sprite = document.createElement("canvas");
+  sprite.width = size;
+  sprite.height = size;
+  const context = sprite.getContext("2d");
+  if (!context) return sprite;
+  const center = size / 2;
+  const gradient = context.createRadialGradient(center * 0.82, center * 0.78, 0, center, center, center);
+  stops.forEach(([offset, color]) => gradient.addColorStop(offset, color));
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, size, size);
+  return sprite;
+}
+
+function createMeteorAssets(): MeteorAssets {
+  cachedMeteorAssets ??= {
+    trail: createEffectSprite(96, [
+      [0, "rgba(255, 253, 218, .95)"],
+      [0.24, "rgba(255, 164, 48, .82)"],
+      [0.62, "rgba(255, 57, 16, .45)"],
+      [1, "rgba(255, 43, 8, 0)"],
+    ]),
+    smoke: createEffectSprite(128, [
+      [0, "rgba(255, 130, 43, .34)"],
+      [0.28, "rgba(95, 48, 37, .62)"],
+      [0.72, "rgba(31, 28, 29, .42)"],
+      [1, "rgba(20, 22, 24, 0)"],
+    ]),
+  };
+  return cachedMeteorAssets;
+}
+
 function createMeteorModel(random: () => number): MeteorModel {
   const createParticle = (kind: "fire" | "fragment" | "spark"): MeteorParticle => {
     const fire = kind === "fire";
@@ -431,7 +440,7 @@ function createMeteorModel(random: () => number): MeteorModel {
       life: randomBetween(random, fire ? 580 : 680, fire ? 1_180 : spark ? 1_020 : 1_350),
     };
   };
-  const smoke = Array.from({ length: 38 }, () => ({
+  const smoke = Array.from({ length: 24 }, () => ({
     angle: randomBetween(random, Math.PI * 1.08, Math.PI * 1.92),
     delay: randomBetween(random, 160, 640),
     distance: randomBetween(random, 24, 170),
@@ -440,9 +449,9 @@ function createMeteorModel(random: () => number): MeteorModel {
     life: randomBetween(random, 760, 1_620),
   }));
   return {
-    fire: Array.from({ length: 64 }, () => createParticle("fire")),
-    fragments: Array.from({ length: 34 }, () => createParticle("fragment")),
-    sparks: Array.from({ length: 88 }, () => createParticle("spark")),
+    fire: Array.from({ length: 44 }, () => createParticle("fire")),
+    fragments: Array.from({ length: 24 }, () => createParticle("fragment")),
+    sparks: Array.from({ length: 58 }, () => createParticle("spark")),
     smoke,
     rockShape: Array.from({ length: 13 }, () => randomBetween(random, 0.76, 1.18)),
   };
@@ -456,7 +465,7 @@ function meteorPosition(width: number, height: number, progress: number): Point 
   };
 }
 
-function drawMeteorFlight(context: CanvasRenderingContext2D, model: MeteorModel, width: number, height: number, elapsedMs: number, impactAtMs: number) {
+function drawMeteorFlight(context: CanvasRenderingContext2D, model: MeteorModel, assets: MeteorAssets, width: number, height: number, elapsedMs: number, impactAtMs: number) {
   const progress = clamp(elapsedMs / impactAtMs);
   const position = meteorPosition(width, height, progress);
   const previous = meteorPosition(width, height, clamp(progress - 0.018));
@@ -466,23 +475,18 @@ function drawMeteorFlight(context: CanvasRenderingContext2D, model: MeteorModel,
 
   context.save();
   context.globalCompositeOperation = "lighter";
-  for (let trail = 18; trail >= 1; trail -= 1) {
+  for (let trail = 14; trail >= 1; trail -= 1) {
     const sampleProgress = clamp(progress - trail * 0.018);
     if (sampleProgress <= 0) continue;
     const sample = meteorPosition(width, height, sampleProgress);
-    const trailLife = 1 - trail / 19;
+    const trailLife = 1 - trail / 15;
     const trailRadius = radius * trailLife * 0.78 + 2;
-    const gradient = context.createRadialGradient(sample.x, sample.y, 0, sample.x, sample.y, trailRadius * 2.4);
-    gradient.addColorStop(0, `rgba(255, 250, 198, ${0.82 * trailLife})`);
-    gradient.addColorStop(0.25, `rgba(255, 151, 38, ${0.72 * trailLife})`);
-    gradient.addColorStop(0.62, `rgba(255, 55, 16, ${0.42 * trailLife})`);
-    gradient.addColorStop(1, "rgba(255, 43, 8, 0)");
-    context.fillStyle = gradient;
-    context.beginPath();
-    context.arc(sample.x, sample.y, trailRadius * 2.4, 0, TAU);
-    context.fill();
+    const trailSize = trailRadius * 4.8;
+    context.globalAlpha = 0.86 * trailLife;
+    context.drawImage(assets.trail, sample.x - trailSize / 2, sample.y - trailSize / 2, trailSize, trailSize);
   }
 
+  context.globalAlpha = 1;
   context.translate(position.x, position.y);
   context.rotate(direction + elapsedMs * 0.0046);
   const rockGradient = context.createRadialGradient(-radius * 0.28, -radius * 0.35, 0, 0, 0, radius * 1.25);
@@ -532,7 +536,7 @@ function drawMeteorFlight(context: CanvasRenderingContext2D, model: MeteorModel,
   context.restore();
 }
 
-function drawMeteorImpact(context: CanvasRenderingContext2D, model: MeteorModel, width: number, height: number, impactMs: number) {
+function drawMeteorImpact(context: CanvasRenderingContext2D, model: MeteorModel, assets: MeteorAssets, width: number, height: number, impactMs: number) {
   const centerX = width / 2;
   const groundY = height - 68;
   const seconds = impactMs / 1_000;
@@ -573,8 +577,8 @@ function drawMeteorImpact(context: CanvasRenderingContext2D, model: MeteorModel,
   if (flameLife < 1) {
     context.save();
     context.globalCompositeOperation = "lighter";
-    for (let tongue = 0; tongue < 18; tongue += 1) {
-      const amount = tongue / 17;
+    for (let tongue = 0; tongue < 14; tongue += 1) {
+      const amount = tongue / 13;
       const angle = mix(Math.PI * 1.05, Math.PI * 1.95, amount) + Math.sin(tongue * 4.1) * 0.075;
       const flicker = 0.78 + Math.sin(impactMs * 0.028 + tongue * 2.3) * 0.22;
       const length = (72 + (tongue % 5) * 23) * Math.sin(Math.PI * clamp(flameLife * 1.18)) * flicker;
@@ -621,46 +625,60 @@ function drawMeteorImpact(context: CanvasRenderingContext2D, model: MeteorModel,
   });
   context.restore();
 
-  const drawBallistic = (particle: MeteorParticle, index: number, type: "fire" | "fragment" | "spark") => {
+  const ballisticState = (particle: MeteorParticle, index: number, tailSeconds: number) => {
     const ageMs = impactMs - particle.delay;
-    if (ageMs <= 0 || ageMs >= particle.life) return;
+    if (ageMs <= 0 || ageMs >= particle.life) return null;
     const age = ageMs / 1_000;
     const life = ageMs / particle.life;
     const horizontal = Math.cos(particle.angle) * particle.speed;
     const vertical = Math.sin(particle.angle) * particle.speed;
     const x = centerX + horizontal * age;
     const y = groundY + vertical * age + particle.gravity * age * age * 0.5;
-    const previousAge = Math.max(0, age - (type === "spark" ? 0.045 : 0.075));
+    const previousAge = Math.max(0, age - tailSeconds);
     const previousX = centerX + horizontal * previousAge;
     const previousY = groundY + vertical * previousAge + particle.gravity * previousAge * previousAge * 0.5;
     const alpha = (1 - life) * (0.72 + Math.sin(index * 2.3 + impactMs * 0.02) * 0.28);
+    return { age, alpha, life, previousX, previousY, x, y };
+  };
+
+  const drawStreaks = (particles: readonly MeteorParticle[], type: "fire" | "spark") => {
     context.save();
-    context.globalCompositeOperation = type === "fragment" ? "source-over" : "lighter";
-    context.globalAlpha = alpha;
-    if (type === "fragment") {
-      context.translate(x, y);
-      context.rotate(index * 1.7 + seconds * (5 + index % 4));
-      context.fillStyle = index % 3 === 0 ? "#ff8a2b" : "#4a251b";
-      context.shadowColor = "#ff4c18";
-      context.shadowBlur = 6;
-      context.fillRect(-particle.size, -particle.size * 0.58, particle.size * 2, particle.size * 1.16);
-    } else {
+    context.globalCompositeOperation = "lighter";
+    context.lineCap = "round";
+    context.shadowColor = "#ff4315";
+    context.shadowBlur = type === "fire" ? 7 : 4;
+    particles.forEach((particle, index) => {
+      const state = ballisticState(particle, index, type === "spark" ? 0.045 : 0.075);
+      if (!state) return;
+      context.globalAlpha = state.alpha;
       context.strokeStyle = type === "fire" ? (index % 3 === 0 ? "#fff4b8" : "#ff7022") : "#ffd96b";
-      context.lineWidth = particle.size * (1 - life * 0.55);
-      context.lineCap = "round";
-      context.shadowColor = "#ff4315";
-      context.shadowBlur = type === "fire" ? 13 : 7;
+      context.lineWidth = particle.size * (1 - state.life * 0.55);
       context.beginPath();
-      context.moveTo(previousX, previousY);
-      context.lineTo(x, y);
+      context.moveTo(state.previousX, state.previousY);
+      context.lineTo(state.x, state.y);
       context.stroke();
-    }
+    });
     context.restore();
   };
 
-  model.fire.forEach((particle, index) => drawBallistic(particle, index, "fire"));
-  model.fragments.forEach((particle, index) => drawBallistic(particle, index, "fragment"));
-  model.sparks.forEach((particle, index) => drawBallistic(particle, index, "spark"));
+  drawStreaks(model.fire, "fire");
+  drawStreaks(model.sparks, "spark");
+
+  model.fragments.forEach((particle, index) => {
+    const state = ballisticState(particle, index, 0.075);
+    if (!state) return;
+    context.save();
+    context.globalAlpha = state.alpha;
+    context.translate(state.x, state.y);
+    context.rotate(index * 1.7 + seconds * (5 + index % 4));
+    context.fillStyle = index % 3 === 0 ? "#ff8a2b" : "#4a251b";
+    if (index % 3 === 0) {
+      context.shadowColor = "#ff4c18";
+      context.shadowBlur = 4;
+    }
+    context.fillRect(-particle.size, -particle.size * 0.58, particle.size * 2, particle.size * 1.16);
+    context.restore();
+  });
 
   model.smoke.forEach((smoke, index) => {
     const ageMs = impactMs - smoke.delay;
@@ -670,19 +688,11 @@ function drawMeteorImpact(context: CanvasRenderingContext2D, model: MeteorModel,
     const x = centerX + Math.cos(smoke.angle) * smoke.distance * eased + Math.sin(seconds * 2.1 + index) * 9;
     const y = groundY + Math.sin(smoke.angle) * smoke.distance * 0.35 * eased - smoke.rise * eased;
     const radius = smoke.size * mix(0.35, 1.45, eased);
-    const cloud = context.createRadialGradient(x - radius * 0.2, y - radius * 0.25, 0, x, y, radius);
-    cloud.addColorStop(0, `rgba(255, 127, 42, ${(1 - life) * 0.28})`);
-    cloud.addColorStop(0.28, `rgba(94, 45, 34, ${(1 - life) * 0.4})`);
-    cloud.addColorStop(0.72, `rgba(32, 28, 29, ${(1 - life) * 0.28})`);
-    cloud.addColorStop(1, "rgba(20, 22, 24, 0)");
-    context.save();
-    context.globalAlpha = 1 - smoothstep(0.72, 1, life);
-    context.fillStyle = cloud;
-    context.beginPath();
-    context.arc(x, y, radius, 0, TAU);
-    context.fill();
-    context.restore();
+    const smokeSize = radius * 2.25;
+    context.globalAlpha = (1 - smoothstep(0.72, 1, life)) * 0.82;
+    context.drawImage(assets.smoke, x - smokeSize / 2, y - smokeSize / 2, smokeSize, smokeSize);
   });
+  context.globalAlpha = 1;
 
   const emberLife = clamp(impactMs / 940);
   if (emberLife < 1) {
@@ -703,9 +713,9 @@ function drawMeteorImpact(context: CanvasRenderingContext2D, model: MeteorModel,
   }
 }
 
-function drawMeteor(context: CanvasRenderingContext2D, model: MeteorModel, width: number, height: number, elapsedMs: number, impactAtMs: number) {
-  if (elapsedMs < impactAtMs) drawMeteorFlight(context, model, width, height, elapsedMs, impactAtMs);
-  else drawMeteorImpact(context, model, width, height, elapsedMs - impactAtMs);
+function drawMeteor(context: CanvasRenderingContext2D, model: MeteorModel, assets: MeteorAssets, width: number, height: number, elapsedMs: number, impactAtMs: number) {
+  if (elapsedMs < impactAtMs) drawMeteorFlight(context, model, assets, width, height, elapsedMs, impactAtMs);
+  else drawMeteorImpact(context, model, assets, width, height, elapsedMs - impactAtMs);
 }
 
 export function SpecialAttackCanvas({ kind, width, height, durationMs, impactAtMs, className }: Props) {
@@ -714,9 +724,9 @@ export function SpecialAttackCanvas({ kind, width, height, durationMs, impactAtM
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const context = canvas.getContext("2d", { alpha: true });
+    const context = canvas.getContext("2d", { alpha: true, desynchronized: true });
     if (!context) return;
-    const ratio = Math.min(1.75, window.devicePixelRatio || 1);
+    const ratio = Math.min(MAX_CANVAS_RATIO, window.devicePixelRatio || 1);
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
     canvas.style.width = `${width}px`;
@@ -730,6 +740,7 @@ export function SpecialAttackCanvas({ kind, width, height, durationMs, impactAtM
       : kind === "tornado"
         ? createTornadoModel(random)
         : createMeteorModel(random);
+    const meteorAssets = kind === "meteor" ? createMeteorAssets() : null;
     const startedAt = performance.now();
     let animationFrame = 0;
 
@@ -738,7 +749,7 @@ export function SpecialAttackCanvas({ kind, width, height, durationMs, impactAtM
       context.clearRect(0, 0, width, height);
       if (kind === "lightning") drawLightning(context, model as LightningModel, width, height, elapsedMs, durationMs);
       else if (kind === "tornado") drawTornado(context, model as TornadoModel, width, height, elapsedMs, durationMs);
-      else drawMeteor(context, model as MeteorModel, width, height, elapsedMs, impactAtMs);
+      else drawMeteor(context, model as MeteorModel, meteorAssets as MeteorAssets, width, height, elapsedMs, impactAtMs);
       if (elapsedMs < durationMs) animationFrame = window.requestAnimationFrame(render);
     };
 

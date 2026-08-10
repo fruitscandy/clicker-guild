@@ -5,7 +5,9 @@ type SpecialSoundPhase = "cast" | "impact" | "pulse";
 
 let specialAudioContext: AudioContext | null = null;
 let specialMasterGain: GainNode | null = null;
+let sharedNoiseBuffer: AudioBuffer | null = null;
 let subscribed = false;
+const SHARED_NOISE_BUFFER_SECONDS = 0.32;
 
 function getContext() {
   if (typeof window === "undefined") return null;
@@ -43,15 +45,18 @@ function tone(context: AudioContext, start: number, duration: number, from: numb
   oscillator.stop(start + duration + 0.02);
 }
 
-function noise(context: AudioContext, start: number, duration: number, volume: number, from: number, to: number, type: BiquadFilterType = "bandpass") {
-  if (!specialMasterGain) return;
-  const frameCount = Math.max(1, Math.floor(context.sampleRate * duration));
+function getSharedNoiseBuffer(context: AudioContext) {
+  if (sharedNoiseBuffer?.sampleRate === context.sampleRate) return sharedNoiseBuffer;
+  const frameCount = Math.max(1, Math.floor(context.sampleRate * SHARED_NOISE_BUFFER_SECONDS));
   const buffer = context.createBuffer(1, frameCount, context.sampleRate);
   const data = buffer.getChannelData(0);
-  for (let index = 0; index < frameCount; index += 1) {
-    const envelope = Math.pow(1 - index / frameCount, 1.7);
-    data[index] = (Math.random() * 2 - 1) * envelope;
-  }
+  for (let index = 0; index < frameCount; index += 1) data[index] = Math.random() * 2 - 1;
+  sharedNoiseBuffer = buffer;
+  return buffer;
+}
+
+function noise(context: AudioContext, start: number, duration: number, volume: number, from: number, to: number, type: BiquadFilterType = "bandpass") {
+  if (!specialMasterGain) return;
   const source = context.createBufferSource();
   const filter = context.createBiquadFilter();
   const gain = context.createGain();
@@ -62,11 +67,13 @@ function noise(context: AudioContext, start: number, duration: number, volume: n
   gain.gain.setValueAtTime(0.0001, start);
   gain.gain.exponentialRampToValueAtTime(volume, start + Math.min(0.025, duration * 0.15));
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-  source.buffer = buffer;
+  source.buffer = getSharedNoiseBuffer(context);
+  source.loop = true;
   source.connect(filter);
   filter.connect(gain);
   gain.connect(specialMasterGain);
   source.start(start);
+  source.stop(start + duration + 0.02);
 }
 
 function playLightning(context: AudioContext, phase: SpecialSoundPhase) {

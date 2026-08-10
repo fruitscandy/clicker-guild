@@ -1464,7 +1464,7 @@ export default function Game() {
                   const specialClassName = specialMonsterClassName(monster.id, specialAttackEffects, now);
                   const specialEffectStyle = specialMonsterEffectStyle(monster, specialAttackEffects, now);
                   const artScale = (monsterAsset?.scale ?? 1) * (monster.kind === "leader" ? 1.08 : 1);
-                  return <span key={`${monster.id}-${monster.hitId}`} className={`pack-monster monster-${monster.kind} ${monsterAsset ? "has-pack-art" : ""} ${monster.hp <= 0 ? "is-defeated" : ""} ${struck ? `is-struck click-recoil-tier-${monster.lastHitTier}` : ""} ${specialClassName}`} style={{ left: `${monster.x}%`, top: `${monster.y}%`, "--monster-scale": monster.scale, "--monster-art-scale": artScale, zIndex: Math.round(monster.y), ...specialEffectStyle } as React.CSSProperties}>
+                  return <span key={monster.id} className={`pack-monster monster-${monster.kind} ${monsterAsset ? "has-pack-art" : ""} ${monster.hp <= 0 ? "is-defeated" : ""} ${struck ? `is-struck hit-cycle-${monster.hitId % 2 ? "odd" : "even"} click-recoil-tier-${monster.lastHitTier}` : ""} ${specialClassName}`} style={{ left: `${monster.x}%`, top: `${monster.y}%`, "--monster-scale": monster.scale, "--monster-art-scale": artScale, zIndex: Math.round(monster.y), ...specialEffectStyle } as React.CSSProperties}>
                     <i className="pack-shadow" />
                     {monsterAsset ? (
                       <span className="pack-monster-art-frame">

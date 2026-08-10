@@ -109,6 +109,13 @@ test("새 특수공격 원화만으로 전장 연출을 구성하고 기존 합�
   assert.match(canvas, /drawMeteorFlight/);
   assert.match(canvas, /drawMeteorImpact/);
   assert.match(canvas, /globalCompositeOperation = "lighter"/);
+  assert.match(canvas, /MAX_CANVAS_RATIO = 1\.25/);
+  assert.match(canvas, /createEffectSprite/);
+  assert.match(canvas, /drawImage\(assets\.trail/);
+  assert.match(canvas, /drawImage\(assets\.smoke/);
+  assert.doesNotMatch(canvas, /context\.filter = "blur/);
+  assert.doesNotMatch(layerStyles, /\.meteorStage::after/);
+  assert.doesNotMatch(layerStyles, /\.tornadoCanvas\s*\{[^}]*filter:/s);
   assert.match(layerStyles, /monsterElectricCage/);
   assert.match(layerStyles, /monsterTornadoPull/);
   assert.match(layerStyles, /monsterMeteorKnockback/);
@@ -128,12 +135,15 @@ test("새 특수공격 원화만으로 전장 연출을 구성하고 기존 합�
   assert.match(audio, /playLightning/);
   assert.match(audio, /playTornado/);
   assert.match(audio, /playMeteor/);
+  assert.match(audio, /getSharedNoiseBuffer/);
+  assert.match(audio, /source\.loop = true/);
 });
 
 test("길드 연구와 전투 화면이 특수 비술 모듈을 실제로 사용한다", async () => {
-  const [game, controller] = await Promise.all([
+  const [game, controller, globalStyles] = await Promise.all([
     readFile(new URL("../app/Game.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/special-attack-controller.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(game, /SPECIAL_RESEARCH_NODES/);
   assert.match(game, /<SpecialResearchPanel/);
@@ -145,4 +155,8 @@ test("길드 연구와 전투 화면이 특수 비술 모듈을 실제로 사용
   assert.match(controller, /playSpecialAttackSound/);
   assert.match(controller, /FIRST_CAST_DELAY/);
   assert.match(controller, /attack\.delayMs \+ 620 \+ pulse \* 520/);
+  assert.match(game, /key=\{monster\.id\}/);
+  assert.match(game, /hit-cycle-/);
+  assert.doesNotMatch(game, /key=\{`\$\{monster\.id\}-\$\{monster\.hitId\}`\}/);
+  assert.match(globalStyles, /packMonsterHeavyHitAlternate/);
 });

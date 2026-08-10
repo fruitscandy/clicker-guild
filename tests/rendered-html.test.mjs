@@ -52,7 +52,7 @@ test("ships region-specific monsters with hit and death actions", async () => {
   assert.match(game, /Math\.min\(88, 68 \+ stage\.regionIndex \* 2\)/);
   assert.match(game, /mass-swarm/);
   assert.match(game, /className="pack-monster-art"/);
-  assert.match(game, /is-struck click-recoil-tier/);
+  assert.match(game, /is-struck hit-cycle-/);
   assert.match(game, /window\.setTimeout\(awardVictory, 900\)/);
   assert.match(css, /@keyframes packMonsterArtHit/);
   assert.match(css, /@keyframes packMonsterArtDefeat/);
