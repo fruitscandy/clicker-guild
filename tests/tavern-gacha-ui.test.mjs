@@ -17,12 +17,15 @@ test("uses discounted one and ten contract recruitment with transparent rank odd
   assert.ok(tenCost < singleCost * 10);
 
   const rateRows = [...balance.matchAll(/\{ F: ([\d.]+), E: ([\d.]+), D: ([\d.]+), C: ([\d.]+), B: ([\d.]+), A: ([\d.]+), S: ([\d.]+) \}/g)];
-  assert.equal(rateRows.length, 6);
+  assert.equal(rateRows.length, 2);
   for (const row of rateRows) {
     const rates = row.slice(1).map(Number);
     assert.equal(rates.reduce((sum, rate) => sum + rate, 0), 100);
     for (let index = 1; index < rates.length; index += 1) assert.ok(rates[index - 1] > rates[index]);
   }
+  const highRankChance = (row) => row.slice(-3).map(Number).reduce((sum, rate) => sum + rate, 0);
+  assert.equal(highRankChance(rateRows[0]), 4);
+  assert.equal(highRankChance(rateRows[1]), 8);
 
   assert.match(tavern, /onRecruit\(1\)/);
   assert.match(tavern, /onRecruit\(10\)/);

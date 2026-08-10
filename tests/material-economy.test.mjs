@@ -47,16 +47,20 @@ test("one clear preserves the compact but generous gold curve", () => {
     return shortRunStageGold(Math.floor(index / 3), (stage - 1) % 3 + 1);
   }).reduce((sum, gold) => sum + gold, 160);
 
-  const coreProgressionCost = [
-    ...PLAYER_WEAPON_BALANCE.map((weapon) => weapon.cost),
+  const requiredPlayerProgressionCost = PLAYER_WEAPON_BALANCE.reduce((sum, weapon) => sum + weapon.cost, 0);
+  const optionalGuildProgressionCost = [
     ...GUILD_HALL_STAGES.map((hall) => hall.upgradeCost ?? 0),
     ...CORE_UPGRADE_NODES.map((node) => node.cost),
     CITADEL_RESEARCH_COST,
   ].reduce((sum, cost) => sum + cost, 0);
 
   assert.equal(onePassGold, 292660);
-  assert.equal(coreProgressionCost, 280570);
-  assert.ok(onePassGold >= coreProgressionCost, "one clear should fund all core weapon, research, and hall costs");
-  assert.ok(onePassGold - coreProgressionCost < 15000, "special attacks and gacha should still require choices");
+  assert.equal(GUILD_HALL_STAGES.length, 4);
+  assert.deepEqual(GUILD_HALL_STAGES.map((hall) => hall.requiredResearch), [3, 6, 10, null]);
+  assert.equal(requiredPlayerProgressionCost, 143380);
+  assert.equal(optionalGuildProgressionCost, 31700);
+  assert.ok(onePassGold >= requiredPlayerProgressionCost, "one clear should fund the player weapon route without guild research");
+  assert.ok(optionalGuildProgressionCost < onePassGold * 0.15, "optional guild research should remain a compact side path");
+  assert.ok(onePassGold - requiredPlayerProgressionCost >= optionalGuildProgressionCost, "guild research should accelerate a run, not gate it");
   assert.ok(onePassGold < 310000, "gold should still require choices during the run");
 });

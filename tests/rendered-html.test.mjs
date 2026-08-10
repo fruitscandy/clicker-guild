@@ -113,7 +113,7 @@ test("routes guild management through buildings and gates four-way research", as
   assert.match(game, /activeFacility === "forge"/);
   assert.doesNotMatch(game, /activeFacility === "training"/);
   assert.doesNotMatch(progression, /"training"/);
-  assert.match(progression, /researchDepth: 5/);
+  assert.match(progression, /researchDepth: 4/);
   assert.match(progression, /inferHallLevelFromNodes/);
   assert.match(hub, /길드 건물 선택/);
   assert.match(hub, /forgeBuildingArt/);
@@ -204,21 +204,30 @@ test("runs portrait-driven gacha recruitment, party formation, and member sales 
   assert.match(tavernStyles, /--portrait-scale/);
 });
 
-test("lays research branches out in non-overlapping responsive lanes", async () => {
+test("lays research branches out from one core in four directions", async () => {
   const [researchMap, researchStyles] = await Promise.all([
     readFile(new URL("../app/guild-hub/ResearchMap.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/guild-hub/ResearchMap.module.css", import.meta.url), "utf8"),
   ]);
 
-  assert.match(researchMap, /DIRECTION_GROUPS/);
-  assert.match(researchMap, /className=\{styles\.laneTrack\}/);
+  assert.match(researchMap, /DIRECTION_BRANCHES/);
+  for (const direction of ["north", "east", "south", "west"]) {
+    assert.match(researchMap, new RegExp(`direction: "${direction}"`));
+  }
+  assert.match(researchMap, /className=\{styles\.familyTrack\}/);
+  assert.match(researchMap, /className=\{styles\.coreDock\}/);
   assert.match(researchMap, /data-node-id=\{node\.id\}/);
   assert.doesNotMatch(researchMap, /nodePoint|<svg|className=\{styles\.connectors\}/);
-  assert.match(researchStyles, /\.laneTrack\s*\{/);
-  assert.match(researchStyles, /flex:\s*0 0 144px/);
+  assert.match(researchStyles, /\.crossCanvas\s*\{/);
+  assert.match(researchStyles, /\.familyTrack\s*\{/);
+  assert.match(researchStyles, /\.axisNorth/);
+  assert.match(researchStyles, /position:\s*absolute/);
   assert.match(researchStyles, /overflow-x:\s*auto/);
   assert.match(researchStyles, /@media \(max-width: 820px\)/);
-  assert.match(researchStyles, /grid-template-columns:\s*minmax\(0, 1fr\)/);
+  assert.match(researchStyles, /\.north\s*\{/);
+  assert.match(researchStyles, /\.east\s*\{/);
+  assert.match(researchStyles, /\.south\s*\{/);
+  assert.match(researchStyles, /\.west\s*\{/);
 });
 
 test("keeps developer upgrade experiments temporary and independent from gold", async () => {
