@@ -31,6 +31,7 @@ import { fieldAssetForRegion } from "./field-assets";
 import { GameNoticeDialog, type GameNotice } from "./game-notice/GameNoticeDialog";
 import { BOSS_BATTLE_SECONDS, NORMAL_BATTLE_SECONDS } from "./economy-balance";
 import { BulletHellFinale } from "./bullet-hell/BulletHellFinale";
+import { FinaleDefeatWave, type FinaleDefeatWavePhase } from "./bullet-hell/FinaleDefeatWave";
 import type { FinaleLoadout, FinaleMode } from "./bullet-hell/engine";
 import { BASE_ATTACK_RANGE, BASE_CLICK_DAMAGE, failureSalvageFor, MEMBER_ASSIST_FACTOR, PLAYER_WEAPON_BALANCE } from "./game-balance";
 import { combatTraitFor, compactNumber, getStage, MEMBERS, RANK_ORDER, STAGE_COUNT, STAGES_PER_REGION, type CombatStyle, type MemberDefinition } from "./game-data";
@@ -77,6 +78,7 @@ import { isTutorialStep, recoverTutorialStep, type TutorialStep } from "./tutori
 import { UPGRADE_ICON_BY_KEY } from "./upgrade-icons";
 
 type LootPhase = "idle" | "fighting" | "collecting" | "complete";
+type FinaleDefeatTransitionPhase = "idle" | FinaleDefeatWavePhase;
 type MemberProgress = { level: number; xp: number };
 type CombatProcKey = "range" | "critical" | "shockwave" | "autoAttack";
 type ClickAttackPattern = {
@@ -377,6 +379,7 @@ export default function Game() {
   const [developerUpgrades, setDeveloperUpgrades] = useState<UpgradeLevels>(() => maximumUpgradeLevels());
   const [finaleMode, setFinaleMode] = useState(false);
   const [finaleVisualMode, setFinaleVisualMode] = useState<FinaleMode>("field");
+  const [finaleDefeatPhase, setFinaleDefeatPhase] = useState<FinaleDefeatTransitionPhase>("idle");
   const [clicks, setClicks] = useState(0);
   const [hitFx, setHitFx] = useState<ClickAttackFx | null>(null);
   const [activeHitFxs, setActiveHitFxs] = useState<ClickAttackFx[]>([]);
@@ -403,7 +406,20 @@ export default function Game() {
   const lootTimers = useRef<number[]>([]);
   const developerEntrySave = useRef<SaveState | null>(null);
   const tutorialRecruitLock = useRef(false);
+  const finaleDefeatFrames = useRef<number[]>([]);
+  const guildHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const closeNotice = useCallback(() => setNotice(null), []);
+  const cancelFinaleDefeatFrames = useCallback(() => {
+    finaleDefeatFrames.current.forEach((frame) => window.cancelAnimationFrame(frame));
+    finaleDefeatFrames.current = [];
+  }, []);
+  const beginFinaleDefeatReturn = useCallback(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    setNotice(null);
+    setFinaleDefeatPhase((current) => current === "idle" ? "covering" : current);
+  }, []);
+
+  useEffect(() => () => cancelFinaleDefeatFrames(), [cancelFinaleDefeatFrames]);
 
   function showNotice(title: string, message: string, options: Omit<GameNotice, "title" | "message"> = {}) {
     setNotice({ title, message, ...options });
@@ -441,6 +457,7 @@ export default function Game() {
   const lootCollecting = lootPhase === "collecting";
   const combatLocked = finaleMode || battleActive || lootCollecting || victory || defeat;
   const seamlessFinale = finaleMode;
+  const finaleDefeatTransitioning = finaleDefeatPhase !== "idle";
   const aliveMonsters = useMemo(() => fieldMonsters.filter((monster) => monster.hp > 0), [fieldMonsters]);
   const defeatedMonsters = fieldMonsters.length - aliveMonsters.length;
   const defeatSalvage = useMemo(() => developerMode ? { gold: 0, material: 0 } : failureSalvageFor(stage.stage, Math.round(stage.gold * goldMultiplier), stageMaterial.rewardAmount, defeatedMonsters, fieldMonsters.length), [developerMode, stage.stage, stage.gold, goldMultiplier, stageMaterial.rewardAmount, defeatedMonsters, fieldMonsters.length]);
@@ -878,7 +895,7 @@ export default function Game() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function returnToGuild() {
+  function returnToGuild(scrollBehavior: ScrollBehavior = "smooth") {
     clearLootTimers();
     victoryLock.current = true;
     rewardLock.current = true;
@@ -904,7 +921,7 @@ export default function Game() {
       ...current,
       tutorialStep: current.tutorialStep === "return" ? "tavern" : current.tutorialStep === "retry" ? "hunt" : current.tutorialStep,
     }));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: scrollBehavior });
   }
 
   function retreatBattle() {
@@ -1137,6 +1154,8 @@ export default function Game() {
     setDeveloperStage(null);
     setDeveloperClickLevel(CLICK_ATTACK_PATTERNS.length - 1);
     setFinaleMode(false);
+    cancelFinaleDefeatFrames();
+    setFinaleDefeatPhase("idle");
     setFieldMonsters([]);
     setHitFx(null);
     setActiveHitFxs([]);
@@ -1178,6 +1197,42 @@ export default function Game() {
     });
   }
 
+  function handleFinaleDefeatCovered() {
+    if (finaleDefeatPhase !== "covering") return;
+
+    cancelFinaleDefeatFrames();
+    setFinaleDefeatPhase("covered");
+    setNotice(null);
+    setFinaleMode(false);
+    returnToGuild("auto");
+
+    const firstFrame = window.requestAnimationFrame(() => {
+      finaleDefeatFrames.current = finaleDefeatFrames.current.filter((frame) => frame !== firstFrame);
+      const secondFrame = window.requestAnimationFrame(() => {
+        finaleDefeatFrames.current = finaleDefeatFrames.current.filter((frame) => frame !== secondFrame);
+        setFinaleDefeatPhase((current) => current === "covered" ? "revealing" : current);
+      });
+      finaleDefeatFrames.current.push(secondFrame);
+    });
+    finaleDefeatFrames.current.push(firstFrame);
+  }
+
+  function handleFinaleDefeatRevealed() {
+    if (finaleDefeatPhase !== "revealing") return;
+
+    cancelFinaleDefeatFrames();
+    setFinaleDefeatPhase("idle");
+    const commitFrame = window.requestAnimationFrame(() => {
+      finaleDefeatFrames.current = finaleDefeatFrames.current.filter((frame) => frame !== commitFrame);
+      const focusFrame = window.requestAnimationFrame(() => {
+        finaleDefeatFrames.current = finaleDefeatFrames.current.filter((frame) => frame !== focusFrame);
+        guildHeadingRef.current?.focus({ preventScroll: true });
+      });
+      finaleDefeatFrames.current.push(focusFrame);
+    });
+    finaleDefeatFrames.current.push(commitFrame);
+  }
+
   function leaveFinale() {
     setFinaleMode(false);
     returnToGuild();
@@ -1205,11 +1260,14 @@ export default function Game() {
     <main
       className={`game-shell ${combatLocked ? "battle-mode" : ""} ${developerMode ? "developer-mode" : ""} ${seamlessFinale ? "finale-active" : ""}`}
       data-finale-mode={seamlessFinale ? finaleVisualMode : undefined}
+      data-finale-defeat-transition={finaleDefeatTransitioning ? finaleDefeatPhase : undefined}
+      aria-hidden={finaleDefeatTransitioning ? true : undefined}
+      inert={finaleDefeatTransitioning ? true : undefined}
     >
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true">G</span>
-          <div><span className="eyebrow">GUILDMASTER CHRONICLE</span><h1>모험가 길드</h1></div>
+          <div><span className="eyebrow">GUILDMASTER CHRONICLE</span><h1 ref={guildHeadingRef} tabIndex={-1}>모험가 길드</h1></div>
         </div>
         <div className="resources" aria-label="보유 자원">
           <span><i className="resource-dot gold-dot" />골드 <strong>{compactNumber(save.gold)}</strong></span>
@@ -1484,6 +1542,7 @@ export default function Game() {
                 cursorWeapon={activeClickPattern}
                 initialCursorPoint={weaponCursor}
                 onModeChange={setFinaleVisualMode}
+                onDefeat={beginFinaleDefeatReturn}
                 onExit={leaveFinale}
                 onVictory={completeFinale}
               />}
@@ -1530,8 +1589,8 @@ export default function Game() {
             </aside>
           </div>
 
-          {victory && !seamlessFinale && <div className="victory-overlay" role="dialog" aria-modal="true" aria-labelledby="victory-title"><div className="victory-card"><div className="victory-crest" aria-hidden="true"><span>★</span></div><div className="victory-heading"><p>EXPEDITION COMPLETE</p><span className="victory-divider" aria-hidden="true"><i>◆</i></span><h2 id="victory-title">{fieldMonsters.length}마리 처치 완료!</h2><small>{stage.region.name}의 위협을 몰아냈습니다</small></div><div className="outcome-rewards" aria-label="획득 보상"><span>{developerMode ? <><i className="reward-glyph">◇</i><small>전투 기록</small><b>저장 안 됨</b></> : <><i className="reward-glyph">●</i><small>골드</small><b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span className="material-victory-reward"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} /><small>{stageMaterial.name}</small><b>+{stageMaterial.rewardAmount}</b></span>}{!developerMode && <span><i className="reward-glyph reward-xp">✦</i><small>경험치</small><b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span className="boss-clear-reward"><i className="reward-glyph">♜</i><small>군주 토벌</small><b>완료</b></span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? STAGE_COUNT : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(STAGE_COUNT, stage.stage + 1))}><small>모험 계속하기</small><span>다음 지역</span><b aria-hidden="true">›</b></button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}><small>같은 지역</small><span>재전투</span></button><button className="text-button" onClick={returnToGuild} data-tutorial="return-guild">영지로 복귀</button></div></div></div>}
-          {defeat && !seamlessFinale && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">⚑</span><p>EXPEDITION FAILED</p><h2>공세 실패</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드 전투가 종료되었습니다." : "제한 시간 안에 적을 모두 처치하지 못했습니다."}</strong>{!developerMode && <span>회수 전리품 · 골드 +{compactNumber(defeatSalvage.gold)} · {stageMaterial.name} +{defeatSalvage.material}</span>}<span>이번 전리품으로 바로 강화하거나 같은 웨이브를 재도전하세요.</span></div><button className="primary-button" onClick={returnToGuild} data-tutorial="return-guild">영지로 복귀</button></div></div>}
+          {victory && !seamlessFinale && <div className="victory-overlay" role="dialog" aria-modal="true" aria-labelledby="victory-title"><div className="victory-card"><div className="victory-crest" aria-hidden="true"><span>★</span></div><div className="victory-heading"><p>EXPEDITION COMPLETE</p><span className="victory-divider" aria-hidden="true"><i>◆</i></span><h2 id="victory-title">{fieldMonsters.length}마리 처치 완료!</h2><small>{stage.region.name}의 위협을 몰아냈습니다</small></div><div className="outcome-rewards" aria-label="획득 보상"><span>{developerMode ? <><i className="reward-glyph">◇</i><small>전투 기록</small><b>저장 안 됨</b></> : <><i className="reward-glyph">●</i><small>골드</small><b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span className="material-victory-reward"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} /><small>{stageMaterial.name}</small><b>+{stageMaterial.rewardAmount}</b></span>}{!developerMode && <span><i className="reward-glyph reward-xp">✦</i><small>경험치</small><b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span className="boss-clear-reward"><i className="reward-glyph">♜</i><small>군주 토벌</small><b>완료</b></span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? STAGE_COUNT : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(STAGE_COUNT, stage.stage + 1))}><small>모험 계속하기</small><span>다음 지역</span><b aria-hidden="true">›</b></button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}><small>같은 지역</small><span>재전투</span></button><button className="text-button" onClick={() => returnToGuild()} data-tutorial="return-guild">영지로 복귀</button></div></div></div>}
+          {defeat && !seamlessFinale && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">⚑</span><p>EXPEDITION FAILED</p><h2>공세 실패</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드 전투가 종료되었습니다." : "제한 시간 안에 적을 모두 처치하지 못했습니다."}</strong>{!developerMode && <span>회수 전리품 · 골드 +{compactNumber(defeatSalvage.gold)} · {stageMaterial.name} +{defeatSalvage.material}</span>}<span>이번 전리품으로 바로 강화하거나 같은 웨이브를 재도전하세요.</span></div><button className="primary-button" onClick={() => returnToGuild()} data-tutorial="return-guild">영지로 복귀</button></div></div>}
         </section>
       )}
 
@@ -1554,6 +1613,11 @@ export default function Game() {
       />
       <GameNoticeDialog notice={notice} onClose={closeNotice} onConfirm={confirmNotice} />
       <footer className="game-footer"><span>GUILDMASTER CHRONICLE · LOCAL BUILD</span><span>작은 길드가 전설이 되는 곳</span></footer>
+      {finaleDefeatPhase !== "idle" && <FinaleDefeatWave
+        phase={finaleDefeatPhase}
+        onCovered={handleFinaleDefeatCovered}
+        onRevealed={handleFinaleDefeatRevealed}
+      />}
     </main>
   );
 }

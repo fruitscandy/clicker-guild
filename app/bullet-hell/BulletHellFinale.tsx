@@ -23,6 +23,7 @@ import {
   FINALE_GUILD_ATLAS,
   FINALE_VFX_ASSETS,
   finaleBulletAsset,
+  finaleBulletCardSize,
 } from "./assets";
 import {
   GLITCH_BOSS_BODY_RADIUS,
@@ -41,10 +42,12 @@ import {
   FINALE_GUILD_SIZE,
   FINALE_HEIGHT,
   FINALE_WIDTH,
+  finaleGuildMaskCells,
   forceFinaleMode,
   restartFinalePhaseTwo,
   updateFinaleWorld,
   type FinaleAttackEvent,
+  type FinaleGuildMaskCell,
   type FinaleLoadout,
   type FinaleMode,
   type FinalePlayerHitEvent,
@@ -58,6 +61,8 @@ const WHITEOUT_HOLD_MS = 1_550;
 const ATTACK_IMPACT_LIFETIME_MS = 720;
 const MAX_ATTACK_IMPACTS = 6;
 const BOSS_HIT_FLASH_MS = 190;
+const GUILD_MASK_GRID_SIZE = 24;
+const GUILD_MASK_CELL_STEP = FINALE_GUILD_SIZE / GUILD_MASK_GRID_SIZE;
 const FIELD_BACKGROUND = "/assets/fields/field-10-ancient-dragon-sanctuary-hq.webp";
 const MOVEMENT_KEY_BY_CODE: Record<string, string> = {
   KeyW: "w",
@@ -79,9 +84,7 @@ const RENDER_SOURCES = [...new Set([
   ...Object.values(FINALE_VFX_ASSETS),
 ])];
 
-const BULLET_ASSET_BY_SOURCE = new Map(FINALE_BULLET_ASSETS.map((asset) => [asset.source, asset]));
-
-type FinaleScene = "intro" | "running" | "paused" | "victory" | "defeat";
+type FinaleScene = "intro" | "running" | "paused" | "victory" | "defeat" | "departing";
 type VirtualDirection = "up" | "down" | "left" | "right" | "focus";
 type PlayerImpact = FinalePlayerHitEvent & { ageMs: number };
 type AttackImpact = FinaleAttackEvent & { ageMs: number };
@@ -99,6 +102,37 @@ type ActivePageFracture = {
   portal: PageFracturePortal;
   settled: boolean;
 };
+
+const GUILD_MASK_BOUNDARY_CACHE = new WeakMap<
+  readonly FinaleGuildMaskCell[],
+  readonly FinaleGuildMaskCell[]
+>();
+
+function guildMaskCellKey(x: number, y: number) {
+  return `${Math.round(x * 1_000)}:${Math.round(y * 1_000)}`;
+}
+
+function guildMaskBoundaryCells(cells: readonly FinaleGuildMaskCell[]) {
+  const cached = GUILD_MASK_BOUNDARY_CACHE.get(cells);
+  if (cached) return cached;
+  const occupied = new Set(cells.map((cell) => guildMaskCellKey(cell.x, cell.y)));
+  const boundary = cells.filter((cell) => (
+    !occupied.has(guildMaskCellKey(cell.x - GUILD_MASK_CELL_STEP, cell.y))
+    || !occupied.has(guildMaskCellKey(cell.x + GUILD_MASK_CELL_STEP, cell.y))
+    || !occupied.has(guildMaskCellKey(cell.x, cell.y - GUILD_MASK_CELL_STEP))
+    || !occupied.has(guildMaskCellKey(cell.x, cell.y + GUILD_MASK_CELL_STEP))
+  ));
+  GUILD_MASK_BOUNDARY_CACHE.set(cells, boundary);
+  return boundary;
+}
+
+function traceGuildMaskCells(context: CanvasRenderingContext2D, cells: readonly FinaleGuildMaskCell[]) {
+  context.beginPath();
+  cells.forEach((cell) => {
+    context.moveTo(cell.x + cell.radius, cell.y);
+    context.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2);
+  });
+}
 
 type HudSnapshot = {
   playerHp: number;
@@ -127,6 +161,7 @@ export type BulletHellFinaleProps = {
   initialCursorPoint?: WeaponCursorPoint;
   seed?: number;
   onModeChange?: (mode: FinaleMode) => void;
+  onDefeat?: () => void;
   onExit: () => void;
   onVictory: () => void;
 };
@@ -641,14 +676,6 @@ function drawGuildBody(
     context.fillRect(-28, -21, 56, 42);
   }
   context.shadowBlur = 0;
-  if (world.player.shield > 0) {
-    context.strokeStyle = "rgba(108,244,251,.76)";
-    context.lineWidth = 2;
-    context.setLineDash([13, 7]);
-    context.beginPath();
-    context.arc(0, 0, 40 + (reducedMotion ? 0 : Math.sin(world.elapsedMs / 145) * 1.5), 0, Math.PI * 2);
-    context.stroke();
-  }
   context.restore();
 }
 
@@ -656,39 +683,59 @@ function drawBullet(
   context: CanvasRenderingContext2D,
   bullet: FinaleWorld["bullets"][number],
   images: Map<string, HTMLImageElement>,
+  reducedMotion: boolean,
 ) {
-  const asset = BULLET_ASSET_BY_SOURCE.get(bullet.asset) ?? finaleBulletAsset(bullet.spriteIndex);
-  const image = images.get(bullet.asset) ?? images.get(asset.source);
+  const asset = finaleBulletAsset(bullet.spriteIndex);
+  const image = images.get(asset.source);
   const telegraph = bullet.ageMs < bullet.telegraphMs;
   const warningProgress = clamp(bullet.ageMs / Math.max(1, bullet.telegraphMs), 0, 1);
-  const visibleRadius = Math.max(asset.radius * 1.52, bullet.radius * 1.72);
+  const cardSize = finaleBulletCardSize(asset);
+  const halfCard = cardSize / 2;
 
   context.save();
   context.translate(bullet.x, bullet.y);
-  context.rotate(bullet.rotation);
+  context.rotate(reducedMotion ? 0 : bullet.rotation);
   if (telegraph) {
     context.globalAlpha = .2 + warningProgress * .42;
     context.strokeStyle = warningProgress > .72 ? "#fff1ad" : "#ff7fb6";
     context.lineWidth = 2;
     context.setLineDash([4, 5]);
     context.beginPath();
-    context.arc(0, 0, visibleRadius + 7 - warningProgress * 4, 0, Math.PI * 2);
+    context.arc(0, 0, halfCard + 7 - warningProgress * 4, 0, Math.PI * 2);
     context.stroke();
-  } else {
-    context.shadowColor = asset.kind === "weapon" ? "#ff5aa8" : "#5debf4";
-    context.shadowBlur = 8;
   }
+
+  context.globalAlpha = 1;
+  context.setLineDash([]);
+  context.shadowColor = "#ff4da1";
+  context.shadowBlur = telegraph || reducedMotion ? 0 : 8;
+  context.fillStyle = telegraph ? "#a81258" : "#d91b73";
+  context.fillRect(-halfCard, -halfCard, cardSize, cardSize);
+  context.shadowBlur = 0;
+  context.strokeStyle = telegraph ? "#ff8fc1" : "#ffc0dd";
+  context.lineWidth = 2;
+  context.strokeRect(-halfCard + 1, -halfCard + 1, cardSize - 2, cardSize - 2);
+
   if (image?.complete && image.naturalWidth > 0) {
-    context.drawImage(image, -visibleRadius, -visibleRadius, visibleRadius * 2, visibleRadius * 2);
+    const contentSize = cardSize - 12;
+    const imageScale = Math.min(contentSize / image.naturalWidth, contentSize / image.naturalHeight);
+    const imageWidth = image.naturalWidth * imageScale;
+    const imageHeight = image.naturalHeight * imageScale;
+    context.globalAlpha = telegraph ? .58 : 1;
+    context.drawImage(image, -imageWidth / 2, -imageHeight / 2, imageWidth, imageHeight);
   } else {
-    context.fillStyle = telegraph ? "#ff92be" : "#74f3fa";
-    context.beginPath();
-    context.arc(0, 0, bullet.radius, 0, Math.PI * 2);
-    context.fill();
+    context.globalAlpha = telegraph ? .5 : .9;
+    context.fillStyle = "#ffe1ef";
+    context.fillRect(-cardSize * .2, -cardSize * .2, cardSize * .4, cardSize * .4);
   }
-  context.globalAlpha = telegraph ? .3 : .64;
+
+  context.globalAlpha = telegraph ? .64 : .94;
+  context.fillStyle = "rgba(9,3,12,.72)";
+  context.beginPath();
+  context.arc(0, 0, bullet.radius + 2.5, 0, Math.PI * 2);
+  context.fill();
   context.strokeStyle = "#ffffff";
-  context.lineWidth = 1;
+  context.lineWidth = 2;
   context.beginPath();
   context.arc(0, 0, bullet.radius, 0, Math.PI * 2);
   context.stroke();
@@ -746,26 +793,42 @@ function drawPlayerImpact(
   context.restore();
 }
 
-function drawPlayerCore(context: CanvasRenderingContext2D, world: FinaleWorld, focusHeld: boolean, reducedMotion: boolean) {
+function drawGuildHitArea(
+  context: CanvasRenderingContext2D,
+  world: FinaleWorld,
+  loadout: FinaleLoadout,
+  impact: PlayerImpact | null,
+  focusHeld: boolean,
+  reducedMotion: boolean,
+) {
+  const cells = finaleGuildMaskCells(loadout.hallLevel);
+  const boundaryCells = guildMaskBoundaryCells(cells);
+  const impactDuration = reducedMotion ? 190 : impact?.kind === "shield" ? 430 : 320;
+  const impactProgress = impact ? clamp(impact.ageMs / impactDuration, 0, 1) : 1;
+  const impactVisible = Boolean(impact && impactProgress < 1);
+  const shielded = impactVisible ? impact?.kind === "shield" : world.player.shield > 0;
+  const outlineColor = impactVisible && !shielded
+    ? "#ff8b72"
+    : shielded
+      ? "#7cf8ff"
+      : focusHeld
+        ? "#ff7697"
+        : "#ffd38a";
+  const pulse = reducedMotion ? 1 : .86 + Math.sin(world.elapsedMs / 180) * .14;
+
   context.save();
   context.translate(world.player.x, world.player.y);
-  context.fillStyle = focusHeld ? "#ff5478" : "#ffffff";
-  context.strokeStyle = focusHeld ? "#ffc0cc" : "#7af4fb";
-  context.shadowColor = focusHeld ? "#ff5478" : "#64eef6";
-  context.shadowBlur = 12;
-  context.beginPath();
-  context.arc(0, 0, world.stats.hitRadius, 0, Math.PI * 2);
+  context.globalCompositeOperation = "screen";
+  context.fillStyle = outlineColor;
+  context.globalAlpha = impactVisible ? .2 : .08;
+  traceGuildMaskCells(context, cells);
   context.fill();
-  context.lineWidth = 1.5;
-  context.stroke();
-  context.shadowBlur = 0;
-  if (reducedMotion && world.player.invulnerableMs > 0) {
-    context.strokeStyle = "#ffe5a8";
-    context.lineWidth = 2;
-    context.beginPath();
-    context.arc(0, 0, world.stats.hitRadius + 5, 0, Math.PI * 2);
-    context.stroke();
-  }
+
+  context.globalAlpha = (impactVisible ? .98 - impactProgress * .24 : .72) * pulse;
+  context.shadowColor = outlineColor;
+  context.shadowBlur = reducedMotion ? 0 : impactVisible ? 18 : shielded ? 11 : 6;
+  traceGuildMaskCells(context, boundaryCells);
+  context.fill();
   context.restore();
 }
 
@@ -938,10 +1001,10 @@ function drawWorld(
   if (world.mode === "collapse" || world.mode === "bulletHell") {
     drawGuildBody(context, world, loadout, images, reducedMotion);
     if (world.mode === "bulletHell") {
-      world.bullets.forEach((bullet) => drawBullet(context, bullet, images));
+      world.bullets.forEach((bullet) => drawBullet(context, bullet, images, reducedMotion));
       if (playerImpact) drawPlayerImpact(context, playerImpact, images, reducedMotion);
     }
-    drawPlayerCore(context, world, focusHeld, reducedMotion);
+    drawGuildHitArea(context, world, loadout, playerImpact, focusHeld, reducedMotion);
   }
   if (!omitBoss) {
     attackImpacts.forEach((impact) => drawAttackImpact(context, impact, images, reducedMotion));
@@ -983,6 +1046,7 @@ export function BulletHellFinale({
   initialCursorPoint,
   seed = 20260810,
   onModeChange,
+  onDefeat,
   onExit,
   onVictory,
 }: BulletHellFinaleProps) {
@@ -1001,6 +1065,7 @@ export function BulletHellFinale({
   const lastHudRef = useRef(0);
   const whiteoutStartedAtRef = useRef<number | null>(null);
   const resultSoundRef = useRef<"victory" | "defeat" | null>(null);
+  const defeatHandledRef = useRef(false);
   const pageFractureRef = useRef<ActivePageFracture | null>(null);
   const pageFractureScrollRef = useRef<{ x: number; y: number } | null>(null);
   const previousModeRef = useRef<FinaleMode>(initialWorld.mode);
@@ -1021,6 +1086,25 @@ export function BulletHellFinale({
     ? smoothstep((hud.modeElapsedMs - FINALE_BOSS_ATTACKABLE_MS + 400) / 400)
     : 1;
   const musicSignal = finaleMusicForMode(hud.mode);
+
+  const completeDefeat = useCallback((world: FinaleWorld) => {
+    if (defeatHandledRef.current) return;
+    defeatHandledRef.current = true;
+    if (resultSoundRef.current !== "defeat") {
+      resultSoundRef.current = "defeat";
+      playExpeditionFailSound();
+    }
+    setHud(snapshotFromWorld(world));
+    if (onDefeat) {
+      sceneRef.current = "departing";
+      setScene("departing");
+      onDefeat();
+      return;
+    }
+    setAnnouncement("동기화 실패. 2페이즈 시작점에서 즉시 재시도할 수 있습니다.");
+    sceneRef.current = "defeat";
+    setScene("defeat");
+  }, [onDefeat]);
 
   useEffect(() => {
     sceneRef.current = scene;
@@ -1352,19 +1436,20 @@ export function BulletHellFinale({
       if (world.playerHitEvent) playerImpactRef.current = { ...world.playerHitEvent, ageMs: 0 };
 
       if (world.playerHit) {
+        const departingAfterDefeat = world.status === "defeat" && Boolean(onDefeat);
         if (world.playerHitEvent?.kind === "shield") {
           playCombatProcSound({ critical: true });
-          setAnnouncement(`방어막이 탄환을 흡수했습니다. 잔여 ${world.player.shield} CHARGE, 본관 내구도 유지.`);
+          if (!departingAfterDefeat) setAnnouncement(`방어막이 탄환을 흡수했습니다. 잔여 ${world.player.shield} CHARGE, 본관 내구도 유지.`);
         } else {
           playMonsterHitSound(4, 1);
-          setAnnouncement(`길드 본관 피격. 내구도 ${world.player.hp}/${world.player.maxHp}.`);
+          if (!departingAfterDefeat) setAnnouncement(`길드 본관 피격. 내구도 ${world.player.hp}/${world.player.maxHp}.`);
         }
       }
       if (previousModeRef.current !== world.mode) {
         previousModeRef.current = world.mode;
         if (world.mode === "bulletHell") {
           playCombatProcSound({ momentumMaxed: true });
-          setAnnouncement("2페이즈. WASD로 흰 피격점을 지키고, 보스를 직접 클릭하세요.");
+          setAnnouncement("2페이즈. WASD로 길드 본관 전체 피격영역을 지키고, 보스를 직접 클릭하세요.");
         } else if (world.mode === "whiteout") {
           whiteoutStartedAtRef.current = timestamp;
           setAnnouncement("기록 말소자 격파. 마지막 기록을 복원합니다.");
@@ -1389,13 +1474,7 @@ export function BulletHellFinale({
       }
 
       if (world.status === "defeat") {
-        if (resultSoundRef.current !== "defeat") {
-          resultSoundRef.current = "defeat";
-          playExpeditionFailSound();
-        }
-        setHud(snapshotFromWorld(world));
-        setAnnouncement("동기화 실패. 2페이즈 시작점에서 즉시 재시도할 수 있습니다.");
-        setScene("defeat");
+        completeDefeat(world);
         return;
       }
 
@@ -1419,7 +1498,7 @@ export function BulletHellFinale({
       if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
       frameRef.current = null;
     };
-  }, [renderCanvas, scene, settlePageFracture, updatePageFracture]);
+  }, [completeDefeat, onDefeat, renderCanvas, scene, settlePageFracture, updatePageFracture]);
 
   const trackFinaleWeaponCursor = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (event.pointerType !== "mouse") return;
@@ -1456,6 +1535,7 @@ export function BulletHellFinale({
     attackImpactsRef.current = [];
     whiteoutStartedAtRef.current = null;
     resultSoundRef.current = null;
+    defeatHandledRef.current = false;
     previousModeRef.current = world.mode;
     previousCycleRef.current = world.cycle;
     setHud(snapshotFromWorld(world));
@@ -1472,6 +1552,7 @@ export function BulletHellFinale({
     playerImpactRef.current = null;
     attackImpactsRef.current = [];
     resultSoundRef.current = null;
+    defeatHandledRef.current = false;
     previousModeRef.current = world.mode;
     previousCycleRef.current = world.cycle;
     setHud(snapshotFromWorld(world));
@@ -1492,6 +1573,7 @@ export function BulletHellFinale({
     attackImpactsRef.current = [];
     whiteoutStartedAtRef.current = null;
     resultSoundRef.current = null;
+    defeatHandledRef.current = false;
     previousModeRef.current = world.mode;
     previousCycleRef.current = world.cycle;
     setHud(snapshotFromWorld(world));
@@ -1517,7 +1599,7 @@ export function BulletHellFinale({
     setHud(snapshotFromWorld(world));
     renderCanvas();
     settlePageFracture();
-    setScene("defeat");
+    completeDefeat(world);
   };
 
   const jumpToOpening = () => {
@@ -1635,7 +1717,7 @@ export function BulletHellFinale({
 
     {mode === "preview" && showCombatChrome && <div className={styles.quickTools} aria-label="개발자 장면 이동 도구"><span>DEV</span><div>{(["field", "collapse", "bulletHell", "destruction", "whiteout"] as FinaleMode[]).map((target) => <button className={styles.phaseButton} key={target} type="button" onClick={() => jumpToMode(target)}>{target}</button>)}<button className={styles.phaseButton} type="button" onClick={jumpToOpening}>CORE OPEN</button><button className={styles.phaseButton} type="button" onClick={forceDefeat}>DEFEAT</button><button className={styles.phaseButton} type="button" onClick={restartAll}>RESET</button></div></div>}
 
-    <p id="finale-controls" className={styles.srOnly}>보스를 클릭하거나 Enter로 공격합니다. 2페이즈에서는 WASD 또는 방향키로 길드 본관을 움직이고 Shift로 정밀 이동합니다. 흰 점이 실제 피격점입니다.</p>
+    <p id="finale-controls" className={styles.srOnly}>보스를 클릭하거나 Enter로 공격합니다. 2페이즈에서는 WASD 또는 방향키로 길드 본관을 움직이고 Shift로 정밀 이동합니다. 발광 윤곽선 안의 길드 본관 전체가 실제 피격영역입니다.</p>
     <p className={styles.srOnly} aria-live="polite">{announcement}</p>
   </div>;
 

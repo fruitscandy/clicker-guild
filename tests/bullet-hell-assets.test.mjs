@@ -49,6 +49,19 @@ test("sprite lookup wraps finite indices and falls back safely for invalid input
   assert.equal(assets.finaleBulletAsset(Number.POSITIVE_INFINITY), manifest[0]);
 });
 
+test("asset cards stay guild-scale with kind-specific opaque bounds", () => {
+  assert.deepEqual(assets.FINALE_BULLET_CARD_SIZE_BY_KIND, {
+    upgrade: 72,
+    weapon: 80,
+    boss: 88,
+  });
+  for (const asset of assets.FINALE_BULLET_ASSETS) {
+    const cardSize = assets.finaleBulletCardSize(asset);
+    assert.ok(cardSize >= 70 && cardSize <= 90, `${asset.id}: ${cardSize}`);
+    assert.equal(cardSize, assets.FINALE_BULLET_CARD_SIZE_BY_KIND[asset.kind]);
+  }
+});
+
 test("guild player atlas exposes its six square frames", () => {
   assert.deepEqual(assets.FINALE_GUILD_ATLAS, {
     source: "/assets/guild/guild-growth-sprites-v1.png",

@@ -35,7 +35,7 @@ function bossClick(world, nowMs) {
   return engine.attackFinaleBoss(world, world.boss.x, world.boss.y, nowMs);
 }
 
-function overlappingBullet(world, id = 900_000) {
+function overlappingBullet(world, id = 900_000, overrides = {}) {
   return {
     id,
     x: world.player.x,
@@ -45,6 +45,7 @@ function overlappingBullet(world, id = 900_000) {
     ax: 0,
     ay: 0,
     radius: 8,
+    visualRadius: 8,
     rotation: 0,
     spriteIndex: 0,
     spin: 0,
@@ -54,9 +55,31 @@ function overlappingBullet(world, id = 900_000) {
     lifetimeMs: 10_000,
     damage: 1,
     kind: "error",
-    asset: "/favicon.svg",
     grazed: false,
+    ...overrides,
   };
+}
+
+function withoutBulletId(bullet) {
+  const pattern = { ...bullet };
+  Reflect.deleteProperty(pattern, "id");
+  return pattern;
+}
+
+function rayIntersectsBox(origin, velocity, box) {
+  let entry = Number.NEGATIVE_INFINITY;
+  let exit = Number.POSITIVE_INFINITY;
+  for (const axis of ["x", "y"]) {
+    if (Math.abs(velocity[axis]) < 1e-12) {
+      if (origin[axis] < box[`min${axis}`] || origin[axis] > box[`max${axis}`]) return false;
+      continue;
+    }
+    const first = (box[`min${axis}`] - origin[axis]) / velocity[axis];
+    const second = (box[`max${axis}`] - origin[axis]) / velocity[axis];
+    entry = Math.max(entry, Math.min(first, second));
+    exit = Math.min(exit, Math.max(first, second));
+  }
+  return exit >= Math.max(0, entry);
 }
 
 test("only guild hall level survives loadout normalization and affects combat", () => {
@@ -81,8 +104,9 @@ test("only guild hall level survives loadout normalization and affects combat", 
   assert.equal(highHall.stats.maxHp, 5);
   assert.equal(plain.stats.maxShields, 1);
   assert.equal(highHall.stats.maxShields, 1);
-  assert.equal(plain.stats.hitRadius, 7);
-  assert.equal(highHall.stats.hitRadius, 7);
+  assert.equal(plain.stats.hitRadius, 45);
+  assert.equal(highHall.stats.hitRadius, 45);
+  assert.equal(plain.stats.grazeRadius, 64);
   assert.equal(plain.stats.moveSpeed, highHall.stats.moveSpeed);
   assert.equal(plain.stats.clickDamage, 1);
   assert.equal(highHall.stats.clickDamage, 1.25);
@@ -106,6 +130,45 @@ test("same seed and inputs produce deterministic phase-two patterns", () => {
   different.player.invulnerableMs = 999_999;
   different = advance(different, 5_120);
   assert.notDeepEqual(different.bullets, first.bullets);
+});
+
+test("edge volleys aim through the player jitter box and replay from the phase-two seed", () => {
+  let first = engine.forceFinaleMode(engine.createFinaleWorld(loadout(), { seed: 0xace5 }), "bulletHell");
+  first.player.invulnerableMs = 999_999;
+  first = advance(first, 16);
+  assert.ok(first.bullets.length === 5 || first.bullets.length === 6);
+
+  const jitterBox = {
+    minx: first.player.x - 56,
+    maxx: first.player.x + 56,
+    miny: first.player.y - 56,
+    maxy: first.player.y + 56,
+  };
+  let nonCentralAim = false;
+  const edgeCounts = { top: 0, left: 0, right: 0 };
+  for (const bullet of first.bullets) {
+    const speed = Math.hypot(bullet.vx, bullet.vy);
+    assert.ok(speed >= 112 && speed < 136);
+    assert.equal(rayIntersectsBox(bullet, { x: bullet.vx / speed, y: bullet.vy / speed }, jitterBox), true);
+    const centerCross = Math.abs(
+      (first.player.x - bullet.x) * (bullet.vy / speed)
+      - (first.player.y - bullet.y) * (bullet.vx / speed),
+    );
+    nonCentralAim ||= centerCross > 0.01;
+    if (bullet.y === 92 + bullet.visualRadius) edgeCounts.top += 1;
+    else if (bullet.x === bullet.visualRadius) edgeCounts.left += 1;
+    else if (bullet.x === engine.FINALE_WIDTH - bullet.visualRadius) edgeCounts.right += 1;
+    else assert.fail("bullet did not originate on a supported battlefield edge");
+  }
+  assert.equal(nonCentralAim, true, "at least one projectile must retain deterministic aim error");
+  assert.ok(Object.values(edgeCounts).every((count) => count > 0), "one volley should cover all three fair edges");
+  assert.ok(first.bullets.some((bullet) => bullet.spriteIndex >= 37), "selectors stay unbounded for manifest wrapping");
+
+  let replay = engine.restartFinalePhaseTwo({ ...first, status: "defeat" });
+  replay.player.invulnerableMs = 999_999;
+  replay = advance(replay, 16);
+  assert.deepEqual(replay.bullets.map(withoutBulletId), first.bullets.map(withoutBulletId));
+  assert.ok(replay.bullets[0].id > first.bullets.at(-1).id, "event serials remain globally monotonic across retry");
 });
 
 test("boss reveal locks damage without consuming a click or cooldown", () => {
@@ -208,10 +271,13 @@ test("field collapse leads to a fresh phase two without replaying phase one", ()
 
   let firing = engine.forceFinaleMode(world, "bulletHell");
   firing.player.invulnerableMs = 999_999;
-  firing = advance(firing, 800);
-  const aimedOriginY = engine.FINALE_BOSS_ANCHOR_Y + firing.boss.radius * .5;
-  assert.equal(firing.bullets.filter((bullet) => bullet.y === aimedOriginY).length, 3,
-    "the aimed fan must fire from the same anchored boss body");
+  firing = advance(firing, 16);
+  assert.ok(firing.bullets.length === 5 || firing.bullets.length === 6);
+  assert.ok(firing.bullets.every((bullet) => (
+    bullet.x === bullet.visualRadius
+    || bullet.x === engine.FINALE_WIDTH - bullet.visualRadius
+    || bullet.y === 92 + bullet.visualRadius
+  )), "the asset volley must enter from the top, left, or right battlefield edge");
 });
 
 test("one run reaches the ending from protected reveal through both combat phases", () => {
@@ -266,20 +332,101 @@ test("phase two repeats a six-second dodge and 2.5-second double-damage opening"
   assert.equal(world.cycle, "dodge");
 });
 
-test("telegraphed safe-corridor patterns stay near the 100-bullet target and below 140", () => {
+test("large rotating edge volleys stay at five or six simultaneous bullets", () => {
   let world = engine.forceFinaleMode(engine.createFinaleWorld(loadout(), { seed: 12 }), "bulletHell");
   world.player.invulnerableMs = 999_999;
   let observedMaximum = 0;
   let observedTelegraph = false;
+  let observedRotation = false;
   for (let elapsed = 0; elapsed < 34_000; elapsed += 16) {
+    const rotations = new Map(world.bullets.map((bullet) => [bullet.id, bullet.rotation]));
     world = engine.updateFinaleWorld(world, {}, 16);
     observedMaximum = Math.max(observedMaximum, world.bullets.length);
     observedTelegraph ||= world.bullets.some((bullet) => bullet.ageMs < bullet.telegraphMs && bullet.telegraphMs >= 500);
+    observedRotation ||= world.bullets.some((bullet) => rotations.has(bullet.id) && rotations.get(bullet.id) !== bullet.rotation);
     assert.ok(world.bullets.length <= engine.FINALE_BULLET_CAP);
+    assert.ok(world.bullets.every((bullet) => bullet.radius === engine.FINALE_ASSET_BULLET_CORE_RADIUS));
+    assert.ok(world.bullets.every((bullet) => bullet.visualRadius === engine.FINALE_ASSET_BULLET_VISUAL_RADIUS));
+    assert.ok(world.bullets.every((bullet) => bullet.spin !== 0));
   }
   assert.equal(observedTelegraph, true);
-  assert.ok(observedMaximum >= 80, `expected a dense but readable field, saw ${observedMaximum}`);
-  assert.ok(observedMaximum <= 140);
+  assert.equal(observedRotation, true);
+  assert.equal(observedMaximum, 6);
+  assert.equal(engine.FINALE_BULLET_CAP, 6);
+
+  let imported = engine.forceFinaleMode(engine.createFinaleWorld(loadout(), { seed: 120 }), "bulletHell");
+  imported.boss.attackCooldownMs = 999_999;
+  imported.bullets = Array.from({ length: 9 }, (_, index) => overlappingBullet(imported, 80_000 + index, {
+    x: 120 + index * 20,
+    y: 220,
+    ageMs: 0,
+    telegraphMs: 10_000,
+  }));
+  imported = engine.updateFinaleWorld(imported, {}, 16);
+  assert.equal(imported.bullets.length, 6, "the cap also repairs imported or debug-mutated state");
+});
+
+test("hall-specific alpha masks hit painted cells but not transparent frame corners", () => {
+  const corners = [[-43, -43], [43, -43], [-43, 43], [43, 43]];
+  for (let hallLevel = 1; hallLevel <= 6; hallLevel += 1) {
+    const cells = engine.finaleGuildMaskCells(hallLevel);
+    assert.ok(cells.length > 0, `hall ${hallLevel} must have collision cells`);
+    assert.ok(cells.every((cell) => (
+      Math.abs(cell.x) + cell.radius <= engine.FINALE_GUILD_SIZE / 2
+      && Math.abs(cell.y) + cell.radius <= engine.FINALE_GUILD_SIZE / 2
+    )), `hall ${hallLevel} cells must stay inside the 90px sprite frame`);
+
+    for (const [offsetX, offsetY] of corners) {
+      let cornerWorld = engine.forceFinaleMode(engine.createFinaleWorld(loadout({ hallLevel }), { seed: hallLevel }), "bulletHell");
+      cornerWorld.player.invulnerableMs = 0;
+      cornerWorld.boss.attackCooldownMs = 999_999;
+      cornerWorld.bullets = [overlappingBullet(cornerWorld, 90_000 + hallLevel, {
+        x: cornerWorld.player.x + offsetX,
+        y: cornerWorld.player.y + offsetY,
+        radius: engine.FINALE_ASSET_BULLET_CORE_RADIUS,
+        visualRadius: engine.FINALE_ASSET_BULLET_VISUAL_RADIUS,
+        vx: 0,
+        vy: 0,
+      })];
+      cornerWorld = engine.updateFinaleWorld(cornerWorld, {}, 16);
+      assert.equal(cornerWorld.player.shield, 1, `hall ${hallLevel} transparent corner must not absorb a hit`);
+    }
+
+    const opaqueCell = cells[Math.floor(cells.length / 2)];
+    let opaqueWorld = engine.forceFinaleMode(engine.createFinaleWorld(loadout({ hallLevel }), { seed: hallLevel }), "bulletHell");
+    opaqueWorld.player.invulnerableMs = 0;
+    opaqueWorld.boss.attackCooldownMs = 999_999;
+    opaqueWorld.bullets = [overlappingBullet(opaqueWorld, 91_000 + hallLevel, {
+      x: opaqueWorld.player.x + opaqueCell.x,
+      y: opaqueWorld.player.y + opaqueCell.y,
+      radius: engine.FINALE_ASSET_BULLET_CORE_RADIUS,
+      visualRadius: engine.FINALE_ASSET_BULLET_VISUAL_RADIUS,
+      vx: 0,
+      vy: 0,
+    })];
+    opaqueWorld = engine.updateFinaleWorld(opaqueWorld, {}, 16);
+    assert.equal(opaqueWorld.player.shield, 0, `hall ${hallLevel} painted cell must absorb a hit`);
+
+    let topLeft = engine.forceFinaleMode(engine.createFinaleWorld(loadout({ hallLevel }), { seed: hallLevel }), "bulletHell");
+    topLeft.player.invulnerableMs = 999_999;
+    topLeft = advance(topLeft, 5_000, { left: true, up: true });
+    assert.equal(topLeft.player.x, 45);
+    assert.equal(topLeft.player.y, 92 + 45);
+    assert.ok(cells.every((cell) => (
+      topLeft.player.x + cell.x - cell.radius >= 0
+      && topLeft.player.y + cell.y - cell.radius >= 92
+    )));
+
+    let bottomRight = engine.forceFinaleMode(engine.createFinaleWorld(loadout({ hallLevel }), { seed: hallLevel }), "bulletHell");
+    bottomRight.player.invulnerableMs = 999_999;
+    bottomRight = advance(bottomRight, 5_000, { right: true, down: true });
+    assert.equal(bottomRight.player.x, engine.FINALE_WIDTH - 45);
+    assert.equal(bottomRight.player.y, engine.FINALE_HEIGHT - 45);
+    assert.ok(cells.every((cell) => (
+      bottomRight.player.x + cell.x + cell.radius <= engine.FINALE_WIDTH
+      && bottomRight.player.y + cell.y + cell.radius <= engine.FINALE_HEIGHT
+    )));
+  }
 });
 
 test("one shield, one-second invulnerability, hull defeat, and phase-two retry are explicit", () => {

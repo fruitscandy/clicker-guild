@@ -199,18 +199,43 @@ test("stacks visible boss-hit feedback without letting rate-limited clicks erase
   assert.ok(bossLayer >= 0 && attackLayer >= 0 && bossLayer < attackLayer);
 });
 
-test("renders the guild under enemy bullets while keeping the exact white hit point on top", async () => {
+test("renders opaque rotating asset cards and the exact guild mask above impacts", async () => {
   const component = await readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8");
 
   assert.match(component, /const size = FINALE_GUILD_SIZE/);
-  assert.match(component, /context\.arc\(0, 0, world\.stats\.hitRadius/);
+  assert.match(component, /const asset = finaleBulletAsset\(bullet\.spriteIndex\)/);
+  assert.doesNotMatch(component, /BULLET_ASSET_BY_SOURCE|bullet\.asset/);
+  assert.match(component, /const cardSize = finaleBulletCardSize\(asset\)/);
+  assert.match(component, /context\.fillStyle = telegraph \? "#a81258" : "#d91b73"/);
+  assert.match(component, /context\.fillRect\(-halfCard, -halfCard, cardSize, cardSize\)/);
+  assert.match(component, /Math\.min\(contentSize \/ image\.naturalWidth, contentSize \/ image\.naturalHeight\)/);
+  assert.match(component, /context\.rotate\(reducedMotion \? 0 : bullet\.rotation\)/);
+  assert.match(component, /const cells = finaleGuildMaskCells\(loadout\.hallLevel\)/);
+  assert.match(component, /traceGuildMaskCells\(context, cells\)/);
+  assert.match(component, /traceGuildMaskCells\(context, boundaryCells\)/);
+  assert.doesNotMatch(component, /function drawPlayerCore/);
+  assert.doesNotMatch(component, /흰 점이 실제 피격점/);
 
   const bodyLayer = component.indexOf("drawGuildBody(context, world, loadout, images, reducedMotion);");
-  const enemyLayer = component.indexOf("world.bullets.forEach((bullet) => drawBullet(context, bullet, images));");
+  const enemyLayer = component.indexOf("world.bullets.forEach((bullet) => drawBullet(context, bullet, images, reducedMotion));");
   const impactLayer = component.indexOf("if (playerImpact) drawPlayerImpact(context, playerImpact, images, reducedMotion);");
-  const coreLayer = component.indexOf("drawPlayerCore(context, world, focusHeld, reducedMotion);");
-  assert.ok([bodyLayer, enemyLayer, impactLayer, coreLayer].every((index) => index >= 0));
-  assert.ok(bodyLayer < enemyLayer && enemyLayer < impactLayer && impactLayer < coreLayer);
+  const maskLayer = component.indexOf("drawGuildHitArea(context, world, loadout, playerImpact, focusHeld, reducedMotion);");
+  assert.ok([bodyLayer, enemyLayer, impactLayer, maskLayer].every((index) => index >= 0));
+  assert.ok(bodyLayer < enemyLayer && enemyLayer < impactLayer && impactLayer < maskLayer);
+});
+
+test("hands campaign defeat off once while preserving the preview retry dialog", async () => {
+  const component = await readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8");
+
+  assert.match(component, /onDefeat\?: \(\) => void/);
+  assert.match(component, /"departing"/);
+  assert.match(component, /const defeatHandledRef = useRef\(false\)/);
+  assert.match(component, /if \(defeatHandledRef\.current\) return/);
+  assert.match(component, /sceneRef\.current = "departing";\s*setScene\("departing"\);\s*onDefeat\(\)/);
+  assert.ok((component.match(/completeDefeat\(world\)/g) ?? []).length >= 2);
+  assert.match(component, /setAnnouncement\("동기화 실패\. 2페이즈 시작점에서 즉시 재시도할 수 있습니다\."\)/);
+  assert.match(component, /sceneRef\.current = "defeat";\s*setScene\("defeat"\)/);
+  assert.match(component, /scene === "victory" \|\| scene === "defeat"/);
 });
 
 test("makes shield absorption, defeat, retry, destruction, and victory whiteout unambiguous", async () => {

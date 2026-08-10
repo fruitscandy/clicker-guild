@@ -9,6 +9,16 @@ export type FinaleBulletAsset = Readonly<{
   scale: number;
 }>;
 
+export const FINALE_BULLET_CARD_SIZE_BY_KIND = {
+  upgrade: 72,
+  weapon: 80,
+  boss: 88,
+} as const satisfies Readonly<Record<FinaleBulletAssetKind, number>>;
+
+export function finaleBulletCardSize(asset: Pick<FinaleBulletAsset, "kind">) {
+  return FINALE_BULLET_CARD_SIZE_BY_KIND[asset.kind];
+}
+
 export const FINALE_UPGRADE_BULLET_ASSETS = [
   { id: "upgrade-range", kind: "upgrade", label: "참격 범위", source: "/assets/upgrades/range.webp", radius: 10, scale: 0.72 },
   { id: "upgrade-critical", kind: "upgrade", label: "치명타", source: "/assets/upgrades/critical.webp", radius: 10, scale: 0.72 },

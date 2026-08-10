@@ -1,0 +1,144 @@
+.wave {
+  --wave-feather: 96px;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483200;
+  overflow: hidden;
+  pointer-events: auto;
+  touch-action: none;
+  isolation: isolate;
+}
+
+.stripField {
+  position: absolute;
+  inset: 0;
+}
+
+.strip {
+  position: absolute;
+  left: calc(var(--strip-index) * 100% / 48 - 1px);
+  top: calc(-1 * var(--wave-feather));
+  display: block;
+  width: calc(100% / 48 + 2px);
+  height: calc(100% + var(--wave-feather));
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(105, 247, 250, .92) 0,
+      rgba(39, 151, 160, .72) 24px,
+      #102528 72px,
+      #051011 var(--wave-feather),
+      #020606 100%
+    );
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, .16) 12px, #000 88px, #000 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, .16) 12px, #000 88px, #000 100%);
+  will-change: transform;
+}
+
+.wave[data-finale-defeat-wave="covering"] .strip {
+  animation: waveCover 720ms cubic-bezier(.55, .02, .24, 1) var(--cover-delay) both;
+}
+
+.wave[data-finale-defeat-wave="covered"] .strip {
+  transform: translate3d(0, 0, 0);
+}
+
+.wave[data-finale-defeat-wave="revealing"] .strip {
+  animation: waveReveal 620ms cubic-bezier(.42, 0, .2, 1) var(--reveal-delay) both;
+}
+
+.phaseClock {
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.wave[data-finale-defeat-wave="covering"] .phaseClock {
+  animation: coverClock 910ms linear both;
+}
+
+.wave[data-finale-defeat-wave="revealing"] .phaseClock {
+  animation: revealClock 810ms linear both;
+}
+
+.reducedVeil {
+  display: none;
+}
+
+@keyframes waveCover {
+  from { transform: translate3d(0, calc(100% + var(--wave-feather)), 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes waveReveal {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, calc(100% + var(--wave-feather)), 0); }
+}
+
+@keyframes coverClock {
+  from { opacity: .999; }
+  to { opacity: 1; }
+}
+
+@keyframes revealClock {
+  from { opacity: .999; }
+  to { opacity: 1; }
+}
+
+@supports not ((mask-image: linear-gradient(#000, transparent)) or (-webkit-mask-image: linear-gradient(#000, transparent))) {
+  .strip {
+    border-radius: 50% 50% 0 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .wave {
+    --wave-feather: 72px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stripField {
+    display: none;
+  }
+
+  .reducedVeil {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background: #030908;
+  }
+
+  .wave[data-finale-defeat-wave="covering"] .reducedVeil {
+    animation: reducedCover 160ms linear both;
+  }
+
+  .wave[data-finale-defeat-wave="covered"] .reducedVeil {
+    opacity: 1;
+  }
+
+  .wave[data-finale-defeat-wave="revealing"] .reducedVeil {
+    animation: reducedReveal 180ms linear both;
+  }
+
+  .wave[data-finale-defeat-wave="covering"] .phaseClock {
+    animation-duration: 180ms;
+  }
+
+  .wave[data-finale-defeat-wave="revealing"] .phaseClock {
+    animation-duration: 200ms;
+  }
+}
+
+@keyframes reducedCover {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes reducedReveal {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
