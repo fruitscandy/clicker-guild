@@ -40,6 +40,12 @@ test("uses discounted one and ten recruitment with a minimal rank odds UI", asyn
   assert.doesNotMatch(tavern, />契<|className=\{styles\.oddsSeal\}>%/);
   assert.match(tavern, /중복 정산/);
   assert.match(tavern, /REVEAL_STAGGER_MS/);
+  assert.match(tavern, /alreadyRevealed/);
+  assert.match(tavern, /skipRevealAnimation/);
+  assert.match(tavern, /if \(!results\.length \|\| skipRevealAnimation\) return/);
+  assert.match(tavern, /onComplete\(sequence\)/);
+  assert.match(game, /lastRevealedRecruitSequence/);
+  assert.match(game, /recruitRevealComplete=\{recruitSequence <= lastRevealedRecruitSequence\}/);
   assert.match(tavern, /playGuildRecruitRevealSound/);
   assert.match(tavern, /role="dialog"/);
   assert.match(tavern, /정말 판매하시겠습니까/);
@@ -57,6 +63,8 @@ test("uses discounted one and ten recruitment with a minimal rank odds UI", asyn
   assert.match(styles, /\.rankA/);
   assert.match(styles, /\.rankS/);
   assert.match(styles, /\.revealSlash/);
+  assert.match(styles, /\.settledResult[^\n]*animation:none/);
+  assert.match(styles, /\.settledResult \.resultCard::before[^\n]*opacity:0; visibility:hidden/);
   assert.match(styles, /\.saleDialogBackdrop/);
   assert.match(styles, /\.rateBoardTitle/);
   assert.doesNotMatch(styles, /\.headerStats|\.contractSeal|\.oddsSeal|\.rateLegend|\.emptyResult/);

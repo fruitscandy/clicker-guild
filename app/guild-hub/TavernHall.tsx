@@ -24,10 +24,12 @@ type TavernHallProps = {
   gold: number;
   recruitResults: RecruitResult[];
   recruitSequence: number;
+  recruitRevealComplete: boolean;
   pendingSaleId: string | null;
   formatNumber: (value: number) => string;
   getAttack: (member: MemberDefinition, progress: MemberProgress) => number;
   onRecruit: (count: 1 | 10) => void;
+  onRecruitRevealComplete: (sequence: number) => void;
   onToggleParty: (id: string) => void;
   onRequestSale: (id: string) => void;
   onCancelSale: () => void;
@@ -58,21 +60,28 @@ function isRare(member: MemberDefinition) {
 
 const REVEAL_LEAD_MS = 180;
 const REVEAL_STAGGER_MS = 175;
+const REVEAL_SETTLE_MS = 650;
 
 type RecruitRevealProps = {
   sequence: number;
   results: RecruitResult[];
   members: MemberDefinition[];
   formatNumber: (value: number) => string;
+  alreadyRevealed: boolean;
+  onComplete: (sequence: number) => void;
 };
 
-function RecruitReveal({ sequence, results, members, formatNumber }: RecruitRevealProps) {
-  const [revealedCount, setRevealedCount] = useState(0);
+function RecruitReveal({ sequence, results, members, formatNumber, alreadyRevealed, onComplete }: RecruitRevealProps) {
+  const [skipRevealAnimation] = useState(alreadyRevealed);
+  const [revealedCount, setRevealedCount] = useState(() => skipRevealAnimation ? results.length : 0);
 
   useEffect(() => {
-    if (!results.length) return;
+    if (!results.length || skipRevealAnimation) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const timer = window.setTimeout(() => setRevealedCount(results.length), 0);
+      const timer = window.setTimeout(() => {
+        setRevealedCount(results.length);
+        onComplete(sequence);
+      }, 0);
       return () => window.clearTimeout(timer);
     }
 
@@ -81,9 +90,16 @@ function RecruitReveal({ sequence, results, members, formatNumber }: RecruitReve
       setRevealedCount(index + 1);
       if (member) playGuildRecruitRevealSound(member.rank, index);
     }, REVEAL_LEAD_MS + index * REVEAL_STAGGER_MS));
+    const completionTimer = window.setTimeout(
+      () => onComplete(sequence),
+      REVEAL_LEAD_MS + (results.length - 1) * REVEAL_STAGGER_MS + REVEAL_SETTLE_MS,
+    );
 
-    return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [members, results, sequence]);
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+      window.clearTimeout(completionTimer);
+    };
+  }, [members, onComplete, results, sequence, skipRevealAnimation]);
 
   if (!results.length) return null;
 
@@ -92,8 +108,8 @@ function RecruitReveal({ sequence, results, members, formatNumber }: RecruitReve
   const latestMember = latestResult ? members.find((candidate) => candidate.id === latestResult.memberId) : null;
   const revealing = revealedCount < results.length;
 
-  return <div className={`${styles.resultStage} ${revealing ? styles.revealing : styles.revealComplete}`}>
-    {latestMember && <span key={`${sequence}-${revealedCount}`} className={`${styles.revealSlash} ${isRare(latestMember) ? styles.rareRevealSlash : ""}`} aria-hidden="true" />}
+  return <div className={`${styles.resultStage} ${revealing ? styles.revealing : styles.revealComplete} ${skipRevealAnimation ? styles.settledResult : ""}`}>
+    {!skipRevealAnimation && latestMember && <span key={`${sequence}-${revealedCount}`} className={`${styles.revealSlash} ${isRare(latestMember) ? styles.rareRevealSlash : ""}`} aria-hidden="true" />}
     <div className={styles.revealProgress} aria-label={`영입 결과 공개 ${revealedCount}/${results.length}`}>
       <div>{results.map((result, index) => {
         const member = members.find((candidate) => candidate.id === result.memberId);
@@ -123,7 +139,7 @@ function RecruitReveal({ sequence, results, members, formatNumber }: RecruitReve
   </div>;
 }
 
-export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel, gold, recruitResults, recruitSequence, pendingSaleId, formatNumber, getAttack, onRecruit, onToggleParty, onRequestSale, onCancelSale, onConfirmSale, tutorialFreeTenRecruit = false }: TavernHallProps) {
+export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel, gold, recruitResults, recruitSequence, recruitRevealComplete, pendingSaleId, formatNumber, getAttack, onRecruit, onRecruitRevealComplete, onToggleParty, onRequestSale, onCancelSale, onConfirmSale, tutorialFreeTenRecruit = false }: TavernHallProps) {
   const ownedMembers = ownedIds.map((id) => members.find((member) => member.id === id)).filter((member): member is MemberDefinition => Boolean(member));
   const partyMembers = partyIds.map((id) => members.find((member) => member.id === id)).filter((member): member is MemberDefinition => Boolean(member));
   const pendingSaleMember = members.find((member) => member.id === pendingSaleId) ?? null;
@@ -175,7 +191,7 @@ export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel,
           <strong id="latest-recruit-title">영입 결과</strong>
           <b>{recruitResults.length}명</b>
         </div>
-        <RecruitReveal key={recruitSequence} sequence={recruitSequence} results={recruitResults} members={members} formatNumber={formatNumber} />
+        <RecruitReveal key={recruitSequence} sequence={recruitSequence} results={recruitResults} members={members} formatNumber={formatNumber} alreadyRevealed={recruitRevealComplete} onComplete={onRecruitRevealComplete} />
       </section>}
     </div>
 
