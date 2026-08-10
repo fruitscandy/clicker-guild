@@ -26,11 +26,13 @@ import {
 import {
   createFinaleWorld,
   deriveFinaleStats,
+  finaleDroneOffsets,
   FINALE_HEIGHT,
   FINALE_WIDTH,
   forceFinalePhase,
   updateFinaleWorld,
   type FinaleLoadout,
+  type FinalePlayerHitEvent,
   type FinaleWorld,
 } from "./engine";
 import styles from "./BulletHellFinale.module.css";
@@ -56,6 +58,7 @@ const BULLET_ASSET_BY_SOURCE = new Map(FINALE_BULLET_ASSETS.map((asset) => [asse
 
 type FinaleScene = "breach" | "running" | "paused" | "victory" | "defeat";
 type VirtualDirection = "up" | "down" | "left" | "right" | "focus";
+type PlayerImpact = FinalePlayerHitEvent & { ageMs: number };
 
 type HudSnapshot = {
   playerHp: number;
@@ -116,8 +119,12 @@ function drawHexagon(context: CanvasRenderingContext2D, radius: number) {
   context.closePath();
 }
 
-function drawArenaBackground(context: CanvasRenderingContext2D, world: FinaleWorld) {
-  const seconds = world.elapsedMs / 1000;
+function drawArenaBackground(
+  context: CanvasRenderingContext2D,
+  world: FinaleWorld,
+  reducedMotion: boolean,
+) {
+  const seconds = reducedMotion ? 0 : world.elapsedMs / 1000;
   const gradient = context.createRadialGradient(FINALE_WIDTH / 2, 90, 30, FINALE_WIDTH / 2, FINALE_HEIGHT / 2, 650);
   gradient.addColorStop(0, world.boss.phase >= 3 ? "#2d1028" : "#10253b");
   gradient.addColorStop(.5, "#07101a");
@@ -158,10 +165,14 @@ function drawArenaBackground(context: CanvasRenderingContext2D, world: FinaleWor
   context.restore();
 }
 
-function drawGlitchBoss(context: CanvasRenderingContext2D, world: FinaleWorld) {
+function drawGlitchBoss(
+  context: CanvasRenderingContext2D,
+  world: FinaleWorld,
+  reducedMotion: boolean,
+) {
   const { x, y, hp, maxHp, phase } = world.boss;
-  const seconds = world.elapsedMs / 1000;
-  const pulse = 1 + Math.sin(seconds * 4.2) * .035;
+  const seconds = reducedMotion ? 0 : world.elapsedMs / 1000;
+  const pulse = reducedMotion ? 1 : 1 + Math.sin(seconds * 4.2) * .035;
   const phaseColor = phase >= 4 ? "#ff526a" : phase >= 3 ? "#ff4dac" : phase >= 2 ? "#9873ff" : "#62eff8";
 
   context.save();
@@ -263,35 +274,45 @@ function drawPlayerShot(context: CanvasRenderingContext2D, shot: FinaleWorld["sh
   context.save();
   context.translate(shot.x, shot.y);
   context.rotate(Math.atan2(shot.vy, shot.vx) + Math.PI / 2);
+  const droneShot = shot.source === "drone";
   const gradient = context.createLinearGradient(0, 11, 0, -14);
   gradient.addColorStop(0, "transparent");
-  gradient.addColorStop(.48, shot.critical ? "#fff1a4" : "#6ef7ff");
+  gradient.addColorStop(.48, shot.critical ? "#ff9bd5" : droneShot ? "#53f5ff" : "#f3c76f");
   gradient.addColorStop(1, "#ffffff");
   context.fillStyle = gradient;
-  context.shadowColor = shot.critical ? "#ffd969" : "#53edf5";
+  context.shadowColor = shot.critical ? "#ff58b5" : droneShot ? "#46ecf8" : "#f1bd5b";
   context.shadowBlur = shot.critical ? 13 : 7;
   context.beginPath();
   context.moveTo(0, -14);
-  context.lineTo(3.5, 10);
-  context.lineTo(-3.5, 10);
+  context.lineTo(droneShot ? 3 : 4, 10);
+  context.lineTo(droneShot ? -3 : -4, 10);
   context.closePath();
   context.fill();
+  if (droneShot && shot.ageMs < 120) {
+    context.globalAlpha = clamp(1 - shot.ageMs / 120, 0, 1) * .78;
+    context.strokeStyle = "#b9ffff";
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.moveTo(0, 10);
+    context.lineTo(0, 10 + (1 - shot.ageMs / 120) * 20);
+    context.stroke();
+  }
   context.restore();
 }
 
-function drawGuildPlayer(
+function drawGuildBody(
   context: CanvasRenderingContext2D,
   world: FinaleWorld,
   loadout: FinaleLoadout,
   images: Map<string, HTMLImageElement>,
-  focusHeld: boolean,
+  reducedMotion: boolean,
 ) {
   const player = world.player;
   const atlas = images.get(FINALE_GUILD_ATLAS.source);
   const frame = clamp(Math.round(loadout.hallLevel), 1, 6) - 1;
   const column = frame % FINALE_GUILD_ATLAS.columns;
   const row = Math.floor(frame / FINALE_GUILD_ATLAS.columns);
-  const blink = player.invulnerableMs > 0 && Math.floor(player.invulnerableMs / 75) % 2 === 0;
+  const blink = !reducedMotion && player.invulnerableMs > 0 && Math.floor(player.invulnerableMs / 75) % 2 === 0;
   const size = 116;
 
   context.save();
@@ -317,38 +338,163 @@ function drawGuildPlayer(
   }
   context.shadowBlur = 0;
 
-  const droneCount = Math.max(0, Math.min(3, loadout.partySize - 1));
-  for (let index = 0; index < droneCount; index += 1) {
-    const side = index % 2 === 0 ? -1 : 1;
-    const tier = Math.floor(index / 2);
-    context.fillStyle = "rgba(103,238,244,.88)";
-    context.strokeStyle = "rgba(225,255,255,.78)";
-    context.lineWidth = 1;
-    drawHexagon(context, 7);
+  const droneOffsets = finaleDroneOffsets(world.stats.droneCount);
+  context.save();
+  context.strokeStyle = "rgba(91,229,239,.24)";
+  context.lineWidth = 1;
+  context.setLineDash([3, 5]);
+  droneOffsets.forEach((offset) => {
+    context.beginPath();
+    context.moveTo(0, 0);
+    context.lineTo(offset.x, offset.y);
+    context.stroke();
+  });
+  context.restore();
+
+  const sinceVolley = Math.max(0, world.stats.shotIntervalMs - player.shotCooldownMs);
+  const muzzleAlpha = clamp(1 - sinceVolley / 90, 0, 1);
+  droneOffsets.forEach((offset, index) => {
     context.save();
-    context.translate(side * (53 + tier * 11), 7 + tier * 17);
-    drawHexagon(context, 7);
+    context.translate(offset.x, offset.y);
+    context.rotate(reducedMotion ? 0 : Math.sin(world.elapsedMs / 270 + index) * .08);
+    context.fillStyle = "rgba(5,31,40,.88)";
+    context.strokeStyle = "rgba(157,251,255,.94)";
+    context.lineWidth = 1.5;
+    drawHexagon(context, 8);
     context.fill();
     context.stroke();
+    context.fillStyle = "#7ef8ff";
+    context.shadowColor = "#55effa";
+    context.shadowBlur = 8;
+    context.beginPath();
+    context.arc(0, 0, 2.7, 0, Math.PI * 2);
+    context.fill();
+    context.shadowBlur = 0;
+    context.strokeStyle = "rgba(210,255,255,.82)";
+    context.beginPath();
+    context.moveTo(0, -7);
+    context.lineTo(0, -13);
+    context.stroke();
+    if (muzzleAlpha > 0) {
+      context.globalAlpha = muzzleAlpha;
+      context.fillStyle = "#e9ffff";
+      context.shadowColor = "#64f4ff";
+      context.shadowBlur = 12;
+      context.beginPath();
+      context.moveTo(0, -20);
+      context.lineTo(4, -11);
+      context.lineTo(-4, -11);
+      context.closePath();
+      context.fill();
+    }
     context.restore();
-  }
+  });
 
-  context.globalAlpha = 1;
+  if (player.shield > 0) {
+    context.globalAlpha = .92;
+    context.strokeStyle = "rgba(99,241,252,.72)";
+    context.lineWidth = 1.5;
+    context.setLineDash([14, 7]);
+    context.beginPath();
+    context.arc(0, 0, 48 + (reducedMotion ? 0 : Math.sin(world.elapsedMs / 130) * 2), 0, Math.PI * 2);
+    context.stroke();
+    context.setLineDash([]);
+  }
+  context.restore();
+}
+
+function drawPlayerCore(
+  context: CanvasRenderingContext2D,
+  world: FinaleWorld,
+  focusHeld: boolean,
+  reducedMotion: boolean,
+) {
+  context.save();
+  context.translate(world.player.x, world.player.y);
   context.fillStyle = focusHeld ? "#ff557b" : "#f9ffff";
+  context.strokeStyle = focusHeld ? "#ffafc0" : "#83f6ff";
   context.shadowColor = focusHeld ? "#ff557b" : "#61edf7";
   context.shadowBlur = 10;
   context.beginPath();
-  context.arc(0, 5, world.stats.hitRadius, 0, Math.PI * 2);
+  context.arc(0, 0, world.stats.hitRadius, 0, Math.PI * 2);
   context.fill();
+  context.lineWidth = 1;
+  context.stroke();
   context.shadowBlur = 0;
-  if (player.shield > 0) {
-    context.strokeStyle = "rgba(99,241,252,.68)";
-    context.lineWidth = 1.5;
+  if (reducedMotion && world.player.invulnerableMs > 0) {
+    context.strokeStyle = "rgba(255,220,150,.9)";
+    context.lineWidth = 2;
     context.beginPath();
-    context.arc(0, 2, 48 + Math.sin(world.elapsedMs / 130) * 2, 0, Math.PI * 2);
+    context.arc(0, 0, world.stats.hitRadius + 5, 0, Math.PI * 2);
     context.stroke();
   }
   context.restore();
+}
+
+function drawPlayerImpact(
+  context: CanvasRenderingContext2D,
+  impact: PlayerImpact,
+  images: Map<string, HTMLImageElement>,
+  reducedMotion: boolean,
+) {
+  const duration = reducedMotion ? 190 : impact.kind === "shield" ? 420 : 300;
+  const progress = clamp(impact.ageMs / duration, 0, 1);
+  if (progress >= 1) return;
+  const fade = Math.pow(1 - progress, 1.35);
+  const shielded = impact.kind === "shield";
+  const flash = images.get(FINALE_VFX_ASSETS.impactFlash);
+  const ring = images.get(FINALE_VFX_ASSETS.impactRing);
+  const radius = reducedMotion ? 58 : 48 + (1 - Math.pow(1 - progress, 3)) * (shielded ? 66 : 34);
+
+  context.save();
+  context.translate(impact.x, impact.y);
+  context.globalCompositeOperation = "screen";
+  if (flash?.complete && flash.naturalWidth > 0 && impact.ageMs < 120) {
+    const flashSize = reducedMotion ? 112 : 88 + progress * 74;
+    context.globalAlpha = clamp(1 - impact.ageMs / 120, 0, 1) * (shielded ? .9 : .66);
+    context.drawImage(flash, -flashSize / 2, -flashSize / 2, flashSize, flashSize);
+  }
+  if (ring?.complete && ring.naturalWidth > 0) {
+    const ringSize = radius * 2;
+    context.globalAlpha = fade * (shielded ? .92 : .58);
+    context.drawImage(ring, -ringSize / 2, -ringSize / 2, ringSize, ringSize);
+  }
+
+  context.globalAlpha = fade;
+  context.strokeStyle = shielded ? "#9cfcff" : "#ff9a68";
+  context.shadowColor = shielded ? "#57eff9" : "#ff654f";
+  context.shadowBlur = 16;
+  context.lineWidth = reducedMotion ? 4 : 2.5 + (1 - progress) * 2;
+  drawHexagon(context, radius);
+  context.stroke();
+  drawHexagon(context, Math.max(12, radius - 9));
+  context.stroke();
+
+  if (!reducedMotion) {
+    for (let index = 0; index < 8; index += 1) {
+      const jitter = ((impact.serial * 17 + index * 23) % 11 - 5) * .025;
+      const angle = impact.angle + Math.PI + index * Math.PI / 4 + jitter;
+      const distance = 18 + progress * (shielded ? 58 : 38);
+      context.save();
+      context.rotate(angle);
+      context.translate(distance, 0);
+      context.rotate(progress * 2 + index);
+      context.globalAlpha = fade * .92;
+      context.fillStyle = shielded ? "#c8ffff" : "#ffd0a1";
+      context.fillRect(-2.5, -1.2, 7, 2.4);
+      context.restore();
+    }
+  }
+  context.restore();
+
+  if (shielded && impact.ageMs < 90) {
+    context.save();
+    context.globalAlpha = clamp(1 - impact.ageMs / 90, 0, 1) * .24;
+    context.strokeStyle = "#a9fdff";
+    context.lineWidth = 7;
+    context.strokeRect(8, 8, FINALE_WIDTH - 16, FINALE_HEIGHT - 16);
+    context.restore();
+  }
 }
 
 function drawWorld(
@@ -357,8 +503,10 @@ function drawWorld(
   loadout: FinaleLoadout,
   images: Map<string, HTMLImageElement>,
   focusHeld: boolean,
+  impact: PlayerImpact | null,
+  reducedMotion: boolean,
 ) {
-  drawArenaBackground(context, world);
+  drawArenaBackground(context, world, reducedMotion);
 
   if (world.pulseRadius > 0) {
     context.save();
@@ -372,10 +520,12 @@ function drawWorld(
     context.restore();
   }
 
-  drawGlitchBoss(context, world);
+  drawGlitchBoss(context, world, reducedMotion);
+  drawGuildBody(context, world, loadout, images, reducedMotion);
   world.shots.forEach((shot) => drawPlayerShot(context, shot));
   world.bullets.forEach((bullet) => drawBullet(context, bullet, images));
-  drawGuildPlayer(context, world, loadout, images, focusHeld);
+  if (impact) drawPlayerImpact(context, impact, images, reducedMotion);
+  drawPlayerCore(context, world, focusHeld, reducedMotion);
 
   context.save();
   context.strokeStyle = "rgba(113,235,243,.22)";
@@ -398,6 +548,8 @@ export function BulletHellFinale({
   const worldRef = useRef<FinaleWorld>(initialWorld);
   const keysRef = useRef(new Set<string>());
   const virtualRef = useRef(new Set<VirtualDirection>());
+  const impactRef = useRef<PlayerImpact | null>(null);
+  const reducedMotionRef = useRef(false);
   const frameRef = useRef<number | null>(null);
   const lastFrameRef = useRef(0);
   const lastHudRef = useRef(0);
@@ -427,8 +579,27 @@ export function BulletHellFinale({
     if (!context) return;
     context.setTransform(width / FINALE_WIDTH, 0, 0, height / FINALE_HEIGHT, 0, 0);
     context.imageSmoothingEnabled = true;
-    drawWorld(context, worldRef.current, loadout, imagesRef.current, keysRef.current.has("shift") || virtualRef.current.has("focus"));
+    drawWorld(
+      context,
+      worldRef.current,
+      loadout,
+      imagesRef.current,
+      keysRef.current.has("shift") || virtualRef.current.has("focus"),
+      impactRef.current,
+      reducedMotionRef.current,
+    );
   }, [loadout]);
+
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncPreference = () => {
+      reducedMotionRef.current = query.matches;
+      resizeCanvas();
+    };
+    syncPreference();
+    query.addEventListener("change", syncPreference);
+    return () => query.removeEventListener("change", syncPreference);
+  }, [resizeCanvas]);
 
   useEffect(() => {
     let cancelled = false;
@@ -514,6 +685,10 @@ export function BulletHellFinale({
 
       const elapsed = Math.min(50, Math.max(0, timestamp - lastFrameRef.current));
       lastFrameRef.current = timestamp;
+      if (impactRef.current) {
+        impactRef.current.ageMs += elapsed;
+        if (impactRef.current.ageMs >= 460) impactRef.current = null;
+      }
 
       const pressed = keysRef.current;
       const virtual = virtualRef.current;
@@ -525,15 +700,21 @@ export function BulletHellFinale({
       world = updateFinaleWorld(world, { x: horizontal, y: vertical, focus }, elapsed);
       worldRef.current = world;
       const playerHit = world.playerHit;
+      if (world.playerHitEvent) impactRef.current = { ...world.playerHitEvent, ageMs: 0 };
       const phaseChanged = world.phaseChanged;
       const pulse = world.pulse;
 
       context.setTransform(canvas.width / FINALE_WIDTH, 0, 0, canvas.height / FINALE_HEIGHT, 0, 0);
-      drawWorld(context, world, loadout, imagesRef.current, focus);
+      drawWorld(context, world, loadout, imagesRef.current, focus, impactRef.current, reducedMotionRef.current);
 
       if (playerHit) {
-        playMonsterHitSound(4, 1);
-        setAnnouncement(world.player.shield > 0 ? "금고 장갑이 데이터 탄환을 차단했습니다." : `길드 본관 피격. 내구도 ${world.player.hp}/${world.player.maxHp}.`);
+        if (world.playerHitEvent?.kind === "shield") {
+          playCombatProcSound({ critical: true });
+          setAnnouncement(`금고 장갑 피격. 잔여 ${world.player.shield} CHARGE. 본관 내구도 유지.`);
+        } else {
+          playMonsterHitSound(4, 1);
+          setAnnouncement(`길드 본관 피격. 내구도 ${world.player.hp}/${world.player.maxHp}.`);
+        }
       }
       if (pulse) playCombatProcSound({ shockwave: true });
       if (phaseChanged) {
@@ -580,6 +761,7 @@ export function BulletHellFinale({
 
   const restart = useCallback(() => {
     worldRef.current = createFinaleWorld(loadout, { preview: mode === "preview", seed });
+    impactRef.current = null;
     resultSoundRef.current = null;
     setHud(snapshotFromWorld(worldRef.current));
     setAnnouncement("글리치 코어 재동기화. 교전을 다시 시작합니다.");
@@ -590,6 +772,7 @@ export function BulletHellFinale({
 
   const jumpToPhase = (phase: number) => {
     worldRef.current = forceFinalePhase(worldRef.current, phase);
+    impactRef.current = null;
     setHud(snapshotFromWorld(worldRef.current));
     setAnnouncement(`개발자 패턴 점프: PHASE ${phase}.`);
     requestAnimationFrame(() => canvasRef.current?.focus({ preventScroll: true }));
@@ -701,7 +884,8 @@ export function BulletHellFinale({
               <div className={styles.statList}>
                 <span>자동 사격 <b>{stats.shotDamage.toFixed(1)} DMG</b></span>
                 <span>발사 주기 <b>{stats.shotIntervalMs}ms</b></span>
-                <span>사격 열 <b>{stats.shotCount} + {stats.droneCount}</b></span>
+                <span>본관 사격 <b>{stats.shotCount}열 · 금빛</b></span>
+                <span>지원 포대 <b>{stats.droneCount}기 · 청록 육각</b></span>
                 <span>치명 확률 <b>{Math.round(stats.criticalChance * 100)}%</b></span>
                 <span>이동 속도 <b>{Math.round(stats.moveSpeed)}</b></span>
                 <span>실제 피격점 <b>{stats.hitRadius.toFixed(1)}px</b></span>
@@ -724,7 +908,7 @@ export function BulletHellFinale({
           </aside>
         </div>
 
-        <footer className={styles.bottomRail}><span><strong>TIP</strong> 보이는 건물 전체가 아니라 중앙의 작은 빛만 피격됩니다. SHIFT를 누르면 빛이 붉게 표시됩니다.</span><span>ASSET BARRAGE BUILD · SEED {seed}</span></footer>
+        <footer className={styles.bottomRail}><span><strong>TIP</strong> 적탄은 건물 위로 표시되고 중앙의 흰 코어만 피격됩니다. 청록 육각 지원 포대는 각 위치에서 실제 사격합니다.</span><span>ASSET BARRAGE BUILD · SEED {seed}</span></footer>
         <p className={styles.srOnly} aria-live="assertive">{announcement}</p>
       </section>
     </main>

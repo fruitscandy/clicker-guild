@@ -89,6 +89,7 @@ test("exposes the fixed finale arena and maps every saved upgrade family", () =>
   assert.equal(world.pulse, false);
   assert.equal(world.pulseRadius, 0);
   assert.equal(world.playerHit, false);
+  assert.equal(world.playerHitEvent, null);
   assert.equal(world.phaseChanged, false);
 });
 
@@ -146,12 +147,15 @@ test("shields absorb one collision and invulnerability rejects the overlapping f
   loadout.upgrades.loot = 3;
   let world = engine.createFinaleWorld(loadout, { preview: true, seed: 5 });
   const initialHp = world.player.hp;
+  world.player.shield = 1;
   const initialShields = world.player.shield;
   world.bullets = [overlappingBullet(world, 1), overlappingBullet(world, 2)];
   world = engine.updateFinaleWorld(world, {}, 16);
   assert.equal(world.player.shield, initialShields - 1);
   assert.equal(world.player.hp, initialHp);
   assert.equal(world.playerHit, true);
+  assert.equal(world.playerHitEvent.kind, "shield");
+  assert.equal(world.playerHitEvent.serial, 1);
   assert.ok(world.player.invulnerableMs > 0);
   assert.equal(world.bullets.length, 1);
 
@@ -159,6 +163,47 @@ test("shields absorb one collision and invulnerability rejects the overlapping f
   const protectedWorld = engine.updateFinaleWorld(world, {}, 16);
   assert.equal(protectedWorld.player.shield, world.player.shield);
   assert.equal(protectedWorld.player.hp, world.player.hp);
+  assert.equal(protectedWorld.playerHitEvent, null);
+
+  protectedWorld.player.invulnerableMs = 0;
+  protectedWorld.bullets = [overlappingBullet(protectedWorld, 4)];
+  const hullHit = engine.updateFinaleWorld(protectedWorld, {}, 16);
+  assert.equal(hullHit.player.shield, 0);
+  assert.equal(hullHit.player.hp, initialHp - 1);
+  assert.equal(hullHit.playerHitEvent.kind, "hull");
+});
+
+test("support drones match the loadout and fire from every visible cyan turret", () => {
+  for (const [partySize, tavernLevel] of [[0, 0], [1, 0], [4, 0], [4, 3]]) {
+    const loadout = zeroLoadout();
+    loadout.partySize = partySize;
+    loadout.upgrades.tavern = tavernLevel;
+    const stats = engine.deriveFinaleStats(loadout);
+    assert.equal(engine.finaleDroneOffsets(stats.droneCount).length, stats.droneCount);
+  }
+
+  const loadout = engine.maximumFinaleLoadout();
+  const start = engine.createFinaleWorld(loadout, { preview: true, seed: 44 });
+  const fired = engine.updateFinaleWorld(start, { right: true }, 16);
+  const guildShots = fired.shots.filter((shot) => shot.source === "guild");
+  const droneShots = fired.shots.filter((shot) => shot.source === "drone");
+  const offsets = engine.finaleDroneOffsets(fired.stats.droneCount);
+  assert.equal(guildShots.length, fired.stats.shotCount);
+  assert.equal(droneShots.length, offsets.length);
+
+  for (let index = 0; index < droneShots.length; index += 1) {
+    const shot = droneShots[index];
+    const offset = offsets[index];
+    const originX = shot.x - shot.vx * 0.016;
+    const originY = shot.y - shot.vy * 0.016;
+    assert.ok(Math.abs(originX - (fired.player.x + offset.x)) < 0.001);
+    assert.ok(Math.abs(originY - (fired.player.y + offset.y)) < 0.001);
+    assert.equal(shot.sourceIndex, index);
+    const targetX = fired.boss.x - originX;
+    const targetY = fired.boss.y - originY;
+    assert.ok(Math.abs(targetX * shot.vy - targetY * shot.vx) < 0.001);
+    assert.ok(targetX * shot.vx + targetY * shot.vy > 0);
+  }
 });
 
 test("shockwave research deletes nearby hostile assets without deleting distant bullets", () => {

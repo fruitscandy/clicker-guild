@@ -45,6 +45,14 @@ export type FinaleInput = {
 export type FinaleStatus = "playing" | "victory" | "defeat";
 export type FinalePhase = 1 | 2 | 3 | 4;
 export type FinaleBulletKind = "weapon" | "upgrade" | "loot" | "guild" | "error";
+export type FinaleShotSource = "guild" | "drone";
+export type FinalePlayerHitEvent = {
+  kind: "shield" | "hull";
+  x: number;
+  y: number;
+  angle: number;
+  serial: number;
+};
 
 export type FinaleStats = {
   maxHp: number;
@@ -139,6 +147,9 @@ export type FinaleShot = {
   piercing: boolean;
   hitBoss: boolean;
   asset: string;
+  source: FinaleShotSource;
+  sourceIndex: number;
+  ageMs: number;
 };
 
 export type FinalePulse = {
@@ -172,6 +183,7 @@ export type FinaleWorld = {
   pulseRadius: number;
   pulseState: FinalePulse;
   playerHit: boolean;
+  playerHitEvent: FinalePlayerHitEvent | null;
   phaseChanged: boolean;
   victory: boolean;
   defeat: boolean;
@@ -260,6 +272,18 @@ function finiteOr(value: number, fallback: number) {
 
 function clampLevel(value: number, maximum: number) {
   return Math.round(clamp(finiteOr(value, 0), 0, maximum));
+}
+
+const DRONE_FORMATIONS = [
+  [],
+  [{ x: 0, y: -50 }],
+  [{ x: -60, y: 4 }, { x: 60, y: 4 }],
+  [{ x: -60, y: 7 }, { x: 60, y: 7 }, { x: 0, y: -50 }],
+  [{ x: -60, y: 9 }, { x: 60, y: 9 }, { x: -34, y: -44 }, { x: 34, y: -44 }],
+] as const;
+
+export function finaleDroneOffsets(count: number): ReadonlyArray<{ readonly x: number; readonly y: number }> {
+  return DRONE_FORMATIONS[clampLevel(count, 4)];
 }
 
 function normalizeLoadout(loadout: FinaleLoadout): FinaleLoadout {
@@ -399,6 +423,7 @@ export function createFinaleWorld(
       removed: 0,
     },
     playerHit: false,
+    playerHitEvent: null,
     phaseChanged: false,
     victory: false,
     defeat: false,
@@ -419,6 +444,7 @@ function cloneWorld(world: FinaleWorld): FinaleWorld {
     bullets: world.bullets.map((bullet) => ({ ...bullet })),
     shots: world.shots.map((shot) => ({ ...shot })),
     pulseState: { ...world.pulseState },
+    playerHitEvent: world.playerHitEvent ? { ...world.playerHitEvent } : null,
   };
 }
 
@@ -633,31 +659,55 @@ function spawnPlayerVolley(world: FinaleWorld) {
   world.player.volleysFired += 1;
   const combo = world.loadout.upgrades.combo > 0 && world.player.volleysFired % world.stats.comboEvery === 0;
   if (combo) world.player.comboVolleys += 1;
-  const totalShots = world.stats.shotCount + world.stats.droneCount;
-  const aim = Math.atan2(world.boss.y - world.player.y, world.boss.x - world.player.x);
   const weaponAsset = WEAPON_ASSETS[world.loadout.weaponLevel];
+  const droneOffsets = finaleDroneOffsets(world.stats.droneCount);
+  const totalShots = world.stats.shotCount + droneOffsets.length;
+  let globalIndex = 0;
 
-  for (let index = 0; index < totalShots; index += 1) {
-    if (world.shots.length >= MAX_SHOTS) break;
-    const offset = (index - (totalShots - 1) / 2) * world.stats.shotSpread;
+  const addShot = (source: FinaleShotSource, sourceIndex: number, originX: number, originY: number, spreadOffset: number) => {
+    if (world.shots.length >= MAX_SHOTS) return;
+    const aim = Math.atan2(world.boss.y - originY, world.boss.x - originX);
     const critical = random(world) < world.stats.criticalChance;
     const multiplier = (critical ? world.stats.criticalMultiplier : 1) * (combo ? world.stats.comboMultiplier : 1);
     if (critical) world.player.criticalShots += 1;
     world.shots.push({
       id: world.nextShotId,
-      x: world.player.x + Math.cos(aim + Math.PI / 2) * (index - (totalShots - 1) / 2) * 7,
-      y: world.player.y - world.player.radius * 0.4,
-      vx: Math.cos(aim + offset) * world.stats.shotSpeed,
-      vy: Math.sin(aim + offset) * world.stats.shotSpeed,
+      x: originX,
+      y: originY,
+      vx: Math.cos(aim + spreadOffset) * world.stats.shotSpeed,
+      vy: Math.sin(aim + spreadOffset) * world.stats.shotSpeed,
       radius: 4 + Math.min(3, world.loadout.upgrades.range * 0.35),
       damage: Math.round(world.stats.shotDamage * multiplier),
       critical,
       combo,
-      piercing: world.loadout.upgrades.range >= 6 && index === Math.floor(totalShots / 2),
+      piercing: world.loadout.upgrades.range >= 6 && globalIndex === Math.floor(totalShots / 2),
       hitBoss: false,
       asset: weaponAsset,
+      source,
+      sourceIndex,
+      ageMs: 0,
     });
     world.nextShotId += 1;
+    globalIndex += 1;
+  };
+
+  const guildAim = Math.atan2(world.boss.y - world.player.y, world.boss.x - world.player.x);
+  for (let index = 0; index < world.stats.shotCount; index += 1) {
+    if (world.shots.length >= MAX_SHOTS) break;
+    const lane = index - (world.stats.shotCount - 1) / 2;
+    addShot(
+      "guild",
+      index,
+      world.player.x + Math.cos(guildAim + Math.PI / 2) * lane * 7,
+      world.player.y - world.player.radius * 0.4,
+      lane * world.stats.shotSpread,
+    );
+  }
+
+  for (let index = 0; index < droneOffsets.length; index += 1) {
+    if (world.shots.length >= MAX_SHOTS) break;
+    const offset = droneOffsets[index];
+    addShot("drone", index, world.player.x + offset.x, world.player.y + offset.y, 0);
   }
 }
 
@@ -698,6 +748,7 @@ function moveProjectiles(world: FinaleWorld, deltaMs: number) {
   world.shots.forEach((shot) => {
     shot.x += shot.vx * deltaSeconds;
     shot.y += shot.vy * deltaSeconds;
+    shot.ageMs += deltaMs;
   });
   world.shots = world.shots.filter((shot) => shot.x >= -40 && shot.x <= FINALE_WIDTH + 40 && shot.y >= -50 && shot.y <= FINALE_HEIGHT + 40);
 }
@@ -771,7 +822,15 @@ function collideBulletsWithPlayer(world: FinaleWorld) {
 
     if (distance <= hitDistance && world.player.invulnerableMs <= 0) {
       world.playerHit = true;
-      if (world.player.shield > 0) world.player.shield -= 1;
+      const shielded = world.player.shield > 0;
+      world.playerHitEvent = {
+        kind: shielded ? "shield" : "hull",
+        x: world.player.x,
+        y: world.player.y,
+        angle: Math.atan2(bullet.vy, bullet.vx),
+        serial: bullet.id,
+      };
+      if (shielded) world.player.shield -= 1;
       else world.player.hp = Math.max(0, world.player.hp - bullet.damage);
       world.player.invulnerableMs = world.stats.invulnerabilityMs;
       if (world.player.hp <= 0) {
@@ -843,6 +902,7 @@ function stepWorld(world: FinaleWorld, input: FinaleInput, deltaMs: number) {
 export function updateFinaleWorld(world: FinaleWorld, input: FinaleInput, deltaMs: number): FinaleWorld {
   const next = cloneWorld(world);
   next.playerHit = false;
+  next.playerHitEvent = null;
   next.pulse = false;
   next.phaseChanged = false;
   next.victory = false;
@@ -865,6 +925,7 @@ export function forceFinalePhase(world: FinaleWorld, requestedPhase: number): Fi
   const definition = PHASES[safePhase];
   next.status = "playing";
   next.playerHit = false;
+  next.playerHitEvent = null;
   next.pulse = false;
   next.phaseChanged = true;
   next.victory = false;
