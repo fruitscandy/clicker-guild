@@ -1224,7 +1224,7 @@ export default function Game() {
       <section className="guild-rank-strip" aria-label="길드 성장 현황">
         <span className="guild-seal">{RANK_ORDER[Math.min(RANK_ORDER.length - 1, Math.floor((save.unlockedStage - 1) / 5))]}</span>
         <div className="guild-rank-copy">
-          <span><b>15분 원정 진척</b><em>{save.unlockedStage}/{STAGE_COUNT} 웨이브</em></span>
+          <span><b>원정 진척</b><em>{save.unlockedStage}/{STAGE_COUNT} 웨이브</em></span>
           <i><b style={{ width: `${save.unlockedStage / STAGE_COUNT * 100}%` }} /></i>
         </div>
         <div className="current-objective"><small>현재 목표</small><strong>{stage.boss ? `${stage.name} 군주전` : `${stage.region.name} ${stage.localStage}웨이브 돌파`}</strong></div>

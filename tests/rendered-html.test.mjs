@@ -180,8 +180,9 @@ test("runs portrait-driven gacha recruitment, party formation, and member sales 
   assert.doesNotMatch(game, /function trainMember/);
   assert.doesNotMatch(progression, /"training"/);
   assert.match(hub, /tavernBuildingArt/);
-  assert.match(tavern, /RANDOM CONTRACTS/);
-  assert.match(tavern, /최신 영입 결과/);
+  assert.match(tavern, /THE WANDERING MUG/);
+  assert.doesNotMatch(tavern, /RANDOM CONTRACTS|계약 종/);
+  assert.match(tavern, /영입 결과/);
   assert.match(tavern, /길드원 편성/);
   assert.match(tavern, /보유 길드원/);
   assert.match(tavern, /onRecruit/);
@@ -198,7 +199,8 @@ test("runs portrait-driven gacha recruitment, party formation, and member sales 
   assert.match(tavernStyles, /\.rareResult/);
   assert.match(tavernStyles, /\.revealSlash/);
   assert.match(tavernStyles, /\.saleDialog/);
-  assert.match(tavernStyles, /\.rateBoardHeader/);
+  assert.match(tavernStyles, /\.rateBoardTitle/);
+  assert.doesNotMatch(tavernStyles, /\.rateBoardHeader|\.contractSeal|\.emptyResult/);
   assert.match(tavernStyles, /\.partySlots/);
   assert.match(tavernStyles, /\.ownedRoster/);
   assert.match(tavernStyles, /\.sellButton/);
