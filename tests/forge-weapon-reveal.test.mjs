@@ -18,5 +18,7 @@ test("the forge reveals only owned weapons and the next silhouette", async () =>
   assert.match(forge, /hidden\s*\? <span className=\{styles\.hiddenCardGlyph\} aria-hidden="true">\?\?\?<\/span>/);
   assert.match(forge, /<strong>\{unlocked \? weapon\.weaponName : craftable \? "다음 무기" : "\?\?\?"\}<\/strong>/);
   assert.match(styles, /\.hiddenCardGlyph \{/);
+  assert.match(styles, /\.weaponStand > \.heroWeapon \{[^}]*width: 210px;[^}]*height: 310px;/s);
+  assert.match(styles, /\.weaponCard > \.cardWeapon \{[^}]*width: 51px;[^}]*height: 72px;/s);
   assert.doesNotMatch(forge, /PLAYER WEAPON · \+\{current\.tier\}/);
 });

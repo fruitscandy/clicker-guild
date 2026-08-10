@@ -180,7 +180,7 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
             ? <span className={styles.levelProgress}>{progress.completed}/{progress.total}</span>
             : depth > 0 && !singleUnlock && <span className={styles.depth}>{depth}</span>}
           <span className={`${styles.glyph} ${icon && !hallLocked ? styles.glyphArt : ""}`} aria-hidden="true">
-            {hallLocked ? "◆" : icon ? <Image src={icon} alt="" width={64} height={64} /> : node.glyph}
+            {hallLocked ? "◆" : icon ? <Image src={icon} alt="" width={64} height={64} unoptimized /> : node.glyph}
           </span>
           <span className={styles.nodeName}>{variant === "branch" ? BRANCH_LABELS[familyForNode(node.id)] : node.title}</span>
           <span className={styles.nodeCost}>{familyComplete ? "완료" : hallLocked ? `본관 ${requiredHallLevel}` : node.cost ? `${formatCost(node.cost)} G` : "기반"}</span>
@@ -218,7 +218,7 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
         <button type="button" autoFocus className={styles.detailClose} onClick={() => setSelectedNodeId(null)} aria-label="연구 설명 닫기">×</button>
         <div className={styles.detailIdentity}>
           <span className={`${styles.detailIcon} ${icon ? styles.detailIconArt : ""}`} aria-hidden="true">
-            {icon ? <Image src={icon} alt="" width={64} height={64} /> : selectedNode.glyph}
+            {icon ? <Image src={icon} alt="" width={64} height={64} unoptimized /> : selectedNode.glyph}
           </span>
           <span>
             <small>{detail ? BRANCH_LABELS[family] : "핵심 연구"}{nodeDepth(selectedNode.id) && !singleUnlock ? ` · 단계 ${nodeDepth(selectedNode.id)}` : ""}</small>

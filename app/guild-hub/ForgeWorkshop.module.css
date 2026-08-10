@@ -50,7 +50,7 @@
 
 .weaponStage { position: relative; z-index: 2; display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; min-height: 390px; }
 .weaponStand { position: relative; display: grid; justify-items: center; align-items: end; height: 390px; }
-.heroWeapon { position: absolute; left: 50%; top: 3px; z-index: 3; width: 210px; height: 310px; transform: translateX(-50%); animation: weaponFloat 2.2s ease-in-out infinite; }
+.weaponStand > .heroWeapon { position: absolute; left: 50%; top: 3px; z-index: 3; width: 210px; height: 310px; transform: translateX(-50%); animation: weaponFloat 2.2s ease-in-out infinite; }
 .blueprintState { position: absolute; left: 50%; top: 12px; z-index: 5; padding: 5px 9px; color: #fff0c4; background: rgba(33,23,18,.85); border: 1px solid #d09548; border-radius: 999px; transform: translateX(-50%); font-size: 7px; font-weight: 1000; letter-spacing: .09em; white-space: nowrap; }
 .anvilGlow { position: absolute; left: 50%; bottom: 65px; width: 220px; height: 90px; background: radial-gradient(ellipse,rgba(255,149,54,.46),rgba(211,77,26,.13) 47%,transparent 72%); filter: blur(6px); transform: translateX(-50%); animation: forgePulse 1.8s ease-in-out infinite alternate; }
 .anvil { position: absolute; left: 50%; bottom: 23px; z-index: 2; width: 154px; height: 64px; background: linear-gradient(#77716c 0 26%,#3e3a38 27% 56%,#262321 57%); border: 4px solid #171412; border-radius: 38% 7px 9px 9px; box-shadow: 0 13px 0 rgba(9,7,6,.52),inset 0 4px rgba(255,255,255,.14); transform: translateX(-50%); }
@@ -76,7 +76,7 @@
 .weaponCard.lockedCard { color: #746b63; background: linear-gradient(#292522,#1b1816); }
 .weaponCard.hiddenCard { color: #5f5852; border-color: #443b35; background: linear-gradient(#24211f,#181614); cursor: default; }
 .weaponCard.hiddenCard:hover { border-color: #443b35; transform: none; }
-.cardTier { position: absolute; right: 5px; top: 4px; color: #a98b6f; font-size: 6px; font-weight: 1000; }.cardWeapon { width: 51px; height: 72px; margin: 2px 0 4px; }.weaponCard strong { width: 100%; overflow: hidden; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }.weaponCard small { width: 100%; margin-top: 2px; overflow: hidden; color: #a69684; font-size: 6px; text-overflow: ellipsis; white-space: nowrap; }.weaponCard.craftable small { color: #f1bc67; }
+.cardTier { position: absolute; right: 5px; top: 4px; color: #a98b6f; font-size: 6px; font-weight: 1000; }.weaponCard > .cardWeapon { width: 51px; height: 72px; margin: 2px 0 4px; }.weaponCard strong { width: 100%; overflow: hidden; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }.weaponCard small { width: 100%; margin-top: 2px; overflow: hidden; color: #a69684; font-size: 6px; text-overflow: ellipsis; white-space: nowrap; }.weaponCard.craftable small { color: #f1bc67; }
 .hiddenCardGlyph { display: grid; place-items: center; width: 51px; height: 72px; margin: 2px 0 4px; color: #6d655e; background: rgba(10,9,8,.34); border: 1px dashed #4d443d; border-radius: 5px; font: 900 14px Georgia,serif; letter-spacing: .08em; }
 
 @keyframes forgePulse { to { opacity: .58; transform: scale(1.08); } }
@@ -93,5 +93,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fireHaze::before,.fireHaze i,.heroWeapon,.weaponCard.craftable { animation: none; }
+  .fireHaze::before,.fireHaze i,.weaponStand > .heroWeapon,.weaponCard.craftable { animation: none; }
 }
