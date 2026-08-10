@@ -30,7 +30,7 @@ import { GameNoticeDialog, type GameNotice } from "./game-notice/GameNoticeDialo
 import { BOSS_BATTLE_SECONDS, NORMAL_BATTLE_SECONDS } from "./economy-balance";
 import { BASE_ATTACK_RANGE, BASE_CLICK_DAMAGE, failureSalvageFor, MEMBER_ASSIST_FACTOR, PLAYER_WEAPON_BALANCE } from "./game-balance";
 import { combatTraitFor, compactNumber, getStage, MEMBERS, RANK_ORDER, STAGE_COUNT, STAGES_PER_REGION, type CombatStyle, type MemberDefinition } from "./game-data";
-import { GUILD_MEMBER_SKILL_VFX_DURATION_MS, guildMemberSkillVfxSource } from "./guild-member-skill-vfx";
+import { GUILD_MEMBER_BASIC_VFX_DURATION_MS, GUILD_MEMBER_SKILL_VFX_DURATION_MS, guildMemberSkillVfxSource } from "./guild-member-skill-vfx";
 import { maximumUpgradeLevels, UPGRADE_CAPS, UPGRADE_KEYS, type UpgradeKey, type UpgradeLevels } from "./developer-upgrades";
 import {
   ATTACK_RANGE_PER_LEVEL,
@@ -113,6 +113,11 @@ type MemberWeaponFx = {
   color: string;
   x: number;
   y: number;
+  entryX: number;
+  entryY: number;
+  exitX: number;
+  exitY: number;
+  angle: number;
   skill: boolean;
 };
 
@@ -716,6 +721,7 @@ export default function Game() {
     const id = memberWeaponFxCounter.current + 1;
     memberWeaponFxCounter.current = id;
     const angle = slot * Math.PI / 2 - Math.PI / 4;
+    const travelDistance = skill ? 52 : 34;
     const fx: MemberWeaponFx = {
       id,
       memberId: member.id,
@@ -724,10 +730,15 @@ export default function Game() {
       color: member.hue,
       x: Math.max(5, Math.min(95, point.x + Math.cos(angle) * (skill ? 4 : 2))),
       y: Math.max(8, Math.min(92, point.y + Math.sin(angle) * (skill ? 4 : 2))),
+      entryX: Math.round(-Math.cos(angle) * travelDistance),
+      entryY: Math.round(-Math.sin(angle) * travelDistance),
+      exitX: Math.round(Math.cos(angle) * (skill ? 14 : 9)),
+      exitY: Math.round(Math.sin(angle) * (skill ? 14 : 9)),
+      angle: Math.round(angle * 180 / Math.PI),
       skill,
     };
     setMemberWeaponFx((current) => [...current.slice(-18), fx]);
-    window.setTimeout(() => setMemberWeaponFx((current) => current.filter((effect) => effect.id !== id)), skill ? GUILD_MEMBER_SKILL_VFX_DURATION_MS : 720);
+    window.setTimeout(() => setMemberWeaponFx((current) => current.filter((effect) => effect.id !== id)), skill ? GUILD_MEMBER_SKILL_VFX_DURATION_MS : GUILD_MEMBER_BASIC_VFX_DURATION_MS);
   }, []);
 
   useEffect(() => {
@@ -1351,10 +1362,22 @@ export default function Game() {
                   return <span
                     className={`member-weapon-fx weapon-style-${effect.style} ${effect.skill ? "is-skill" : "is-basic"}`}
                     key={effect.id}
-                    style={{ left: `${effect.x}%`, top: `${effect.y}%`, "--weapon-color": effect.color } as React.CSSProperties}
+                    style={{
+                      left: `${effect.x}%`,
+                      top: `${effect.y}%`,
+                      "--weapon-color": effect.color,
+                      "--member-entry-x": `${effect.entryX}px`,
+                      "--member-entry-y": `${effect.entryY}px`,
+                      "--member-exit-x": `${effect.exitX}px`,
+                      "--member-exit-y": `${effect.exitY}px`,
+                      "--member-angle": `${effect.angle}deg`,
+                    } as React.CSSProperties}
                   >
                     {memberVfxSource ? <>
+                      <i className="member-skill-vfx-trail" />
                       <i className="member-skill-vfx-bloom" />
+                      <i className="member-skill-vfx-impact" />
+                      {effect.skill && <Image className="member-skill-vfx-echo" src={memberVfxSource} alt="" width={512} height={512} unoptimized draggable={false} />}
                       <Image className="member-skill-vfx-art" src={memberVfxSource} alt="" width={512} height={512} unoptimized draggable={false} />
                     </> : <>
                       <i className="member-projectile primary" />
