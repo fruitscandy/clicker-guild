@@ -42,7 +42,7 @@ test("모든 단계에서 실제 칼날·충격 레이어의 무게와 폭이 �
 });
 
 test("CC0 실녹음 원음 15개를 칼날·금속·중량·울림으로 레이어링한다", async () => {
-  const assetPaths = [...source.matchAll(/"(\/assets\/audio\/weapons\/[^"]+\.ogg)"/g)].map((match) => match[1]);
+  const assetPaths = [...source.matchAll(/"(\/assets\/audio\/weapons\/[^/"]+\.ogg)"/g)].map((match) => match[1]);
   assert.equal(assetPaths.length, 15);
   assert.equal(new Set(assetPaths).size, 15);
   for (const assetPath of assetPaths) {
@@ -57,6 +57,24 @@ test("CC0 실녹음 원음 15개를 칼날·금속·중량·울림으로 레이�
   assert.match(license, /Creative Commons Zero|CC0/);
   assert.match(license, /kenney\.nl\/assets\/rpg-audio/);
   assert.match(license, /kenney\.nl\/assets\/impact-sounds/);
+});
+
+test("실험 모드에서 OpenGameArt CC0 샘플 15개를 무기 단계에 일대일 대응한다", async () => {
+  const auditionSection = source.slice(source.indexOf("WEAPON_AUDITION_ASSETS"), source.indexOf("] as const;", source.indexOf("WEAPON_AUDITION_ASSETS")));
+  const auditionPaths = [...auditionSection.matchAll(/"(\/assets\/audio\/weapons\/audition\/[^\"]+\.(?:wav|ogg))"/g)].map((match) => match[1]);
+
+  assert.equal(auditionPaths.length, 15);
+  assert.equal(new Set(auditionPaths).size, 15);
+  assert.match(source, /WEAPON_AUDITION_MODE = true/);
+  assert.match(source, /bank\.audition\[profile\.tier\]/);
+  for (const assetPath of auditionPaths) {
+    const url = new URL(`../public${assetPath}`, import.meta.url);
+    await access(url);
+    assert.ok((await stat(url)).size > 5000, assetPath);
+  }
+  assert.match(license, /Temporary OpenGameArt audition set/);
+  assert.match(license, /opengameart\.org\/content\/rpg-sound-pack/);
+  assert.match(license, /Creative Commons Zero|CC0/);
 });
 
 test("전투 중 전장 클릭과 수동 공격 버튼만 사운드를 발생시킨다", () => {

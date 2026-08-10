@@ -26,6 +26,9 @@ test("combat focus mode keeps a minimal stage, timer, and resource HUD", async (
   assert.doesNotMatch(focusStyles, /\.battle-mode \.loot-tally,[\s\S]*?display: none;/);
   assert.match(focusStyles, /\.battle-mode \.battle-layout \{\s*display: block;/);
   assert.match(focusStyles, /\.battle-mode \.arena \{[\s\S]*?min-height: max\(560px, calc\(100svh - 114px\)\);/);
+  assert.match(focusStyles, /\.battle-mode\.developer-mode \.battle-sidebar \{[\s\S]*?display: block;/, "developer weapon comparison must remain reachable in combat");
+  assert.match(focusStyles, /\.battle-mode\.developer-mode \.battle-sidebar > :not\(\.click-power\) \{[\s\S]*?display: none;/);
+  assert.match(focusStyles, /\.battle-mode\.developer-mode \.click-power \{[\s\S]*?display: block;/);
 
   const baseCursor = weaponStyles.match(/\.cursor \{[\s\S]*?width: (\d+)px;\s*height: (\d+)px;/);
   const largestCursor = weaponStyles.match(/\.cursorTier4 \{ width: (\d+)px; height: (\d+)px; \}/);

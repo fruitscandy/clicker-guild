@@ -73,7 +73,30 @@ const WEAPON_AUDIO_ASSETS = {
   ],
 } as const;
 
+// Temporary listening test for Issue #104. Each equipped tier plays one
+// unlayered OpenGameArt sample so its raw character can be judged in combat.
+export const WEAPON_AUDITION_ASSETS = [
+  "/assets/audio/weapons/audition/01-rpg-swing.wav",
+  "/assets/audio/weapons/audition/02-rpg-sword-unsheathe.wav",
+  "/assets/audio/weapons/audition/03-rpg-magic1.wav",
+  "/assets/audio/weapons/audition/04-rpg-interface5.wav",
+  "/assets/audio/weapons/audition/05-rpg-metal-ringing.wav",
+  "/assets/audio/weapons/audition/06-rpg-random1.wav",
+  "/assets/audio/weapons/audition/07-rpg-random6.wav",
+  "/assets/audio/weapons/audition/08-swish-1.wav",
+  "/assets/audio/weapons/audition/09-starninjas-sword1.ogg",
+  "/assets/audio/weapons/audition/10-starninjas-sword-clash1.ogg",
+  "/assets/audio/weapons/audition/11-metal-bing1.wav",
+  "/assets/audio/weapons/audition/12-hammer-01.ogg",
+  "/assets/audio/weapons/audition/13-electric-charge.wav",
+  "/assets/audio/weapons/audition/14-electric-charge-start.wav",
+  "/assets/audio/weapons/audition/15-electric-powerup.wav",
+] as const;
+
+export const WEAPON_AUDITION_MODE = true;
+
 type WeaponSoundBank = {
+  audition: AudioBuffer[];
   swings: AudioBuffer[];
   light: AudioBuffer[];
   medium: AudioBuffer[];
@@ -268,7 +291,7 @@ function registerBurst(context: AudioContext, sources: AudioScheduledSourceNode[
 }
 
 async function fetchAudioBytes() {
-  const urls = [...new Set(Object.values(WEAPON_AUDIO_ASSETS).flat())];
+  const urls = [...new Set([...Object.values(WEAPON_AUDIO_ASSETS).flat(), ...WEAPON_AUDITION_ASSETS])];
   const entries = await Promise.all(urls.map(async (url) => {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Weapon audio failed to load: ${url}`);
@@ -284,6 +307,7 @@ async function decodeSoundBank(context: AudioContext, bytes: Map<string, ArrayBu
     return context.decodeAudioData(data.slice(0));
   }));
   return {
+    audition: await decodeGroup(WEAPON_AUDITION_ASSETS),
     swings: await decodeGroup(WEAPON_AUDIO_ASSETS.swings),
     light: await decodeGroup(WEAPON_AUDIO_ASSETS.light),
     medium: await decodeGroup(WEAPON_AUDIO_ASSETS.medium),
@@ -296,6 +320,21 @@ async function decodeSoundBank(context: AudioContext, bytes: Map<string, ArrayBu
 export function playWeaponAttackSound(context: AudioContext, bank: WeaponSoundBank, tier: number, variation = 0) {
   const profile = WEAPON_SOUND_PROFILES[clampTier(tier)];
   const start = context.currentTime + 0.004;
+  if (WEAPON_AUDITION_MODE) {
+    const auditionSource = playSample(context, bank.audition[profile.tier], {
+      at: start,
+      gain: 0.72,
+      playbackRate: 1,
+      maxDuration: 3.2,
+      pan: 0,
+      filter: "highpass",
+      filterHz: 28,
+      space: 0,
+    });
+    registerBurst(context, [auditionSource]);
+    return profile;
+  }
+
   const impactAt = start + profile.impactDelay;
   const direction = variation % 2 === 0 ? 1 : -1;
   const jitter = 1 + ((variation % 5) - 2) * 0.009;

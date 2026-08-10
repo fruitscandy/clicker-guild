@@ -21,6 +21,27 @@
   display: none;
 }
 
+/* The regular combat HUD stays hidden, but DEV audio/VFX comparisons must
+   remain reachable while the battlefield is active. */
+.battle-mode.developer-mode .battle-sidebar {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 40;
+  display: block;
+  width: min(360px, calc(100vw - 24px));
+  max-height: calc(100dvh - 130px);
+  overflow: auto;
+}
+
+.battle-mode.developer-mode .battle-sidebar > :not(.click-power) {
+  display: none;
+}
+
+.battle-mode.developer-mode .click-power {
+  display: block;
+}
+
 .battle-mode > .topbar {
   display: flex;
   min-height: 0;
