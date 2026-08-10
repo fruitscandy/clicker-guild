@@ -30,6 +30,7 @@ import { GameNoticeDialog, type GameNotice } from "./game-notice/GameNoticeDialo
 import { BOSS_BATTLE_SECONDS, NORMAL_BATTLE_SECONDS } from "./economy-balance";
 import { BASE_ATTACK_RANGE, BASE_CLICK_DAMAGE, failureSalvageFor, MEMBER_ASSIST_FACTOR, PLAYER_WEAPON_BALANCE } from "./game-balance";
 import { combatTraitFor, compactNumber, getStage, MEMBERS, RANK_ORDER, STAGE_COUNT, STAGES_PER_REGION, type CombatStyle, type MemberDefinition } from "./game-data";
+import { GUILD_MEMBER_SKILL_VFX_DURATION_MS, guildMemberSkillVfxSource } from "./guild-member-skill-vfx";
 import { maximumUpgradeLevels, UPGRADE_CAPS, UPGRADE_KEYS, type UpgradeKey, type UpgradeLevels } from "./developer-upgrades";
 import {
   ATTACK_RANGE_PER_LEVEL,
@@ -702,7 +703,7 @@ export default function Game() {
       skill,
     };
     setMemberWeaponFx((current) => [...current.slice(-18), fx]);
-    window.setTimeout(() => setMemberWeaponFx((current) => current.filter((effect) => effect.id !== id)), skill ? 1050 : 720);
+    window.setTimeout(() => setMemberWeaponFx((current) => current.filter((effect) => effect.id !== id)), skill ? GUILD_MEMBER_SKILL_VFX_DURATION_MS : 720);
   }, []);
 
   useEffect(() => {
@@ -1256,17 +1257,25 @@ export default function Game() {
               />
 
               <div className="member-weapon-layer" aria-hidden="true">
-                {memberWeaponFx.map((effect) => <span
-                  className={`member-weapon-fx weapon-style-${effect.style} ${effect.skill ? "is-skill" : ""}`}
-                  key={effect.id}
-                  style={{ left: `${effect.x}%`, top: `${effect.y}%`, "--weapon-color": effect.color } as React.CSSProperties}
-                >
-                  <i className="member-projectile primary" />
-                  <i className="member-projectile secondary" />
-                  <i className="member-weapon-impact" />
-                  <b>{effect.glyph}</b>
-                  <small>{memberById(effect.memberId).name.split(" ").at(-1)} · {effect.skill ? memberById(effect.memberId).skill : COMBAT_STYLE_LABELS[effect.style].name}</small>
-                </span>)}
+                {memberWeaponFx.map((effect) => {
+                  const skillVfxSource = effect.skill ? guildMemberSkillVfxSource(effect.memberId) : null;
+                  return <span
+                    className={`member-weapon-fx weapon-style-${effect.style} ${effect.skill ? "is-skill" : ""}`}
+                    key={effect.id}
+                    style={{ left: `${effect.x}%`, top: `${effect.y}%`, "--weapon-color": effect.color } as React.CSSProperties}
+                  >
+                    {skillVfxSource ? <>
+                      <i className="member-skill-vfx-bloom" />
+                      <Image className="member-skill-vfx-art" src={skillVfxSource} alt="" width={512} height={512} unoptimized draggable={false} />
+                    </> : <>
+                      <i className="member-projectile primary" />
+                      <i className="member-projectile secondary" />
+                      <i className="member-weapon-impact" />
+                      <b>{effect.glyph}</b>
+                    </>}
+                    <small>{memberById(effect.memberId).name.split(" ").at(-1)} · {effect.skill ? memberById(effect.memberId).skill : COMBAT_STYLE_LABELS[effect.style].name}</small>
+                  </span>;
+                })}
               </div>
 
               <div className="gold-loot-layer" aria-hidden="true">
