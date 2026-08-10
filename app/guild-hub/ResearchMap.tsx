@@ -81,7 +81,16 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const isClient = useSyncExternalStore(subscribeToClient, () => true, () => false);
   const modalRoot = isClient ? document.body : null;
-  const selectedNode = selectedNodeId ? nodes.find((node) => node.id === selectedNodeId) : undefined;
+  const selectedCandidate = selectedNodeId ? nodes.find((node) => node.id === selectedNodeId) : undefined;
+  const selectedFamily = selectedCandidate ? familyForNode(selectedCandidate.id) : undefined;
+  const selectedFamilyNodes = selectedFamily && BRANCH_DETAILS[selectedFamily]
+    ? nodes
+        .filter((node) => familyForNode(node.id) === selectedFamily)
+        .sort((a, b) => nodeDepth(a.id) - nodeDepth(b.id))
+    : [];
+  const selectedNode = selectedFamilyNodes.length
+    ? selectedFamilyNodes.find((node) => !purchased.has(node.id)) ?? selectedFamilyNodes.at(-1)
+    : selectedCandidate;
   const coreNodes = nodes.filter((node) => node.id !== "foundation" && node.id !== "citadel" && !node.id.startsWith("special-"));
   const completedCoreNodes = coreNodes.filter((node) => purchased.has(node.id)).length;
 
@@ -126,14 +135,19 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
     return { isPurchased, missingPrerequisites, prerequisitesMet, requiredHallLevel, hallLocked };
   }
 
-  function renderNode(node: ResearchNodeView, variant: "branch" | "core" | "citadel" = "branch") {
+  function renderNode(
+    node: ResearchNodeView,
+    variant: "branch" | "core" | "citadel" = "branch",
+    progress?: { completed: number; total: number },
+  ) {
     const { isPurchased, prerequisitesMet, requiredHallLevel, hallLocked } = stateForNode(node);
-    const available = !readOnly && !isPurchased && prerequisitesMet && !hallLocked;
+    const familyComplete = progress ? progress.completed >= progress.total : isPurchased;
+    const available = !readOnly && !familyComplete && prerequisitesMet && !hallLocked;
     const isSelected = node.id === selectedNode?.id;
     const icon = upgradeIconForNode(node.id);
     const depth = nodeDepth(node.id);
-    const singleUnlock = variant === "branch" && nodes.filter((candidate) => familyForNode(candidate.id) === familyForNode(node.id)).length === 1;
-    const status = isPurchased
+    const singleUnlock = variant === "branch" && (progress?.total ?? nodes.filter((candidate) => familyForNode(candidate.id) === familyForNode(node.id)).length) === 1;
+    const status = familyComplete
       ? "연구 완료"
       : readOnly
         ? "DEV 시험대에서 조정"
@@ -146,29 +160,32 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
     return (
       <div
         key={node.id}
-        className={`${styles.nodeWrap} ${styles[variant]} ${isPurchased ? styles.pathComplete : ""}`}
+        className={`${styles.nodeWrap} ${styles[variant]} ${familyComplete ? styles.pathComplete : ""}`}
         role={variant === "branch" ? "listitem" : undefined}
       >
         <button
           type="button"
           data-node-id={node.id}
-          className={`${styles.node} ${isPurchased ? styles.purchased : ""} ${available ? styles.available : ""} ${hallLocked ? styles.locked : ""} ${isSelected ? styles.selected : ""}`}
+          data-upgrade-progress={progress ? `${progress.completed}/${progress.total}` : undefined}
+          className={`${styles.node} ${familyComplete ? styles.purchased : ""} ${available ? styles.available : ""} ${hallLocked ? styles.locked : ""} ${isSelected ? styles.selected : ""}`}
           onClick={() => setSelectedNodeId(node.id)}
-          aria-label={`${node.title} 상세보기: ${node.description}. ${status}. 선택만으로는 구매되지 않습니다.`}
+          aria-label={`${node.title} 상세보기: ${node.description}. ${progress ? `${progress.completed}/${progress.total} 단계. ` : ""}${status}. 선택만으로는 구매되지 않습니다.`}
           aria-pressed={isSelected}
           aria-expanded={isSelected}
           aria-controls="research-node-detail"
           aria-haspopup="dialog"
           title={`${node.title} · ${status}`}
         >
-          {depth > 0 && !singleUnlock && <span className={styles.depth}>{depth}</span>}
+          {progress && !singleUnlock
+            ? <span className={styles.levelProgress}>{progress.completed}/{progress.total}</span>
+            : depth > 0 && !singleUnlock && <span className={styles.depth}>{depth}</span>}
           <span className={`${styles.glyph} ${icon && !hallLocked ? styles.glyphArt : ""}`} aria-hidden="true">
             {hallLocked ? "◆" : icon ? <Image src={icon} alt="" width={64} height={64} /> : node.glyph}
           </span>
           <span className={styles.nodeName}>{variant === "branch" ? BRANCH_LABELS[familyForNode(node.id)] : node.title}</span>
-          <span className={styles.nodeCost}>{isPurchased ? "완료" : hallLocked ? `본관 ${requiredHallLevel}` : node.cost ? `${formatCost(node.cost)} G` : "기반"}</span>
+          <span className={styles.nodeCost}>{familyComplete ? "완료" : hallLocked ? `본관 ${requiredHallLevel}` : node.cost ? `${formatCost(node.cost)} G` : "기반"}</span>
           <span className={styles.statusMark} aria-hidden="true">
-            {isPurchased ? "✓" : hallLocked || !prerequisitesMet ? "◆" : "+"}
+            {familyComplete ? "✓" : hallLocked || !prerequisitesMet ? "◆" : "+"}
           </span>
         </button>
       </div>
@@ -282,7 +299,11 @@ export function ResearchMap({ nodes, purchasedIds, hallLevel, formatCost, onPurc
                           <span>{familyCompleted}/{familyNodes.length}</span>
                         </div>
                         <div className={styles.familyTrack} role="list" aria-label={`${BRANCH_LABELS[family]} 연구 단계`}>
-                          {familyNodes.map((node) => renderNode(node))}
+                          {familyNodes.length > 0 && renderNode(
+                            familyNodes.find((node) => !purchased.has(node.id)) ?? familyNodes[familyNodes.length - 1],
+                            "branch",
+                            { completed: familyCompleted, total: familyNodes.length },
+                          )}
                         </div>
                       </section>
                     );

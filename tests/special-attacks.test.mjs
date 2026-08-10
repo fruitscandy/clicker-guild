@@ -67,9 +67,10 @@ test("운석 넉백은 충돌점 바깥으로 밀되 전장 경계를 절대 넘
   assert.equal(special.specialAttackDamage("meteor", 100), 465);
 });
 
-test("CC0 파티클 원본과 서로 다른 세 전장 연출이 연결된다", async () => {
-  const [layer, panel, audio, license] = await Promise.all([
+test("새 특수공격 원화만으로 전장 연출을 구성하고 기존 합성 레이어는 제거한다", async () => {
+  const [layer, layerStyles, panel, audio, license] = await Promise.all([
     readFile(new URL("../app/SpecialAttackLayer.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/SpecialAttackLayer.module.css", import.meta.url), "utf8"),
     readFile(new URL("../app/guild-hub/SpecialResearchPanel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/special-attack-audio.ts", import.meta.url), "utf8"),
     readFile(new URL("../public/assets/vfx/special/LICENSE.md", import.meta.url), "utf8"),
@@ -91,6 +92,22 @@ test("CC0 파티클 원본과 서로 다른 세 전장 연출이 연결된다", 
   assert.match(layer, /lightningArtwork/);
   assert.match(layer, /tornadoArtwork/);
   assert.match(layer, /meteorArtwork/);
+  for (const removedLayer of [
+    "lightningTexture", "lightningBolt", "electricSparks", "tornadoTextureBack", "tornadoTextureFront",
+    "tornadoFunnel", "tornadoDebris", "meteorTelegraph", "meteorProjectile", "meteorCore", "meteorFlame",
+    "meteorSmoke", "meteorExplosion", "meteorScorch", "meteorFragments",
+  ]) {
+    assert.doesNotMatch(layer, new RegExp(`styles\\.${removedLayer}\\b`), removedLayer);
+  }
+  assert.doesNotMatch(
+    layerStyles,
+    /\/assets\/vfx\/special\/(?:lightning-arc|lightning-spark|tornado-twirl|meteor-flame|smoke-wisp|impact-flash|meteor-explosion|impact-scorch)\.png/,
+  );
+  assert.match(layerStyles, /@keyframes lightningArtworkStrike/);
+  assert.match(layerStyles, /@keyframes tornadoArtworkSurge/);
+  assert.match(layerStyles, /@keyframes meteorArtworkStrike/);
+  assert.match(layerStyles, /animation: meteorArtworkStrike 1\.7s/);
+  assert.doesNotMatch(layerStyles, /meteorArtworkStrike calc\(var\(--effect-delay\)/);
   assert.match(layer, /specialMonsterClassName/);
   assert.match(panel, /특수 공격/);
   assert.match(panel, /previewArtwork/);

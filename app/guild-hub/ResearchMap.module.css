@@ -154,7 +154,7 @@
 }
 
 .north, .south { left: 50%; translate: -50% 0; }
-.north { top: 30px; width: 500px; }
+.north { top: 30px; width: 264px; }
 .south { width: 264px; }
 .south { bottom: 25px; }
 .west, .east { top: 214px; width: 132px; }
@@ -194,24 +194,6 @@
   width: 116px;
   height: 116px;
   place-items: center;
-}
-
-.nodeWrap:not(:last-child)::after {
-  position: absolute;
-  right: -7px;
-  top: 56px;
-  z-index: -1;
-  width: 14px;
-  height: 4px;
-  content: "";
-  background: linear-gradient(90deg, #7c593f, #d39850, #7c593f);
-  border: 1px solid #3a291f;
-  box-shadow: 0 0 7px rgba(225, 156, 72, .32);
-}
-
-.nodeWrap.pathComplete:not(:last-child)::after {
-  background: linear-gradient(90deg, #5f8b62, #9bc27f, #5f8b62);
-  box-shadow: 0 0 8px rgba(123, 190, 116, .34);
 }
 
 .node {
@@ -271,6 +253,7 @@
 .purchased .nodeCost { color: #bce2ad; }
 
 .depth,
+.levelProgress,
 .statusMark {
   position: absolute;
   z-index: 6;
@@ -285,8 +268,10 @@
 }
 
 .depth { left: -9px; top: -9px; color: #ead3ad; background: #302731; }
+.levelProgress { left: -11px; top: -10px; width: 35px; color: #fff0bf; background: #4b302a; border-color: #b57a4d; border-radius: 999px; box-shadow: 0 3px 5px rgba(0, 0, 0, .65); }
 .statusMark { right: -10px; top: -10px; color: #d9c7b6; background: #382f39; box-shadow: 0 3px 5px rgba(0, 0, 0, .7); }
 .purchased .statusMark { color: #eaffdf; background: #4c7656; border-color: #98c18e; }
+.purchased .levelProgress { color: #eaffdf; background: #3f6748; border-color: #8dbd82; }
 
 .coreDock {
   position: absolute;

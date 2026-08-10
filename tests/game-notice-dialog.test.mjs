@@ -27,6 +27,8 @@ test("removes the global top toast and uses an accessible game notice dialog", a
   assert.match(dialog, /event\.key === "Escape"/);
   assert.match(dialog, /previouslyFocused\?\.focus/);
   assert.match(styles, /\.backdrop[\s\S]*position: fixed/);
+  const noticeZIndex = Number(styles.match(/\.backdrop\s*\{[\s\S]*?z-index:\s*(\d+)/)?.[1]);
+  assert.ok(noticeZIndex > 5001, `notice z-index must sit above research dialogs, received ${noticeZIndex}`);
   assert.match(styles, /\.actions\.singleAction/);
   assert.match(styles, /@media \(max-width: 560px\)/);
   assert.match(styles, /prefers-reduced-motion/);
