@@ -93,12 +93,15 @@ export const BGM_TRACK_BY_ID = Object.fromEntries(
   BGM_TRACKS.map((track) => [track.id, track]),
 ) as Record<BgmTrackId, BgmTrack>;
 
+export type BgmTrackPool = readonly [BgmTrack, ...BgmTrack[]];
+
 export const BGM_TRACKS_BY_SCENE = Object.fromEntries(
-  (["guild", "field-select", "battle", "boss"] as const).map((sceneId) => [
-    sceneId,
-    BGM_TRACKS.filter((track) => track.sceneId === sceneId),
-  ]),
-) as Record<BgmSceneId, readonly BgmTrack[]>;
+  (["guild", "field-select", "battle", "boss"] as const).map((sceneId) => {
+    const tracks = BGM_TRACKS.filter((track) => track.sceneId === sceneId);
+    if (tracks.length === 0) throw new Error(`BGM scene has no tracks: ${sceneId}`);
+    return [sceneId, tracks as unknown as BgmTrackPool];
+  }),
+) as unknown as Record<BgmSceneId, BgmTrackPool>;
 
 export type BattleBgmCandidate = {
   id: string;

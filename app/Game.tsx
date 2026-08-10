@@ -30,6 +30,8 @@ import {
 import { fieldAssetForRegion } from "./field-assets";
 import { GameNoticeDialog, type GameNotice } from "./game-notice/GameNoticeDialog";
 import { BOSS_BATTLE_SECONDS, NORMAL_BATTLE_SECONDS } from "./economy-balance";
+import { BulletHellFinale } from "./bullet-hell/BulletHellFinale";
+import type { FinaleLoadout, FinaleMode } from "./bullet-hell/engine";
 import { BASE_ATTACK_RANGE, BASE_CLICK_DAMAGE, failureSalvageFor, MEMBER_ASSIST_FACTOR, PLAYER_WEAPON_BALANCE } from "./game-balance";
 import { combatTraitFor, compactNumber, getStage, MEMBERS, RANK_ORDER, STAGE_COUNT, STAGES_PER_REGION, type CombatStyle, type MemberDefinition } from "./game-data";
 import { GUILD_MEMBER_BASIC_VFX_DURATION_MS, GUILD_MEMBER_SKILL_VFX_DURATION_MS, guildMemberSkillVfxSource } from "./guild-member-skill-vfx";
@@ -151,6 +153,7 @@ type SaveState = {
   upgrades: Record<UpgradeKey, number>;
   nodes: string[];
   autoAdvance: boolean;
+  finaleCleared: boolean;
   tutorialStep: TutorialStep;
 };
 
@@ -205,6 +208,7 @@ const initialState: SaveState = {
   upgrades: { range: 0, critical: 0, shockwave: 0, time: 0, tavern: 0, gold: 0, guild: 0, autoAttack: 0 },
   nodes: ["foundation"],
   autoAdvance: true,
+  finaleCleared: false,
   tutorialStep: "hunt",
 };
 
@@ -371,6 +375,8 @@ export default function Game() {
   const [developerStage, setDeveloperStage] = useState<number | null>(null);
   const [developerClickLevel, setDeveloperClickLevel] = useState(CLICK_ATTACK_PATTERNS.length - 1);
   const [developerUpgrades, setDeveloperUpgrades] = useState<UpgradeLevels>(() => maximumUpgradeLevels());
+  const [finaleMode, setFinaleMode] = useState(false);
+  const [finaleVisualMode, setFinaleVisualMode] = useState<FinaleMode>("field");
   const [clicks, setClicks] = useState(0);
   const [hitFx, setHitFx] = useState<ClickAttackFx | null>(null);
   const [activeHitFxs, setActiveHitFxs] = useState<ClickAttackFx[]>([]);
@@ -406,8 +412,10 @@ export default function Game() {
   const stageNumber = developerMode && developerStage ? developerStage : save.selectedStage;
   const effectiveUpgrades = developerMode ? developerUpgrades : save.upgrades;
   const stage = useMemo(() => getStage(stageNumber), [stageNumber]);
+  const finaleStage = useMemo(() => getStage(STAGE_COUNT), []);
   const stageMaterial = useMemo(() => stageMaterialFor(stageNumber), [stageNumber]);
   const fieldAsset = useMemo(() => fieldAssetForRegion(stage.region.hue), [stage.region.hue]);
+  const finaleFieldAsset = useMemo(() => fieldAssetForRegion(finaleStage.region.hue), [finaleStage.region.hue]);
   const monsterAsset = useMemo(() => monsterAssetForStage(stageNumber), [stageNumber]);
   const partyMembers = useMemo(() => developerMode && !save.party.length ? [memberById("roan")] : save.party.map(memberById), [developerMode, save.party]);
   const progressFor = useCallback((member: MemberDefinition) => developerMode ? { level: member.maxLevel, xp: 0 } : save.progress[member.id], [developerMode, save.progress]);
@@ -427,8 +435,12 @@ export default function Game() {
   const tutorialBattleTimer = !developerMode && save.tutorialStep === "battle" && stage.stage === 1;
   const battleSeconds = (tutorialBattleTimer ? 90 : developerMode ? DEV_BATTLE_SECONDS : stage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + effectiveUpgrades.time * BATTLE_TIME_PER_LEVEL + traitCounts.support * 3;
   const battleTimeLeft = battleDeadline ? Math.max(0, Math.ceil((battleDeadline - now) / 1000)) : battleSeconds;
+  const finaleLoadout = useMemo<FinaleLoadout>(() => ({
+    hallLevel: developerMode ? GUILD_HALL_STAGES.length : save.guildHallLevel,
+  }), [developerMode, save.guildHallLevel]);
   const lootCollecting = lootPhase === "collecting";
-  const combatLocked = battleActive || lootCollecting || victory || defeat;
+  const combatLocked = finaleMode || battleActive || lootCollecting || victory || defeat;
+  const seamlessFinale = finaleMode;
   const aliveMonsters = useMemo(() => fieldMonsters.filter((monster) => monster.hp > 0), [fieldMonsters]);
   const defeatedMonsters = fieldMonsters.length - aliveMonsters.length;
   const defeatSalvage = useMemo(() => developerMode ? { gold: 0, material: 0 } : failureSalvageFor(stage.stage, Math.round(stage.gold * goldMultiplier), stageMaterial.rewardAmount, defeatedMonsters, fieldMonsters.length), [developerMode, stage.stage, stage.gold, goldMultiplier, stageMaterial.rewardAmount, defeatedMonsters, fieldMonsters.length]);
@@ -549,7 +561,18 @@ export default function Game() {
     setLootPhase("complete");
     setVictory(true);
     playStageClearSound(stage.boss);
-    if (developerMode) return;
+    if (developerMode) {
+      if (stage.stage === STAGE_COUNT) {
+        setFinaleVisualMode("field");
+        setFinaleMode(true);
+      }
+      showNotice("개발자 토벌 성공", "보상과 진행도는 저장되지 않습니다.");
+      return;
+    }
+    if (stage.stage === STAGE_COUNT) {
+      setFinaleVisualMode("field");
+      setFinaleMode(true);
+    }
     const firstClear = !save.cleared.includes(stage.stage);
     const earnedGold = Math.round(stage.gold * goldMultiplier);
     const earnedMaterial = stageMaterial.rewardAmount;
@@ -1113,6 +1136,7 @@ export default function Game() {
     setDeveloperMode(false);
     setDeveloperStage(null);
     setDeveloperClickLevel(CLICK_ATTACK_PATTERNS.length - 1);
+    setFinaleMode(false);
     setFieldMonsters([]);
     setHitFx(null);
     setActiveHitFxs([]);
@@ -1154,8 +1178,34 @@ export default function Game() {
     });
   }
 
+  function leaveFinale() {
+    setFinaleMode(false);
+    returnToGuild();
+    showNotice(
+      developerMode ? "개발자 글리치 탄막 시험 종료" : "글리치 코어 이탈",
+      developerMode
+        ? "시험 결과와 진행도는 저장되지 않았습니다."
+        : "길드 영지로 귀환했습니다.",
+    );
+  }
+
+  function completeFinale() {
+    if (!developerMode) setSave((current) => ({ ...current, finaleCleared: true }));
+    setFinaleMode(false);
+    returnToGuild();
+    showNotice(
+      developerMode ? "개발자 글리치 보스 격파" : "기록 말소자 격파",
+      developerMode
+        ? "시험 결과는 저장되지 않았습니다."
+        : "길드의 마지막 기록이 새로 쓰였습니다.",
+    );
+  }
+
   return (
-    <main className={`game-shell ${combatLocked ? "battle-mode" : ""} ${developerMode ? "developer-mode" : ""}`}>
+    <main
+      className={`game-shell ${combatLocked ? "battle-mode" : ""} ${developerMode ? "developer-mode" : ""} ${seamlessFinale ? "finale-active" : ""}`}
+      data-finale-mode={seamlessFinale ? finaleVisualMode : undefined}
+    >
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true">G</span>
@@ -1166,6 +1216,8 @@ export default function Game() {
           <MaterialInventory materials={save.materials} unlockedStage={save.unlockedStage} weaponLevel={save.weaponLevel} />
         </div>
         {developerToolsAvailable && <button className={`small-button developer-toggle ${developerMode ? "active" : ""}`} onClick={toggleDeveloperMode}>DEV {developerMode ? "ON" : "OFF"}</button>}
+        {developerToolsAvailable && developerMode && <button className="small-button" onClick={() => { setFinaleVisualMode("field"); setFinaleMode(true); }}>엔딩 TEST</button>}
+        {!developerMode && save.cleared.includes(STAGE_COUNT) && !save.finaleCleared && <button className="small-button" onClick={() => { setFinaleVisualMode("field"); setFinaleMode(true); }}>엔딩 재개</button>}
         <button className="small-button reset-button" onClick={resetGame}>새 게임</button>
       </header>
 
@@ -1288,11 +1340,13 @@ export default function Game() {
       )}
 
       {combatLocked && (
-        <section className={`screen field-screen biome-${stage.region.hue}`} aria-label="필드 전투">
+        <section className={`screen field-screen biome-${seamlessFinale ? finaleStage.region.hue : stage.region.hue}`} aria-label="필드 전투">
           <div className="field-toolbar">
-            <div><span className="eyebrow">CURRENT EXPEDITION · GUILD SURVIVOR</span><h2>{stage.region.name} <b>{stage.localStage}/{STAGES_PER_REGION}</b></h2></div>
+            <div><span className="eyebrow">CURRENT EXPEDITION · GUILD SURVIVOR</span><h2>{seamlessFinale ? finaleStage.region.name : stage.region.name} <b>{seamlessFinale ? finaleStage.localStage : stage.localStage}/{STAGES_PER_REGION}</b></h2></div>
             <div className="field-actions battle-controls">
-              {lootCollecting
+              {seamlessFinale
+                ? <div className="battle-timer finale-incursion"><span>미확인 개체 난입</span><strong>기록 말소자</strong><i><b style={{ width: "100%" }} /></i></div>
+                : lootCollecting
                 ? <div className="battle-timer loot-sweep-timer"><span>전리품 회수</span><strong>{compactNumber(collectedGold)} G · {collectedMaterial}/{plannedMaterial} 재료</strong><i><b style={{ width: `${lootSweepProgress}%` }} /></i></div>
                 : <div className={`battle-timer ${battleTimeLeft <= 10 ? "urgent" : ""}`}><span>남은 시간</span><strong>{battleTimeLeft}초</strong><i><b style={{ width: `${battleTimeLeft / battleSeconds * 100}%` }} /></i></div>}
               <button className="retreat-button" onClick={retreatBattle} disabled={!battleActive}>후퇴</button>
@@ -1301,24 +1355,25 @@ export default function Game() {
 
           <div className="battle-layout">
             <div
-              className={`arena hack-arena mass-swarm has-forge-cursor panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier} loot-phase-${lootPhase}`}
-              style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties}
-              onPointerDown={attackField}
-              onPointerMove={trackWeaponCursor}
-              onPointerLeave={() => setWeaponCursor((cursor) => ({ ...cursor, visible: false }))}
+              className={`arena hack-arena mass-swarm has-forge-cursor panel field-tone-${seamlessFinale ? finaleFieldAsset.tone : fieldAsset.tone} click-style-${activeClickPattern.tier} loot-phase-${lootPhase}`}
+              style={{ "--field-art-position": seamlessFinale ? finaleFieldAsset.objectPosition : fieldAsset.objectPosition } as React.CSSProperties}
+              onPointerDown={seamlessFinale ? undefined : attackField}
+              onPointerMove={seamlessFinale ? undefined : trackWeaponCursor}
+              onPointerLeave={seamlessFinale ? undefined : () => setWeaponCursor((cursor) => ({ ...cursor, visible: false }))}
               onKeyDown={(event) => {
-                if (!battleActive || (event.key !== "Enter" && event.key !== " ")) return;
+                if (seamlessFinale || !battleActive || (event.key !== "Enter" && event.key !== " ")) return;
                 event.preventDefault();
                 directAttackAt(autoAttackPoint.x, autoAttackPoint.y);
               }}
               role="application"
-              tabIndex={battleActive ? 0 : -1}
-              data-tutorial="battlefield"
-              aria-label="플레이어의 강화 무기로 클릭한 위치를 공격하고 길드원은 자동 공격하는 몬스터 전장"
+              tabIndex={!seamlessFinale && battleActive ? 0 : -1}
+              data-tutorial={seamlessFinale ? undefined : "battlefield"}
+              aria-label={seamlessFinale ? "마지막 스테이지에서 그대로 이어지는 기록 말소자 최종 결전" : "플레이어의 강화 무기로 클릭한 위치를 공격하고 길드원은 자동 공격하는 몬스터 전장"}
             >
-              <Image className="field-background-art" src={fieldAsset.source} alt="" fill sizes="(max-width: 1180px) 100vw, 900px" priority={stage.stage <= 10} unoptimized draggable={false} />
-              <div className="environment-tag"><span>{BIOME_DETAILS[stage.region.hue].label}</span><small>{BIOME_DETAILS[stage.region.hue].description}</small></div>
-              <div className="battle-banner"><span>{stage.boss ? "BOSS SWARM" : `STAGE ${stage.stage}`}</span><strong>{stage.name} 무리</strong></div>
+              <Image className="field-background-art" src={seamlessFinale ? finaleFieldAsset.source : fieldAsset.source} alt="" fill sizes="(max-width: 1180px) 100vw, 900px" priority={seamlessFinale || stage.stage <= 10} unoptimized draggable={false} />
+              <div className="environment-tag"><span>{BIOME_DETAILS[seamlessFinale ? finaleStage.region.hue : stage.region.hue].label}</span><small>{BIOME_DETAILS[seamlessFinale ? finaleStage.region.hue : stage.region.hue].description}</small></div>
+              <div className="battle-banner"><span>{seamlessFinale ? "UNKNOWN BOSS" : stage.boss ? "BOSS SWARM" : `STAGE ${stage.stage}`}</span><strong>{seamlessFinale ? "기록 말소자" : `${stage.name} 무리`}</strong></div>
+              {!seamlessFinale && <>
               <div className="swarm-hud" aria-label={`몬스터 ${defeatedMonsters}체 처치, ${aliveMonsters.length}체 생존`}>
                 <span><small>KILL RUSH</small><strong>{defeatedMonsters}<em> / {fieldMonsters.length}</em></strong></span>
                 <i><b style={{ width: `${fieldMonsters.length ? defeatedMonsters / fieldMonsters.length * 100 : 0}%` }} /></i>
@@ -1420,6 +1475,18 @@ export default function Game() {
               />)}
 
               {hitFx && <span className="sr-only" role="status">{activeCombatProcs.length ? `${activeCombatProcs.map((proc) => `${proc.title} 레벨 ${proc.level}`).join(", ")} 발동. ` : hitFx.automatic ? "자동 플레이어 공격. " : "일반 직접 공격. "}플레이어의 {clickAttackPattern(hitFx.tier).title}, 범위 안의 몬스터 {hitFx.hitCount}체 타격</span>}
+              </>}
+
+              {seamlessFinale && <BulletHellFinale
+                loadout={finaleLoadout}
+                mode={developerMode ? "preview" : "campaign"}
+                presentation="embedded"
+                cursorWeapon={activeClickPattern}
+                initialCursorPoint={weaponCursor}
+                onModeChange={setFinaleVisualMode}
+                onExit={leaveFinale}
+                onVictory={completeFinale}
+              />}
             </div>
 
             <aside className="battle-sidebar">
@@ -1463,8 +1530,8 @@ export default function Game() {
             </aside>
           </div>
 
-          {victory && <div className="victory-overlay" role="dialog" aria-modal="true" aria-labelledby="victory-title"><div className="victory-card"><div className="victory-crest" aria-hidden="true"><span>★</span></div><div className="victory-heading"><p>EXPEDITION COMPLETE</p><span className="victory-divider" aria-hidden="true"><i>◆</i></span><h2 id="victory-title">{fieldMonsters.length}마리 처치 완료!</h2><small>{stage.region.name}의 위협을 몰아냈습니다</small></div><div className="outcome-rewards" aria-label="획득 보상"><span>{developerMode ? <><i className="reward-glyph">◇</i><small>전투 기록</small><b>저장 안 됨</b></> : <><i className="reward-glyph">●</i><small>골드</small><b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span className="material-victory-reward"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} /><small>{stageMaterial.name}</small><b>+{stageMaterial.rewardAmount}</b></span>}{!developerMode && <span><i className="reward-glyph reward-xp">✦</i><small>경험치</small><b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span className="boss-clear-reward"><i className="reward-glyph">♜</i><small>군주 토벌</small><b>완료</b></span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? STAGE_COUNT : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(STAGE_COUNT, stage.stage + 1))}><small>모험 계속하기</small><span>다음 지역</span><b aria-hidden="true">›</b></button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}><small>같은 지역</small><span>재전투</span></button><button className="text-button" onClick={returnToGuild} data-tutorial="return-guild">영지로 복귀</button></div></div></div>}
-          {defeat && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">⚑</span><p>EXPEDITION FAILED</p><h2>공세 실패</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드 전투가 종료되었습니다." : "제한 시간 안에 적을 모두 처치하지 못했습니다."}</strong>{!developerMode && <span>회수 전리품 · 골드 +{compactNumber(defeatSalvage.gold)} · {stageMaterial.name} +{defeatSalvage.material}</span>}<span>이번 전리품으로 바로 강화하거나 같은 웨이브를 재도전하세요.</span></div><button className="primary-button" onClick={returnToGuild} data-tutorial="return-guild">영지로 복귀</button></div></div>}
+          {victory && !seamlessFinale && <div className="victory-overlay" role="dialog" aria-modal="true" aria-labelledby="victory-title"><div className="victory-card"><div className="victory-crest" aria-hidden="true"><span>★</span></div><div className="victory-heading"><p>EXPEDITION COMPLETE</p><span className="victory-divider" aria-hidden="true"><i>◆</i></span><h2 id="victory-title">{fieldMonsters.length}마리 처치 완료!</h2><small>{stage.region.name}의 위협을 몰아냈습니다</small></div><div className="outcome-rewards" aria-label="획득 보상"><span>{developerMode ? <><i className="reward-glyph">◇</i><small>전투 기록</small><b>저장 안 됨</b></> : <><i className="reward-glyph">●</i><small>골드</small><b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span className="material-victory-reward"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} /><small>{stageMaterial.name}</small><b>+{stageMaterial.rewardAmount}</b></span>}{!developerMode && <span><i className="reward-glyph reward-xp">✦</i><small>경험치</small><b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span className="boss-clear-reward"><i className="reward-glyph">♜</i><small>군주 토벌</small><b>완료</b></span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? STAGE_COUNT : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(STAGE_COUNT, stage.stage + 1))}><small>모험 계속하기</small><span>다음 지역</span><b aria-hidden="true">›</b></button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}><small>같은 지역</small><span>재전투</span></button><button className="text-button" onClick={returnToGuild} data-tutorial="return-guild">영지로 복귀</button></div></div></div>}
+          {defeat && !seamlessFinale && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">⚑</span><p>EXPEDITION FAILED</p><h2>공세 실패</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드 전투가 종료되었습니다." : "제한 시간 안에 적을 모두 처치하지 못했습니다."}</strong>{!developerMode && <span>회수 전리품 · 골드 +{compactNumber(defeatSalvage.gold)} · {stageMaterial.name} +{defeatSalvage.material}</span>}<span>이번 전리품으로 바로 강화하거나 같은 웨이브를 재도전하세요.</span></div><button className="primary-button" onClick={returnToGuild} data-tutorial="return-guild">영지로 복귀</button></div></div>}
         </section>
       )}
 
