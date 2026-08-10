@@ -137,7 +137,7 @@ test("boss reveal locks damage without consuming a click or cooldown", () => {
   assert.equal(world.boss.hp, replayHp, "re-entering field mode must replay the protected reveal");
 });
 
-test("boss damage requires an actual click inside the 156px silhouette target", () => {
+test("boss damage requires an actual click inside the 156px circular target", () => {
   let world = engine.createFinaleWorld(loadout(), { seed: 7 });
   world = advance(world, engine.FINALE_BOSS_ATTACKABLE_MS + 16);
   const initialHp = world.boss.hp;

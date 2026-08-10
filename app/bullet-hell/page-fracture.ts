@@ -1,4 +1,4 @@
-import { traceArchivistSilhouette } from "./boss-silhouette";
+import { traceGlitchBossBody } from "./boss-silhouette";
 import {
   PAGE_FRACTURE_SEED,
   createPageFractureShards,
@@ -28,6 +28,8 @@ export type MountPageFractureOptions = Readonly<{
   battleSurface: HTMLElement;
   soundDock?: HTMLElement | null;
   battleCanvas: HTMLCanvasElement;
+  battleSnapshot?: HTMLCanvasElement;
+  bossSnapshot?: HTMLCanvasElement;
   shardHost: HTMLElement;
   keeperHost?: HTMLElement | null;
   worldWidth: number;
@@ -48,7 +50,6 @@ type BossMask = Readonly<{
   x: number;
   y: number;
   scale: number;
-  clickRadius: number;
   silhouetteScale: number;
 }>;
 
@@ -125,7 +126,6 @@ function bossMaskForCanvas(
     x: offsetX + boss.x * scale,
     y: offsetY + boss.y * scale,
     scale,
-    clickRadius: boss.clickRadius,
     silhouetteScale: boss.silhouetteScale ?? .98,
   };
 }
@@ -146,7 +146,7 @@ function bossOriginOnScreen(
   };
 }
 
-function eraseBossAndTargetRing(context: CanvasRenderingContext2D, mask: BossMask) {
+function eraseBossBody(context: CanvasRenderingContext2D, mask: BossMask) {
   context.save();
   context.globalCompositeOperation = "destination-out";
   context.translate(mask.x, mask.y);
@@ -155,19 +155,8 @@ function eraseBossAndTargetRing(context: CanvasRenderingContext2D, mask: BossMas
   context.strokeStyle = "#000";
   context.lineJoin = "round";
   context.lineWidth = 4;
-  traceArchivistSilhouette(context);
+  traceGlitchBossBody(context);
   context.fill();
-  context.stroke();
-  context.restore();
-
-  // Remove only the attack guide's thin stroke. A radial matte would cut a
-  // circular FIELD/halo disc out of every shard instead of excluding the boss.
-  context.save();
-  context.globalCompositeOperation = "destination-out";
-  context.strokeStyle = "#000";
-  context.lineWidth = Math.max(3, 9 * mask.scale);
-  context.beginPath();
-  context.arc(mask.x, mask.y, mask.clickRadius * mask.scale, 0, Math.PI * 2);
   context.stroke();
   context.restore();
 }
@@ -190,7 +179,7 @@ function keepBossSilhouetteOnly(
   matteContext.strokeStyle = "#000";
   matteContext.lineJoin = "round";
   matteContext.lineWidth = 4;
-  traceArchivistSilhouette(matteContext);
+  traceGlitchBossBody(matteContext);
   matteContext.fill();
   matteContext.stroke();
   matteContext.restore();
@@ -207,6 +196,7 @@ function copyCanvasPixels(
   battleCanvas: HTMLCanvasElement,
   battleSnapshot: HTMLCanvasElement,
   mask: BossMask,
+  eraseCapturedBoss: boolean,
 ) {
   const sources = Array.from(sourceRoot.querySelectorAll<HTMLCanvasElement>("canvas"));
   const clones = Array.from(cloneRoot.querySelectorAll<HTMLCanvasElement>("canvas"));
@@ -218,7 +208,7 @@ function copyCanvasPixels(
     const context = clone.getContext("2d");
     if (!context) return;
     context.drawImage(source === battleCanvas ? battleSnapshot : source, 0, 0);
-    if (source === battleCanvas) eraseBossAndTargetRing(context, mask);
+    if (source === battleCanvas && eraseCapturedBoss) eraseBossBody(context, mask);
   });
 }
 
@@ -228,6 +218,7 @@ function cloneVisiblePage(
   battleCanvas: HTMLCanvasElement,
   battleSnapshot: HTMLCanvasElement,
   mask: BossMask,
+  eraseCapturedBoss: boolean,
   contentClassName: string | undefined,
 ) {
   const content = document.createElement("div");
@@ -246,7 +237,7 @@ function cloneVisiblePage(
 
   const sourceClone = sourceRoot.cloneNode(true) as HTMLElement;
   sanitizePageFractureClone(sourceClone);
-  copyCanvasPixels(sourceRoot, sourceClone, battleCanvas, battleSnapshot, mask);
+  copyCanvasPixels(sourceRoot, sourceClone, battleCanvas, battleSnapshot, mask, eraseCapturedBoss);
   const sourceRect = sourceRoot.getBoundingClientRect();
   sourceClone.style.position = "fixed";
   sourceClone.style.left = `${sourceRect.left}px`;
@@ -275,7 +266,7 @@ function mountBossKeeper(
   source: HTMLCanvasElement,
   snapshot: HTMLCanvasElement,
   host: HTMLElement,
-  mask: BossMask,
+  mask: BossMask | null,
   silhouetteScale: number,
   className: string | undefined,
 ) {
@@ -298,7 +289,7 @@ function mountBossKeeper(
   const context = keeper.getContext("2d");
   if (context) {
     context.drawImage(snapshot, 0, 0);
-    keepBossSilhouetteOnly(context, mask, silhouetteScale);
+    if (mask) keepBossSilhouetteOnly(context, mask, silhouetteScale);
   }
   host.replaceChildren(keeper);
 }
@@ -324,6 +315,8 @@ export function mountPageFracture(options: MountPageFractureOptions): PageFractu
     battleSurface,
     soundDock,
     battleCanvas,
+    battleSnapshot: providedBattleSnapshot,
+    bossSnapshot,
     shardHost,
     keeperHost,
     worldWidth,
@@ -345,7 +338,8 @@ export function mountPageFracture(options: MountPageFractureOptions): PageFractu
   if (!snapshotContext || snapshot.width < 2 || snapshot.height < 2) {
     throw new Error("The battle canvas is not ready for a fracture capture.");
   }
-  snapshotContext.drawImage(battleCanvas, 0, 0);
+  snapshotContext.drawImage(providedBattleSnapshot ?? battleCanvas, 0, 0);
+  const eraseCapturedBoss = !providedBattleSnapshot;
 
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
@@ -378,6 +372,7 @@ export function mountPageFracture(options: MountPageFractureOptions): PageFractu
       battleCanvas,
       snapshot,
       mask,
+      eraseCapturedBoss,
       classNames.content,
     ));
     shardHost.append(element);
@@ -387,9 +382,9 @@ export function mountPageFracture(options: MountPageFractureOptions): PageFractu
   if (keeperHost) {
     mountBossKeeper(
       battleCanvas,
-      snapshot,
+      bossSnapshot ?? snapshot,
       keeperHost,
-      mask,
+      bossSnapshot ? null : mask,
       boss.silhouetteScale ?? .98,
       classNames.keeper,
     );

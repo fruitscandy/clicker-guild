@@ -72,7 +72,7 @@ test("keeps the equipped sword cursor while narrowing attacks to the assembled b
   assert.doesNotMatch(css, /finale-active \.arena > \[data-weapon-tier\]/);
 });
 
-test("assembles an original archivist silhouette from ominous energy before it becomes attackable", async () => {
+test("assembles the circular multilingual glitch boss from ominous energy before it becomes attackable", async () => {
   const [component, engine, css, silhouette] = await Promise.all([
     readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8"),
     readFile(new URL("app/bullet-hell/engine.ts", root), "utf8"),
@@ -85,20 +85,29 @@ test("assembles an original archivist silhouette from ominous energy before it b
   assert.match(engine, /mode === "field" && next\.modeElapsedMs < FINALE_BOSS_ATTACKABLE_MS/);
   assert.match(component, /function drawBossEntranceEnergy/);
   assert.match(component, /world\.modeElapsedMs \/ FINALE_BOSS_REVEAL_MS/);
-  assert.match(component, /import \{ traceArchivistHead, traceArchivistMantle \} from "\.\/boss-silhouette"/);
-  assert.match(silhouette, /export function traceArchivistHead/);
-  assert.match(silhouette, /export function traceArchivistMantle/);
-  assert.match(silhouette, /export function traceArchivistSilhouette/);
-  assert.match(component, /drawArchivistSilhouette/);
-  assert.match(component, /const cyan = field/);
-  assert.match(component, /const magenta = field/);
+  assert.match(component, /GLITCH_BOSS_BODY_RADIUS,[\s\S]*?GLITCH_BOSS_GLYPH_COUNT,[\s\S]*?glitchBossGlyphAt,[\s\S]*?traceGlitchBossBody/);
+  assert.match(silhouette, /GLITCH_BOSS_BODY_RADIUS = 76/);
+  assert.match(silhouette, /GLITCH_BOSS_GLYPH_COUNT = 36/);
+  assert.match(silhouette, /export function traceGlitchBossBody/);
+  assert.match(silhouette, /export function glitchBossGlyphAt/);
+  assert.match(component, /function drawGlitchBossGlow/);
+  assert.match(component, /function drawGlitchBossGlyphCluster/);
+  assert.match(component, /traceGlitchBossBody\(context, GLITCH_BOSS_BODY_RADIUS - 1\.5\);\s*context\.clip\(\)/);
+  assert.match(component, /context\.fillText\(glyph\.char, -glyph\.rgbOffset, 0\)/);
+  assert.match(component, /context\.fillText\(glyph\.char, glyph\.rgbOffset, 0\)/);
+  assert.match(component, /const rotation = reducedMotion \? 0 : seconds/);
+  assert.match(component, /const breath = reducedMotion \? 1 :/);
+  assert.match(component, /const visualTime = reducedMotion \? 0 : elapsedMs/);
+  assert.match(component, /glitchBossGlyphAt\(index, visualTime\)/);
+  assert.doesNotMatch(component, /opening \? 1\.72 : 1/);
+  assert.doesNotMatch(component, /traceArchivist|drawArchivistSilhouette/);
   assert.match(component, /data-boss-summoning=\{hud\.mode === "field" && hud\.modeElapsedMs < FINALE_BOSS_REVEAL_MS/);
   assert.match(component, /smoothstep\(\(progress - \.12\) \/ \.68\)/);
   assert.match(component, /smoothstep\(\(revealProgress - \.5\) \/ \.38\)/);
-  assert.match(component, /smoothstep\(\(revealProgress - \.84\) \/ \.12\)/);
+  assert.match(component, /smoothstep\(\(revealProgress - \.48\) \/ \.46\)/);
   assert.match(component, /const attackableVisual = world\.mode === "bulletHell"[\s\S]*?world\.modeElapsedMs >= FINALE_BOSS_ATTACKABLE_MS/);
-  assert.match(component, /context\.arc\(0, 0, FINALE_BOSS_CLICK_RADIUS/);
-  assert.doesNotMatch(component, /FINALE_BOSS_CLICK_RADIUS \+ 6/);
+  assert.match(component, /const targetGlow = context\.createRadialGradient/);
+  assert.doesNotMatch(component, /context\.arc\(0, 0, FINALE_BOSS_CLICK_RADIUS/);
   assert.doesNotMatch(component, /context\.fillText\(field \? "消"/);
   assert.doesNotMatch(component, /context\.fillText\("CLICK DAMAGE ×2"/);
   assert.match(css, /\.standaloneSurface\[data-boss-summoning="true"\][\s\S]*?finaleSurfaceFracture 1\.25s steps\(8, end\) 2\.35s both/);
@@ -140,6 +149,13 @@ test("fractures the whole page over a live black phase-two underlay without chan
   assert.match(css, /\.battleSurface\[data-finale-mode="bulletHell"\][\s\S]*?background: #000;/);
   assert.match(css, /\.bossOverlay[\s\S]*?pointer-events: none;/);
   assert.match(component, /mountPageFracture\(/);
+  assert.match(component, /const battleSnapshot = document\.createElement\("canvas"\)/);
+  assert.match(component, /const bossSnapshot = document\.createElement\("canvas"\)/);
+  assert.match(component, /drawWorld\([\s\S]*?presentation === "embedded",[\s\S]*?true,/);
+  assert.match(component, /drawBossOnlyCanvas\(bossSnapshot, world, reducedMotionRef\.current\)/);
+  assert.match(component, /keeper\) drawBossOnlyCanvas\(keeper, world, reducedMotionRef\.current\)/);
+  assert.match(component, /battleSnapshot,[\s\S]*?bossSnapshot,[\s\S]*?keeperHost: portal\.keeperHost/);
+  assert.match(css, /\.pageFractureBossKeeper[\s\S]*?z-index: 5/);
   assert.match(component, /beginPageFracture\(before\)[\s\S]*?worldRef\.current = next/);
   assert.match(component, /active\.controller\.update\(world\.modeElapsedMs, world\.stats\.collapseDurationMs/);
   assert.match(component, /before\.mode === "collapse" && world\.mode === "bulletHell"[\s\S]*?settlePageFracture\(\)/);
@@ -153,7 +169,8 @@ test("fractures the whole page over a live black phase-two underlay without chan
   assert.doesNotMatch(controller, /requestAnimationFrame|setTimeout|setInterval|MutationObserver|performance\.now/);
   assert.match(css, /data-page-fracture-underlay="source"/);
   assert.match(css, /height: 100svh !important/);
-  assert.match(css, /html:has\(\[data-page-fracture-underlay="source"\]\)[\s\S]*?overflow-y: scroll !important/);
+  assert.match(component, /data-finale-presentation="standalone"/);
+  assert.match(css, /html:has\(\[data-page-fracture-underlay="source"\]:not\(\[data-finale-presentation="standalone"\]\)\)[\s\S]*?overflow-y: scroll !important/);
   assert.match(css, /data-page-fracture-underlay="dock"/);
   assert.doesNotMatch(css, /finaleChromeFracture/);
   assert.doesNotMatch(css, /data-finale-mode="collapse"[^\{]*\{[^}]*animation:/);

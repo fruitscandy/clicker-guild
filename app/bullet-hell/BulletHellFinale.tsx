@@ -24,7 +24,13 @@ import {
   FINALE_VFX_ASSETS,
   finaleBulletAsset,
 } from "./assets";
-import { traceArchivistHead, traceArchivistMantle } from "./boss-silhouette";
+import {
+  GLITCH_BOSS_BODY_RADIUS,
+  GLITCH_BOSS_GLYPH_COUNT,
+  glitchBossGlyphAt,
+  traceGlitchBossBody,
+  type GlitchBossGlyphTone,
+} from "./boss-silhouette";
 import {
   attackFinaleBoss,
   createFinaleWorld,
@@ -83,6 +89,7 @@ type WeaponCursorPoint = { x: number; y: number; visible: boolean };
 type PageFracturePortal = {
   root: HTMLDivElement;
   shardHost: HTMLDivElement;
+  keeperHost: HTMLDivElement;
   faultLines: HTMLDivElement;
   signalShear: HTMLDivElement;
   flash: HTMLDivElement;
@@ -150,6 +157,13 @@ function createPageFracturePortal(): PageFracturePortal {
   shardHost.setAttribute("inert", "");
   shardHost.inert = true;
 
+  const keeperHost = document.createElement("div");
+  keeperHost.className = styles.pageFractureBossKeeper;
+  keeperHost.dataset.pageFractureLayer = "boss-keeper";
+  keeperHost.setAttribute("aria-hidden", "true");
+  keeperHost.setAttribute("inert", "");
+  keeperHost.inert = true;
+
   const faultLines = document.createElement("div");
   faultLines.className = styles.pageFractureFaultLines;
   faultLines.dataset.pageFractureLayer = "fault-lines";
@@ -167,9 +181,9 @@ function createPageFracturePortal(): PageFracturePortal {
   flash.className = styles.pageFractureFlash;
   flash.dataset.pageFractureLayer = "flash";
 
-  root.append(shardHost, faultLines, signalShear, flash);
+  root.append(shardHost, faultLines, signalShear, flash, keeperHost);
   document.body.append(root);
-  return { root, shardHost, faultLines, signalShear, flash };
+  return { root, shardHost, keeperHost, faultLines, signalShear, flash };
 }
 
 function updatePageFracturePortal(
@@ -306,24 +320,114 @@ function drawNullBackground(context: CanvasRenderingContext2D, world: FinaleWorl
   context.restore();
 }
 
-function drawArchivistSilhouette(
+const GLITCH_GLYPH_COLORS: Record<GlitchBossGlyphTone, string> = {
+  white: "#f8fbff",
+  cyan: "#38eeff",
+  pink: "#ff3cab",
+  violet: "#956fff",
+};
+
+function drawGlitchBossGlow(
   context: CanvasRenderingContext2D,
-  fill: string | CanvasGradient,
-  stroke?: string,
-  lineWidth = 1,
+  seconds: number,
+  opacity: number,
+  opening: boolean,
+  reducedMotion: boolean,
 ) {
-  context.fillStyle = fill;
-  traceArchivistMantle(context);
-  context.fill();
-  traceArchivistHead(context);
-  context.fill();
-  if (!stroke) return;
-  context.strokeStyle = stroke;
-  context.lineWidth = lineWidth;
-  traceArchivistMantle(context);
-  context.stroke();
-  traceArchivistHead(context);
-  context.stroke();
+  const rotation = reducedMotion ? 0 : seconds * (opening ? .31 : .18);
+  const breath = reducedMotion ? 1 : .84 + Math.sin(seconds * 1.85) * .16;
+  const glowRadius = GLITCH_BOSS_BODY_RADIUS - 12;
+  const colors = opening
+    ? ["rgba(255,241,177,.88)", "rgba(56,238,255,.8)", "rgba(255,60,171,.74)"]
+    : ["rgba(56,238,255,.86)", "rgba(132,92,255,.8)", "rgba(255,60,171,.78)"];
+
+  context.save();
+  context.globalCompositeOperation = "screen";
+  context.globalAlpha = opacity * breath * (opening ? 1 : .9);
+
+  const ambient = context.createRadialGradient(0, 0, 48, 0, 0, opening ? 138 : 128);
+  ambient.addColorStop(0, opening ? "rgba(255,235,153,.34)" : "rgba(109,74,255,.3)");
+  ambient.addColorStop(.42, opening ? "rgba(255,60,171,.18)" : "rgba(255,60,171,.16)");
+  ambient.addColorStop(.72, "rgba(56,238,255,.09)");
+  ambient.addColorStop(1, "rgba(0,0,0,0)");
+  context.fillStyle = ambient;
+  context.fillRect(-144, -144, 288, 288);
+
+  context.rotate(rotation);
+  for (let index = 0; index < colors.length; index += 1) {
+    const angle = index * Math.PI * 2 / colors.length - .45;
+    const centerX = Math.cos(angle) * glowRadius;
+    const centerY = Math.sin(angle) * glowRadius;
+    const glow = context.createRadialGradient(centerX, centerY, 2, centerX, centerY, opening ? 62 : 56);
+    glow.addColorStop(0, colors[index]);
+    glow.addColorStop(.34, colors[index].replace(/\.[0-9]+\)$/, ".3)"));
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    context.fillStyle = glow;
+    context.fillRect(-144, -144, 288, 288);
+  }
+  context.restore();
+}
+
+function drawGlitchBossGlyphCluster(
+  context: CanvasRenderingContext2D,
+  elapsedMs: number,
+  opacity: number,
+  assembly: number,
+  opening: boolean,
+  hitStrength: number,
+  reducedMotion: boolean,
+) {
+  const visualTime = reducedMotion ? 0 : elapsedMs;
+  const glyphCount = Math.ceil(GLITCH_BOSS_GLYPH_COUNT * assembly);
+  const frames = Array.from({ length: glyphCount }, (_, index) => (
+    glitchBossGlyphAt(index, visualTime)
+  )).sort((left, right) => left.size - right.size);
+
+  context.save();
+  traceGlitchBossBody(context, GLITCH_BOSS_BODY_RADIUS - 1.5);
+  context.clip();
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+
+  for (const glyph of frames) {
+    context.save();
+    context.translate(glyph.x, glyph.y);
+    context.rotate(glyph.rotation);
+    context.font = `900 ${glyph.size.toFixed(2)}px ui-monospace, "Noto Sans KR", "Malgun Gothic", sans-serif`;
+    const glyphOpacity = opacity * glyph.opacity * glyph.flicker;
+    const baseColor = hitStrength > .68
+      ? "#ffffff"
+      : opening && glyph.tone === "white"
+        ? "#fff8cf"
+        : GLITCH_GLYPH_COLORS[glyph.tone];
+
+    if (!reducedMotion && glyph.hot && Math.abs(glyph.rgbOffset) > .05) {
+      const sliceHeight = Math.max(2, glyph.size * .28);
+      context.save();
+      context.beginPath();
+      context.rect(-glyph.size * .72, -glyph.size * .46, glyph.size * 1.44, sliceHeight);
+      context.clip();
+      context.globalAlpha = glyphOpacity * .82;
+      context.fillStyle = "#ff3cab";
+      context.fillText(glyph.char, -glyph.rgbOffset, 0);
+      context.restore();
+
+      context.save();
+      context.beginPath();
+      context.rect(-glyph.size * .72, glyph.size * .08, glyph.size * 1.44, sliceHeight);
+      context.clip();
+      context.globalAlpha = glyphOpacity * .76;
+      context.fillStyle = "#38eeff";
+      context.fillText(glyph.char, glyph.rgbOffset, 0);
+      context.restore();
+    }
+
+    context.globalAlpha = glyphOpacity;
+    context.fillStyle = baseColor;
+    context.fillText(glyph.char, 0, 0);
+    context.restore();
+  }
+  context.restore();
 }
 
 function drawBossEntranceEnergy(context: CanvasRenderingContext2D, world: FinaleWorld, reducedMotion: boolean) {
@@ -393,13 +497,12 @@ function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reduced
   if (world.mode === "whiteout") return;
   const { x, y } = world.boss;
   const seconds = reducedMotion ? 0 : world.elapsedMs / 1_000;
-  const field = world.mode === "field";
   const opening = world.mode === "bulletHell" && world.cycle === "opening";
   const revealProgress = world.mode === "field"
     ? clamp(world.modeElapsedMs / FINALE_BOSS_REVEAL_MS, 0, 1)
     : 1;
   const assembly = smoothstep((revealProgress - .5) / .38);
-  const eyeIgnition = smoothstep((revealProgress - .84) / .12);
+  const glyphAssembly = smoothstep((revealProgress - .48) / .46);
   const destructionProgress = world.mode === "destruction"
     ? clamp(world.modeElapsedMs / world.stats.destructionDurationMs, 0, 1)
     : 0;
@@ -411,157 +514,73 @@ function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reduced
     : Math.sin(hitPhase * Math.PI * 2.4) * hitStrength * 6 * (world.clicksLanded % 2 ? 1 : -1);
   const squash = reducedMotion ? 0 : Math.sin(hitPhase * Math.PI) * hitStrength * .05;
   const signalJitter = reducedMotion ? 0 : Math.sin(world.elapsedMs * .091) * (1 - revealProgress) * 9;
-  const coreColor = opening ? "#fff0a4" : field ? "#f0c66e" : "#bffcff";
-  const cyan = field ? "#50d7d3" : "#00ead7";
-  const magenta = field ? "#9f4778" : "#ff2b8c";
   const bodyOpacity = assembly * (1 - destructionProgress * .76);
   const destructionMotion = reducedMotion ? 0 : destructionProgress;
   const attackableVisual = world.mode === "bulletHell"
     || (world.mode === "field" && world.modeElapsedMs >= FINALE_BOSS_ATTACKABLE_MS);
 
   context.save();
-  context.translate(x + signalJitter, y);
+  context.translate(x + signalJitter + recoil * .5, y);
   context.scale(
-    .94 * pulse * (destructionMotion ? 1 - destructionMotion * .78 : 1),
-    .94 * pulse * (1 + destructionMotion * .12),
+    .94 * pulse * (1 + squash) * (destructionMotion ? 1 - destructionMotion * .78 : 1),
+    .94 * pulse * (1 - squash * .7) * (1 + destructionMotion * .12),
   );
+  drawGlitchBossGlow(context, seconds, bodyOpacity, opening, reducedMotion);
+
+  const bodyGradient = context.createRadialGradient(-12, -14, 3, 0, 0, GLITCH_BOSS_BODY_RADIUS);
+  bodyGradient.addColorStop(0, opening ? "#17130a" : "#10121b");
+  bodyGradient.addColorStop(.32, "#07080d");
+  bodyGradient.addColorStop(.76, "#010205");
+  bodyGradient.addColorStop(1, "#000000");
   context.globalAlpha = bodyOpacity;
-
-  const aura = context.createRadialGradient(0, -8, 8, 0, -2, opening ? 142 : 118);
-  aura.addColorStop(0, opening ? "rgba(255,238,143,.48)" : field ? "rgba(121,38,45,.32)" : "rgba(46,220,230,.3)");
-  aura.addColorStop(.48, opening ? "rgba(255,211,89,.13)" : "rgba(126,47,161,.11)");
-  aura.addColorStop(1, "transparent");
-  context.fillStyle = aura;
-  context.fillRect(-150, -150, 300, 300);
-
-  context.save();
-  context.globalCompositeOperation = "screen";
-  context.globalAlpha = bodyOpacity * (.18 + hitStrength * .22);
-  context.translate(-4 - recoil - hitStrength * (reducedMotion ? 0 : 4), 1);
-  context.scale(1 + squash, 1 - squash * .7);
-  drawArchivistSilhouette(context, cyan);
-  context.translate(9 + recoil * 2 + hitStrength * (reducedMotion ? 0 : 8), -2);
-  drawArchivistSilhouette(context, magenta);
-  context.restore();
-
-  const bodyGradient = context.createLinearGradient(-18, -82, 22, 78);
-  bodyGradient.addColorStop(0, field ? "#1c1720" : "#111827");
-  bodyGradient.addColorStop(.42, "#05070d");
-  bodyGradient.addColorStop(1, field ? "#1a1013" : "#02040a");
-  drawArchivistSilhouette(context, bodyGradient, field ? "rgba(230,183,99,.68)" : "rgba(77,234,232,.7)", 1.5);
-
-  context.save();
-  context.globalCompositeOperation = "screen";
-  for (let index = 0; index < 6; index += 1) {
-    const sliceY = -60 + index * 24;
-    const offset = reducedMotion ? 0 : Math.sin(seconds * 9 + index * 2.7) * (index % 2 ? 5 : 8);
-    const width = 31 + (index * 17) % 54;
-    context.globalAlpha = bodyOpacity * (.12 + (index % 3) * .045);
-    context.fillStyle = index % 2 ? magenta : cyan;
-    context.fillRect(-width / 2 + offset, sliceY, width, index % 3 === 0 ? 3 : 1.5);
-  }
-  context.restore();
-
-  context.save();
-  context.globalAlpha = bodyOpacity * .34;
-  context.strokeStyle = field ? "rgba(239,198,119,.43)" : "rgba(103,236,240,.48)";
-  context.lineWidth = 2;
-  context.setLineDash([8, 7]);
-  context.beginPath();
-  context.moveTo(-45, -5);
-  context.lineTo(-75, -23);
-  context.lineTo(-87, -8);
-  context.lineTo(-66, 9);
-  context.moveTo(44, -7);
-  context.lineTo(78, -28);
-  context.lineTo(90, -12);
-  context.lineTo(64, 11);
-  context.stroke();
-  context.restore();
-
-  for (let index = 0; index < 8; index += 1) {
-    const angle = index * Math.PI / 4 + seconds * (field ? .08 : .2) * (index % 2 ? -1 : 1);
-    const radius = 88 + index % 3 * 8 + destructionMotion * (90 + index * 7);
-    const fragmentAlpha = bodyOpacity * (.22 + index % 3 * .08) * (1 - destructionProgress);
-    context.save();
-    context.translate(Math.cos(angle) * radius, Math.sin(angle) * radius * .72);
-    context.rotate(angle + seconds * .3);
-    context.globalAlpha = fragmentAlpha;
-    context.fillStyle = index % 3 === 0 ? magenta : index % 2 ? coreColor : cyan;
-    context.fillRect(-6 - index % 2 * 3, -1.5, 12 + index % 2 * 6, 3);
-    context.restore();
-  }
-
-  context.save();
-  context.fillStyle = "rgba(0,0,0,.88)";
-  context.strokeStyle = field ? "rgba(184,91,74,.66)" : "rgba(255,48,142,.64)";
-  context.lineWidth = 1.5;
-  context.beginPath();
-  context.moveTo(-20, -61);
-  context.lineTo(-2, -70);
-  context.lineTo(21, -59);
-  context.lineTo(18, -24);
-  context.lineTo(-2, -14);
-  context.lineTo(-22, -27);
-  context.closePath();
+  context.fillStyle = bodyGradient;
+  traceGlitchBossBody(context);
   context.fill();
-  context.stroke();
-  context.restore();
 
-  const fissureWidth = opening ? 8 : 2.5 + eyeIgnition * 2.5;
-  context.save();
-  context.globalCompositeOperation = "screen";
-  context.shadowColor = coreColor;
-  context.shadowBlur = opening ? 28 : 14 + eyeIgnition * 8;
-  context.fillStyle = world.boss.flashMs > 0 ? "#ffffff" : coreColor;
-  context.globalAlpha = eyeIgnition;
-  context.beginPath();
-  context.moveTo(-fissureWidth * .35, -60);
-  context.lineTo(fissureWidth * .45, -49);
-  context.lineTo(-fissureWidth * .2, -39);
-  context.lineTo(fissureWidth * .6, -29);
-  context.lineTo(0, -19);
-  context.lineTo(-fissureWidth * .75, -31);
-  context.lineTo(fissureWidth * .1, -42);
-  context.closePath();
-  context.fill();
-  context.restore();
-
-  context.save();
-  context.globalCompositeOperation = "screen";
-  context.globalAlpha = eyeIgnition * (opening ? .92 : .52);
-  context.shadowColor = coreColor;
-  context.shadowBlur = opening ? 22 : 11;
-  context.fillStyle = world.boss.flashMs > 0 ? "#ffffff" : coreColor;
-  context.beginPath();
-  context.moveTo(-12 - (opening ? 4 : 0), -42);
-  context.lineTo(-2, -46);
-  context.lineTo(13 + (opening ? 4 : 0), -42);
-  context.lineTo(2, -38);
-  context.closePath();
-  context.fill();
-  context.restore();
+  drawGlitchBossGlyphCluster(
+    context,
+    world.elapsedMs,
+    bodyOpacity,
+    glyphAssembly,
+    opening,
+    hitStrength,
+    reducedMotion,
+  );
 
   if (hitStrength > 0) {
     context.save();
     context.globalCompositeOperation = "screen";
-    context.globalAlpha = hitStrength * .58;
-    drawArchivistSilhouette(context, "#ffffff");
+    context.globalAlpha = hitStrength * .42 * bodyOpacity;
+    const flash = context.createRadialGradient(-12, -18, 2, 0, 0, GLITCH_BOSS_BODY_RADIUS);
+    flash.addColorStop(0, "#ffffff");
+    flash.addColorStop(.42, "rgba(206,253,255,.72)");
+    flash.addColorStop(1, "rgba(255,255,255,.04)");
+    context.fillStyle = flash;
+    traceGlitchBossBody(context);
+    context.fill();
     context.restore();
   }
   context.restore();
 
-  if (attackableVisual && eyeIgnition > 0) {
+  if (attackableVisual && glyphAssembly > 0) {
     context.save();
     context.translate(x, y);
-    context.globalAlpha = eyeIgnition * (opening ? .92 : .34);
-    context.strokeStyle = opening ? "#fff0a4" : coreColor;
-    context.lineWidth = opening ? 3 : 1.5;
-    context.setLineDash(opening ? [12, 5] : [8, 10]);
-    context.rotate(reducedMotion ? 0 : seconds * (opening ? .22 : .08));
-    context.beginPath();
-    context.arc(0, 0, FINALE_BOSS_CLICK_RADIUS, 0, Math.PI * 2);
-    context.stroke();
+    context.globalCompositeOperation = "screen";
+    context.globalAlpha = glyphAssembly * (opening ? .82 : .26);
+    const targetGlow = context.createRadialGradient(
+      0,
+      0,
+      GLITCH_BOSS_BODY_RADIUS - 5,
+      0,
+      0,
+      FINALE_BOSS_CLICK_RADIUS + (opening ? 24 : 18),
+    );
+    targetGlow.addColorStop(0, "rgba(0,0,0,0)");
+    targetGlow.addColorStop(.28, opening ? "rgba(255,240,164,.46)" : "rgba(56,238,255,.16)");
+    targetGlow.addColorStop(.62, opening ? "rgba(255,60,171,.18)" : "rgba(132,92,255,.11)");
+    targetGlow.addColorStop(1, "rgba(0,0,0,0)");
+    context.fillStyle = targetGlow;
+    context.fillRect(-120, -120, 240, 240);
     context.restore();
   }
 
@@ -901,6 +920,7 @@ function drawWorld(
   attackImpacts: readonly AttackImpact[],
   reducedMotion: boolean,
   preserveHostField: boolean,
+  omitBoss = false,
 ) {
   if (world.mode === "field") {
     if (!preserveHostField) drawFieldBackground(context, images);
@@ -911,8 +931,10 @@ function drawWorld(
     drawNullBackground(context, world, reducedMotion);
   }
 
-  drawBossEntranceEnergy(context, world, reducedMotion);
-  drawBoss(context, world, reducedMotion);
+  if (!omitBoss) {
+    drawBossEntranceEnergy(context, world, reducedMotion);
+    drawBoss(context, world, reducedMotion);
+  }
   if (world.mode === "collapse" || world.mode === "bulletHell") {
     drawGuildBody(context, world, loadout, images, reducedMotion);
     if (world.mode === "bulletHell") {
@@ -921,7 +943,9 @@ function drawWorld(
     }
     drawPlayerCore(context, world, focusHeld, reducedMotion);
   }
-  attackImpacts.forEach((impact) => drawAttackImpact(context, impact, images, reducedMotion));
+  if (!omitBoss) {
+    attackImpacts.forEach((impact) => drawAttackImpact(context, impact, images, reducedMotion));
+  }
 
   if (world.mode === "whiteout") {
     context.fillStyle = "#ffffff";
@@ -932,6 +956,23 @@ function drawWorld(
   context.lineWidth = 2;
   context.strokeRect(7, 7, FINALE_WIDTH - 14, FINALE_HEIGHT - 14);
   context.restore();
+}
+
+function drawBossOnlyCanvas(
+  canvas: HTMLCanvasElement,
+  world: FinaleWorld,
+  reducedMotion: boolean,
+) {
+  const context = canvas.getContext("2d");
+  if (!context) return false;
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  const scale = Math.min(canvas.width / FINALE_WIDTH, canvas.height / FINALE_HEIGHT);
+  const offsetX = (canvas.width - FINALE_WIDTH * scale) / 2;
+  const offsetY = (canvas.height - FINALE_HEIGHT * scale) / 2;
+  context.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+  drawBoss(context, world, reducedMotion);
+  return true;
 }
 
 export function BulletHellFinale({
@@ -1048,6 +1089,8 @@ export function BulletHellFinale({
       world.stats.collapseDurationMs,
       reducedMotionRef.current,
     );
+    const keeper = active.portal.keeperHost.querySelector<HTMLCanvasElement>("[data-page-fracture-keeper]");
+    if (keeper) drawBossOnlyCanvas(keeper, world, reducedMotionRef.current);
   }, []);
 
   const beginPageFracture = useCallback((world: FinaleWorld) => {
@@ -1066,6 +1109,32 @@ export function BulletHellFinale({
     const soundDock = document.querySelector<HTMLElement>("[aria-label='게임 사운드 제어']");
     pageFractureScrollRef.current = { x: window.scrollX, y: window.scrollY };
     const portal = createPageFracturePortal();
+    const battleSnapshot = document.createElement("canvas");
+    const bossSnapshot = document.createElement("canvas");
+    battleSnapshot.width = bossSnapshot.width = battleCanvas.width;
+    battleSnapshot.height = bossSnapshot.height = battleCanvas.height;
+    const battleSnapshotContext = battleSnapshot.getContext("2d");
+    if (!battleSnapshotContext || !drawBossOnlyCanvas(bossSnapshot, world, reducedMotionRef.current)) {
+      portal.root.remove();
+      pageFractureScrollRef.current = null;
+      return false;
+    }
+    const snapshotScale = Math.min(battleCanvas.width / FINALE_WIDTH, battleCanvas.height / FINALE_HEIGHT);
+    const snapshotOffsetX = (battleCanvas.width - FINALE_WIDTH * snapshotScale) / 2;
+    const snapshotOffsetY = (battleCanvas.height - FINALE_HEIGHT * snapshotScale) / 2;
+    battleSnapshotContext.setTransform(snapshotScale, 0, 0, snapshotScale, snapshotOffsetX, snapshotOffsetY);
+    drawWorld(
+      battleSnapshotContext,
+      world,
+      loadout,
+      imagesRef.current,
+      keysRef.current.has("shift") || virtualRef.current.has("focus"),
+      playerImpactRef.current,
+      attackImpactsRef.current,
+      reducedMotionRef.current,
+      presentation === "embedded",
+      true,
+    );
     const canvasRect = battleCanvas.getBoundingClientRect();
     const canvasScale = Math.max(.001, Math.min(canvasRect.width / FINALE_WIDTH, canvasRect.height / FINALE_HEIGHT));
     const canvasOffsetX = (canvasRect.width - FINALE_WIDTH * canvasScale) / 2;
@@ -1078,7 +1147,10 @@ export function BulletHellFinale({
         battleSurface,
         soundDock,
         battleCanvas,
+        battleSnapshot,
+        bossSnapshot,
         shardHost: portal.shardHost,
+        keeperHost: portal.keeperHost,
         worldWidth: FINALE_WIDTH,
         worldHeight: FINALE_HEIGHT,
         boss: {
@@ -1106,7 +1178,7 @@ export function BulletHellFinale({
       soundDock?.removeAttribute("data-page-fracture-underlay");
       return false;
     }
-  }, [seed]);
+  }, [loadout, presentation, seed]);
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -1575,6 +1647,7 @@ export function BulletHellFinale({
       data-finale-scene={scene}
       data-finale-mode={hud.mode}
       data-finale-music={musicSignal}
+      data-finale-presentation="standalone"
     >
       <section className={`field-screen ${styles.screen}`} aria-label="최종 스테이지 전투">
         <header className={styles.stageToolbar}>

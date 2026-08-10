@@ -111,9 +111,14 @@ test("the DOM controller is externally clocked and contains no autonomous observ
   assert.match(source, /soundDock, "dock"/);
   assert.match(source, /root\.inert = true/);
   assert.match(source, /name\.startsWith\("aria-"\)/);
-  assert.match(source, /traceArchivistSilhouette\(context\)/);
+  assert.match(source, /traceGlitchBossBody\(context\)/);
+  assert.doesNotMatch(source, /traceArchivist/);
   assert.doesNotMatch(source, /createRadialGradient/);
-  assert.match(source, /context\.arc\(mask\.x, mask\.y, mask\.clickRadius \* mask\.scale/);
+  assert.match(source, /function eraseBossBody/);
+  assert.match(source, /battleSnapshot\?: HTMLCanvasElement/);
+  assert.match(source, /bossSnapshot\?: HTMLCanvasElement/);
+  assert.match(source, /const eraseCapturedBoss = !providedBattleSnapshot/);
+  assert.match(source, /bossSnapshot \? null : mask/);
   assert.match(source, /const sourceRect = sourceRoot\.getBoundingClientRect\(\)/);
   assert.match(source, /sourceClone\.style\.top = `\$\{sourceRect\.top\}px`/);
   assert.match(source, /const settle = \(\) =>/);
