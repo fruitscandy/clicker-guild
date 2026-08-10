@@ -26,7 +26,7 @@ test("특수 연구는 본관 2·3·4단계에서 독립 해금되는 세 비술
   ]);
   assert.deepEqual(Object.values(special.SPECIAL_ATTACKS).map((attack) => attack.hallLevel), [2, 3, 4]);
   assert.deepEqual(special.unlockedSpecialAttacks(["foundation", "special-tornado-3"]), ["tornado"]);
-  assert.deepEqual(Object.values(special.SPECIAL_ATTACKS).map((attack) => attack.cooldownMs), [5_200, 8_400, 11_800]);
+  assert.deepEqual(Object.values(special.SPECIAL_ATTACKS).map((attack) => attack.cooldownMs), [2_000, 4_000, 6_000]);
   assert.deepEqual(Object.values(special.SPECIAL_ATTACKS).map((attack) => attack.cost), [1_300, 3_600, 8_400]);
   assert.equal(Object.values(special.SPECIAL_ATTACKS).every((attack) => !/[\u3400-\u9fff]/u.test(attack.glyph)), true);
 });
