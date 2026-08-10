@@ -1,7 +1,7 @@
 export const FINALE_WIDTH = 960;
 export const FINALE_HEIGHT = 600;
 
-export const FINALE_BULLET_CAP = 140;
+export const FINALE_BULLET_SOFT_CAP = 5;
 export const FINALE_CLICK_INTERVAL_MS = 125;
 export const FINALE_TELEGRAPH_MS = 650;
 export const FINALE_DODGE_MS = 6_000;
@@ -16,6 +16,7 @@ export const FINALE_BOSS_ANCHOR_Y = 184;
 export const FINALE_PLAYER_START_X = FINALE_WIDTH / 2;
 export const FINALE_PLAYER_START_Y = FINALE_HEIGHT - 72;
 export const FINALE_GUILD_SIZE = 90;
+export const FINALE_ASSET_BULLET_CARD_SIZE = 80;
 
 const FIXED_STEP_MS = 16;
 const MAX_UPDATE_MS = 512;
@@ -24,6 +25,17 @@ const DEFAULT_SEED = 0xc0de_2026;
 const PHASE_ONE_HP = 16;
 const PHASE_TWO_HP = 42;
 const DODGE_CLICK_MULTIPLIER = 0.35;
+const ASSET_VOLLEY_SPEED_MIN = 112;
+const ASSET_VOLLEY_SPEED_RANGE = 24;
+const ASSET_VOLLEY_AIM_JITTER = 56;
+const ASSET_BULLET_SPAWN_MIN_MS = 1_300;
+const ASSET_BULLET_SPAWN_RANGE_MS = 900;
+const ASSET_BULLET_WARNING_HALF_SIZE = FINALE_ASSET_BULLET_CARD_SIZE / 2 + 8;
+const ASSET_BULLET_BOUNDING_RADIUS = ASSET_BULLET_WARNING_HALF_SIZE * Math.sqrt(2);
+const ASSET_BULLET_OFFSCREEN_GAP = 1;
+const GUILD_MASK_GRID_SIZE = 24;
+const GUILD_MASK_CELL_SIZE = FINALE_GUILD_SIZE / GUILD_MASK_GRID_SIZE;
+const GUILD_MASK_CELL_RADIUS = GUILD_MASK_CELL_SIZE * 0.42;
 
 export type FinaleUpgradeKey =
   | "range"
@@ -169,7 +181,7 @@ export type FinaleBullet = {
   vy: number;
   ax: number;
   ay: number;
-  radius: number;
+  cardSize: number;
   rotation: number;
   spriteIndex: number;
   spin: number;
@@ -179,9 +191,14 @@ export type FinaleBullet = {
   lifetimeMs: number;
   damage: number;
   kind: FinaleBulletKind;
-  asset: string;
   grazed: boolean;
 };
+
+export type FinaleGuildMaskCell = Readonly<{
+  x: number;
+  y: number;
+  radius: number;
+}>;
 
 export type FinaleShot = {
   id: number;
@@ -273,21 +290,10 @@ export const FINALE_UPGRADE_CAPS: FinaleUpgrades = {
 const UPGRADE_KEYS = Object.keys(FINALE_UPGRADE_CAPS) as FinaleUpgradeKey[];
 const EMPTY_UPGRADES = Object.fromEntries(UPGRADE_KEYS.map((key) => [key, 0])) as FinaleUpgrades;
 
-const BULLET_ASSETS = [
-  "/assets/weapons/tier-03-twin-blades.webp",
-  "/assets/weapons/tier-06-nebula-saber.webp",
-  "/assets/weapons/tier-09-blood-moon.webp",
-  "/assets/upgrades/range.webp",
-  "/assets/upgrades/critical.webp",
-  "/assets/upgrades/shockwave.webp",
-  "/assets/guild/forge/flame-forge-v1.png",
-  "/assets/guild/research/guild-enhancement-institute-v1.png",
-] as const;
-
 const MODE_COPY: Record<FinaleMode, { phaseName: string; patternName: string }> = {
   field: { phaseName: "ARCHIVE INTERVENTION", patternName: "기록 관리자 직접 타격" },
   collapse: { phaseName: "FIELD COLLAPSE", patternName: "전장 데이터 붕괴" },
-  bulletHell: { phaseName: "NULL CORE", patternName: "안전 통로 탐색" },
+  bulletHell: { phaseName: "NULL CORE", patternName: "에셋 경계 포격" },
   destruction: { phaseName: "CORE DESTRUCTION", patternName: "말소 코어 파괴" },
   whiteout: { phaseName: "ENDING UNLOCKED", patternName: "기록 복원 완료" },
 };
@@ -302,6 +308,75 @@ function finiteOr(value: number, fallback: number) {
 
 function clampLevel(value: number, maximum: number) {
   return Math.round(clamp(finiteOr(value, 0), 0, maximum));
+}
+
+// These masks are sampled from the centre of a 24x24 grid over each frame in
+// guild-growth-sprites-v1.png (alpha >= 128). Small circles keep collision
+// inside the painted silhouette instead of treating transparent frame corners
+// as solid. Coordinates are converted once into the finale's 90px space.
+const GUILD_ALPHA_MASK_ROWS = [
+  [
+    "........................", "........................", "........................", "........................",
+    "........................", "........................", "........................", "........................",
+    ".......##...............", ".......######..#........", ".......#########........", ".....###########........",
+    ".....#############......", ".....##############.....", ".....##############.....", "......############.#....",
+    "...#.#.###########.#....", "...#.#.###########.#....", "..###.############.#....", "...#.###############....",
+    "...##.#############.....", "........................", "........................", "........................",
+  ],
+  [
+    "........................", "........................", "........................", "........................",
+    "........................", ".....#..................", "....###.....##..........", "....##########..........",
+    "....##########..........", "....###########.........", "...#############........", "..##############........",
+    "...#############........", "...###############......", "...################.....", "...################.....",
+    "..#################.....", "...################.....", ".##################.....", ".##################.....",
+    "..#################.....", ".............##.........", "........................", "........................",
+  ],
+  [
+    "........................", "........................", "........................", "........................",
+    ".......#................", ".......###..............", ".......#######..........", "......########.##.......",
+    "....#############.......", "...##############.......", "..###############.......", ".#################......",
+    "..################......", ".#################......", "##################......", "#####################...",
+    "#####################...", "######################..", "#####################...", "######################..",
+    "....###########.#####...", ".......#................", "........................", "........................",
+  ],
+  [
+    "........................", "...............##.......", "...............#........", ".............#####......",
+    ".......#.....#####......", ".......##....#####......", "....#..###########......", ".....#############......",
+    "....##############......", "...################.....", "....###############.....", "....###############.....",
+    "...################.....", "..##################....", ".####################...", "..###################..#",
+    "..###################..#", ".####################..#", "..###################..#", ".....#####......###.....",
+    "........................", "........................", "........................", "........................",
+  ],
+  [
+    "........................", "..............#.........", "....#.........##........", "...##.........#.#.......",
+    "...##..#.....###........", "..####.###.#####........", "..####.##########.......", "..###############.......",
+    "..##############........", "..################......", "..##################....", "..##################...#",
+    "..##################...#", "..##################...#", "..##################...#", "####################...#",
+    "#####################..#", "####################...#", "#####################...", "...#################....",
+    "...........#######......", "........................", "........................", "........................",
+  ],
+  [
+    "........................", "..........#.............", ".........##.............", "........####............",
+    "........####...#........", "........####..#.........", "..##..#######.##........", "..##..##########........",
+    "..##.#############......", "#.##.#############......", "#.################......", "#.################......",
+    "##################.#....", "#.##################....", "######################..", "######################..",
+    "######################..", "#####################...", "#####################...", "..###############.......",
+    ".....###########........", "........................", "........................", "........................",
+  ],
+] as const;
+
+const GUILD_MASK_CELLS: readonly (readonly FinaleGuildMaskCell[])[] = GUILD_ALPHA_MASK_ROWS.map((rows) => (
+  rows.flatMap((row, rowIndex) => [...row].flatMap((value, columnIndex) => value === "#" ? [{
+    x: -FINALE_GUILD_SIZE / 2 + (columnIndex + 0.5) * GUILD_MASK_CELL_SIZE,
+    y: -FINALE_GUILD_SIZE / 2 + (rowIndex + 0.5) * GUILD_MASK_CELL_SIZE,
+    radius: GUILD_MASK_CELL_RADIUS,
+  }] : []))
+));
+
+/** Alpha-derived conservative collision cells in logical coordinates relative to the guild centre. */
+export function finaleGuildMaskCells(hallLevel: number): readonly FinaleGuildMaskCell[] {
+  const index = (clampLevel(hallLevel || 1, 6) || 1) - 1;
+  return GUILD_MASK_CELLS[index];
 }
 
 function normalizeSeed(seed: number | undefined) {
@@ -330,8 +405,8 @@ export function deriveFinaleStats(loadout: FinaleLoadout): FinaleStats {
     maxShields: 1,
     moveSpeed: 224,
     focusSpeed: 128,
-    hitRadius: 7,
-    grazeRadius: 26,
+    hitRadius: FINALE_GUILD_SIZE / 2,
+    grazeRadius: 64,
     clickDamage,
     openingMultiplier: 2,
     clickIntervalMs: FINALE_CLICK_INTERVAL_MS,
@@ -391,7 +466,7 @@ export function createFinaleWorld(
     player: {
       x: FINALE_PLAYER_START_X,
       y: FINALE_PLAYER_START_Y,
-      radius: 34,
+      radius: FINALE_GUILD_SIZE / 2,
       hitRadius: stats.hitRadius,
       hp: stats.maxHp,
       maxHp: stats.maxHp,
@@ -616,7 +691,7 @@ function inputAxis(input: FinaleInput) {
 function movePlayer(world: FinaleWorld, input: FinaleInput, deltaSeconds: number) {
   const axis = inputAxis(input);
   const speed = input.focus ? world.stats.focusSpeed : world.stats.moveSpeed;
-  const margin = world.player.radius * 0.72;
+  const margin = FINALE_GUILD_SIZE / 2;
   world.player.x = clamp(world.player.x + axis.x * speed * deltaSeconds, margin, FINALE_WIDTH - margin);
   world.player.y = clamp(world.player.y + axis.y * speed * deltaSeconds, ARENA_TOP + margin, FINALE_HEIGHT - margin);
 }
@@ -625,80 +700,62 @@ function addBullet(
   world: FinaleWorld,
   bullet: Omit<FinaleBullet, "id" | "ageMs" | "grazed" | "spriteIndex"> & Partial<Pick<FinaleBullet, "spriteIndex">>,
 ) {
-  if (world.bullets.length >= FINALE_BULLET_CAP) return;
   world.bullets.push({
     ...bullet,
     id: world.nextBulletId,
-    spriteIndex: bullet.spriteIndex ?? (world.nextBulletId - 1) % BULLET_ASSETS.length,
+    spriteIndex: bullet.spriteIndex ?? world.nextBulletId - 1,
     ageMs: 0,
     grazed: false,
   });
   world.nextBulletId += 1;
 }
 
-function spawnCorridorWave(world: FinaleWorld) {
-  const safeCenter = 154 + random(world) * (FINALE_WIDTH - 308);
-  const safeWidth = 210;
-  const rowOffset = (world.cycleSerial % 2) * 30;
-  for (let x = 30 + rowOffset; x < FINALE_WIDTH; x += 60) {
-    if (Math.abs(x - safeCenter) < safeWidth / 2) continue;
-    const selector = world.nextBulletId % BULLET_ASSETS.length;
-    addBullet(world, {
-      x,
-      y: ARENA_TOP + 18,
-      vx: (random(world) - 0.5) * 10,
-      vy: 140 + selector % 3 * 7,
-      ax: 0,
-      ay: 0,
-      radius: 10,
-      rotation: Math.PI / 2,
-      spin: selector % 2 ? 0.7 : -0.7,
-      turnRate: 0,
-      telegraphMs: world.stats.warningMs,
-      lifetimeMs: 4_600,
-      damage: 1,
-      kind: selector % 3 === 0 ? "weapon" : selector % 3 === 1 ? "upgrade" : "error",
-      asset: BULLET_ASSETS[selector],
-    });
+function spawnAssetBullet(world: FinaleWorld) {
+  const edge = Math.floor(random(world) * 3);
+  const lane = random(world);
+  let x = -ASSET_BULLET_BOUNDING_RADIUS - ASSET_BULLET_OFFSCREEN_GAP;
+  let y = ARENA_TOP + ASSET_BULLET_BOUNDING_RADIUS;
+  if (edge === 0) {
+    x = ASSET_BULLET_BOUNDING_RADIUS + lane * (FINALE_WIDTH - ASSET_BULLET_BOUNDING_RADIUS * 2);
+    y = -ASSET_BULLET_BOUNDING_RADIUS - ASSET_BULLET_OFFSCREEN_GAP;
+  } else {
+    x = edge === 1
+      ? -ASSET_BULLET_BOUNDING_RADIUS - ASSET_BULLET_OFFSCREEN_GAP
+      : FINALE_WIDTH + ASSET_BULLET_BOUNDING_RADIUS + ASSET_BULLET_OFFSCREEN_GAP;
+    y += lane * (FINALE_HEIGHT - ARENA_TOP - ASSET_BULLET_BOUNDING_RADIUS * 2);
   }
-}
 
-function spawnAimedFan(world: FinaleWorld) {
-  const center = Math.atan2(world.player.y - world.boss.y, world.player.x - world.boss.x);
-  for (let index = 0; index < 3; index += 1) {
-    const angle = center + (index - 1) * 0.18;
-    const selector = (world.nextBulletId + index) % BULLET_ASSETS.length;
-    addBullet(world, {
-      x: world.boss.x,
-      y: world.boss.y + world.boss.radius * 0.5,
-      vx: Math.cos(angle) * (150 + index * 5),
-      vy: Math.sin(angle) * (150 + index * 5),
-      ax: 0,
-      ay: 0,
-      radius: 9,
-      rotation: angle,
-      spin: index % 2 ? 1.1 : -1.1,
-      turnRate: 0,
-      telegraphMs: world.stats.warningMs,
-      lifetimeMs: 4_600,
-      damage: 1,
-      kind: "error",
-      asset: BULLET_ASSETS[selector],
-    });
-  }
+  const targetX = world.player.x + (random(world) * 2 - 1) * ASSET_VOLLEY_AIM_JITTER;
+  const targetY = world.player.y + (random(world) * 2 - 1) * ASSET_VOLLEY_AIM_JITTER;
+  const angle = Math.atan2(targetY - y, targetX - x);
+  const speed = ASSET_VOLLEY_SPEED_MIN + random(world) * ASSET_VOLLEY_SPEED_RANGE;
+  const spinSample = random(world) * 2 - 1;
+  const spin = (spinSample < 0 ? -1 : 1) * (0.65 + Math.abs(spinSample) * 0.9);
+  const spriteIndex = Math.floor(random(world) * 0x1_0000_0000);
+  addBullet(world, {
+    x,
+    y,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
+    ax: 0,
+    ay: 0,
+    cardSize: FINALE_ASSET_BULLET_CARD_SIZE,
+    rotation: angle,
+    spin,
+    turnRate: 0,
+    telegraphMs: world.stats.warningMs,
+    lifetimeMs: 6_500,
+    damage: 1,
+    kind: "error",
+    spriteIndex,
+  });
 }
 
 function updatePatterns(world: FinaleWorld, deltaMs: number) {
-  if (world.cycle !== "dodge") return;
   world.boss.attackCooldownMs -= deltaMs;
-  world.boss.secondaryCooldownMs -= deltaMs;
-  while (world.boss.attackCooldownMs <= 0) {
-    spawnCorridorWave(world);
-    world.boss.attackCooldownMs += 680;
-  }
-  while (world.boss.secondaryCooldownMs <= 0) {
-    spawnAimedFan(world);
-    world.boss.secondaryCooldownMs += 1_900;
+  if (world.boss.attackCooldownMs <= 0) {
+    spawnAssetBullet(world);
+    world.boss.attackCooldownMs = ASSET_BULLET_SPAWN_MIN_MS + random(world) * ASSET_BULLET_SPAWN_RANGE_MS;
   }
 }
 
@@ -724,30 +781,65 @@ function moveBullets(world: FinaleWorld, deltaMs: number) {
     bullet.y += bullet.vy * activeDeltaSeconds;
     bullet.rotation += bullet.spin * activeDeltaSeconds;
   }
-  world.bullets = world.bullets.filter((bullet) => (
-    bullet.ageMs <= bullet.lifetimeMs
-    && bullet.x >= -90
-    && bullet.x <= FINALE_WIDTH + 90
-    && bullet.y >= ARENA_TOP - 90
-    && bullet.y <= FINALE_HEIGHT + 90
-  ));
-  // This defensive slice is deliberately redundant with addBullet's guard. It
-  // makes the hard cap invariant survive imported/debug-mutated state as well.
-  if (world.bullets.length > FINALE_BULLET_CAP) world.bullets.length = FINALE_BULLET_CAP;
+  world.bullets = world.bullets.filter((bullet) => {
+    const warningHalfSize = Math.max(0, finiteOr(bullet.cardSize, 0)) / 2 + 8;
+    const cullingMargin = warningHalfSize * Math.sqrt(2) + 2;
+    return bullet.ageMs <= bullet.lifetimeMs
+      && bullet.x >= -cullingMargin
+      && bullet.x <= FINALE_WIDTH + cullingMargin
+      && bullet.y >= -cullingMargin
+      && bullet.y <= FINALE_HEIGHT + cullingMargin;
+  });
   void deltaSeconds;
+}
+
+function rotatedCardIntersectsCircle(
+  bullet: FinaleBullet,
+  circleX: number,
+  circleY: number,
+  circleRadius: number,
+) {
+  const angle = finiteOr(bullet.rotation, 0);
+  const cosine = Math.cos(angle);
+  const sine = Math.sin(angle);
+  const dx = circleX - bullet.x;
+  const dy = circleY - bullet.y;
+  const localX = dx * cosine + dy * sine;
+  const localY = -dx * sine + dy * cosine;
+  const halfCard = Math.max(0, finiteOr(bullet.cardSize, 0)) / 2;
+  const closestX = clamp(localX, -halfCard, halfCard);
+  const closestY = clamp(localY, -halfCard, halfCard);
+  const separationX = localX - closestX;
+  const separationY = localY - closestY;
+  const radius = Math.max(0, circleRadius);
+  return separationX * separationX + separationY * separationY <= radius * radius;
+}
+
+function cardIntersectsGuild(
+  world: FinaleWorld,
+  bullet: FinaleBullet,
+  guildMask: readonly FinaleGuildMaskCell[],
+  padding = 0,
+) {
+  return guildMask.some((cell) => rotatedCardIntersectsCircle(
+    bullet,
+    world.player.x + cell.x,
+    world.player.y + cell.y,
+    cell.radius + padding,
+  ));
 }
 
 function collideBulletsWithPlayer(world: FinaleWorld) {
   const survivors: FinaleBullet[] = [];
+  const guildMask = finaleGuildMaskCells(world.loadout.hallLevel);
+  const grazePadding = Math.max(0, world.stats.grazeRadius - world.stats.hitRadius);
   for (const bullet of world.bullets) {
     if (bullet.ageMs < bullet.telegraphMs) {
       survivors.push(bullet);
       continue;
     }
-    const distance = Math.sqrt(distanceSquared(world.player, bullet));
-    const hitDistance = world.player.hitRadius + bullet.radius;
-    const grazeDistance = world.stats.grazeRadius + bullet.radius;
-    if (distance <= hitDistance && world.player.invulnerableMs <= 0) {
+    const intersectsGuild = cardIntersectsGuild(world, bullet, guildMask);
+    if (intersectsGuild && world.player.invulnerableMs <= 0) {
       const shielded = world.player.shield > 0;
       world.playerHit = true;
       world.playerHitEvent = {
@@ -768,7 +860,7 @@ function collideBulletsWithPlayer(world: FinaleWorld) {
       }
       continue;
     }
-    if (!bullet.grazed && distance > hitDistance && distance <= grazeDistance) {
+    if (!bullet.grazed && !intersectsGuild && cardIntersectsGuild(world, bullet, guildMask, grazePadding)) {
       bullet.grazed = true;
       world.grazes += 1;
       world.score += 40;
@@ -783,7 +875,6 @@ function updateCycle(world: FinaleWorld, deltaMs: number) {
   if (world.cycleRemainingMs > 0) return;
   world.cycleSerial += 1;
   world.phaseChanged = true;
-  world.bullets = [];
   if (world.cycle === "dodge") {
     world.cycle = "opening";
     world.cycleRemainingMs += world.stats.openingDurationMs;
@@ -793,9 +884,7 @@ function updateCycle(world: FinaleWorld, deltaMs: number) {
   }
   world.cycle = "dodge";
   world.cycleRemainingMs += world.stats.dodgeDurationMs;
-  world.boss.attackCooldownMs = 0;
-  world.boss.secondaryCooldownMs = 800;
-  world.patternName = "안전 통로 탐색";
+  world.patternName = "에셋 경계 포격";
   world.boss.patternName = world.patternName;
 }
 

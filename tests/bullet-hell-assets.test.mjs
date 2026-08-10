@@ -49,6 +49,10 @@ test("sprite lookup wraps finite indices and falls back safely for invalid input
   assert.equal(assets.finaleBulletAsset(Number.POSITIVE_INFINITY), manifest[0]);
 });
 
+test("asset manifest leaves card geometry to the engine", () => {
+  assert.doesNotMatch(source, /FINALE_BULLET_CARD_SIZE_BY_KIND|finaleBulletCardSize/);
+});
+
 test("guild player atlas exposes its six square frames", () => {
   assert.deepEqual(assets.FINALE_GUILD_ATLAS, {
     source: "/assets/guild/guild-growth-sprites-v1.png",

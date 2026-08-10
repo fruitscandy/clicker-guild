@@ -144,6 +144,10 @@ test("fractures the whole page over a live black phase-two underlay without chan
   assert.match(component, /presentation === "embedded"/);
   assert.match(component, /context\.clearRect\(0, 0, canvas\.width, canvas\.height\)/);
   assert.match(component, /Math\.min\(canvas\.width \/ FINALE_WIDTH, canvas\.height \/ FINALE_HEIGHT\)/);
+  assert.match(component, /function withFinaleWorldClip[\s\S]*?context\.save\(\);[\s\S]*?context\.rect\(0, 0, FINALE_WIDTH, FINALE_HEIGHT\);[\s\S]*?context\.clip\(\);[\s\S]*?draw\(\);[\s\S]*?context\.restore\(\);/);
+  assert.match(component, /withFinaleWorldClip\(context, \(\) => \{\s*drawWorld\(/);
+  assert.match(component, /withFinaleWorldClip\(battleSnapshotContext, \(\) => \{\s*drawWorld\(/);
+  assert.match(component, /withFinaleWorldClip\(context, \(\) => drawBoss\(context, world, reducedMotion\)\)/);
   assert.match(css, /\.embeddedSurface\s*\{[\s\S]*?position: absolute;[\s\S]*?inset: 0;[\s\S]*?background: transparent;/);
   assert.match(css, /\.battleSurface\[data-finale-mode="collapse"\][\s\S]*?background: #010204;/);
   assert.match(css, /\.battleSurface\[data-finale-mode="bulletHell"\][\s\S]*?background: #000;/);
@@ -199,18 +203,60 @@ test("stacks visible boss-hit feedback without letting rate-limited clicks erase
   assert.ok(bossLayer >= 0 && attackLayer >= 0 && bossLayer < attackLayer);
 });
 
-test("renders the guild under enemy bullets while keeping the exact white hit point on top", async () => {
-  const component = await readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8");
+test("renders opaque rotating asset cards and the exact guild mask above impacts", async () => {
+  const [component, engine] = await Promise.all([
+    readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8"),
+    readFile(new URL("app/bullet-hell/engine.ts", root), "utf8"),
+  ]);
 
   assert.match(component, /const size = FINALE_GUILD_SIZE/);
-  assert.match(component, /context\.arc\(0, 0, world\.stats\.hitRadius/);
+  assert.match(component, /const asset = finaleBulletAsset\(bullet\.spriteIndex\)/);
+  assert.doesNotMatch(component, /BULLET_ASSET_BY_SOURCE|bullet\.asset/);
+  assert.match(component, /const cardSize = bullet\.cardSize/);
+  assert.doesNotMatch(component, /finaleBulletCardSize|FINALE_BULLET_CARD_SIZE_BY_KIND/);
+  assert.match(engine, /FINALE_ASSET_BULLET_CARD_SIZE = 80/);
+  assert.match(engine, /cardSize: FINALE_ASSET_BULLET_CARD_SIZE/);
+  assert.match(engine, /function rotatedCardIntersectsCircle/);
+  assert.doesNotMatch(engine, /visualRadius/);
+  assert.match(component, /context\.fillStyle = telegraph \? "#a81258" : "#d91b73"/);
+  assert.match(component, /context\.fillRect\(-halfCard, -halfCard, cardSize, cardSize\)/);
+  assert.match(component, /Math\.min\(contentSize \/ image\.naturalWidth, contentSize \/ image\.naturalHeight\)/);
+  assert.match(component, /context\.rotate\(bullet\.rotation\)/);
+  assert.match(component, /const cells = finaleGuildMaskCells\(loadout\.hallLevel\)/);
+  assert.match(component, /traceGuildMaskCells\(context, cells\)/);
+  assert.match(component, /traceGuildMaskCells\(context, boundaryCells\)/);
+  assert.doesNotMatch(component, /function drawPlayerCore/);
+  assert.doesNotMatch(component, /흰 점이 실제 피격점/);
+  assert.match(component, /회전하는 핑크 카드가 길드의 발광 실루엣에 닿으면 피격됩니다/);
+
+  const drawBulletStart = component.indexOf("function drawBullet(");
+  const drawBulletEnd = component.indexOf("function drawPlayerImpact(", drawBulletStart);
+  assert.ok(drawBulletStart >= 0 && drawBulletEnd > drawBulletStart, "drawBullet block should exist");
+  const drawBulletBlock = component.slice(drawBulletStart, drawBulletEnd);
+  assert.doesNotMatch(drawBulletBlock, /rotate\(reducedMotion \? 0/);
+  assert.doesNotMatch(drawBulletBlock, /context\.arc\(/);
+  assert.doesNotMatch(drawBulletBlock, /rgba\(9,3,12,\.72\)|strokeStyle = "#ffffff"/);
 
   const bodyLayer = component.indexOf("drawGuildBody(context, world, loadout, images, reducedMotion);");
-  const enemyLayer = component.indexOf("world.bullets.forEach((bullet) => drawBullet(context, bullet, images));");
+  const enemyLayer = component.indexOf("world.bullets.forEach((bullet) => drawBullet(context, bullet, images, reducedMotion));");
   const impactLayer = component.indexOf("if (playerImpact) drawPlayerImpact(context, playerImpact, images, reducedMotion);");
-  const coreLayer = component.indexOf("drawPlayerCore(context, world, focusHeld, reducedMotion);");
-  assert.ok([bodyLayer, enemyLayer, impactLayer, coreLayer].every((index) => index >= 0));
-  assert.ok(bodyLayer < enemyLayer && enemyLayer < impactLayer && impactLayer < coreLayer);
+  const maskLayer = component.indexOf("drawGuildHitArea(context, world, loadout, playerImpact, focusHeld, reducedMotion);");
+  assert.ok([bodyLayer, enemyLayer, impactLayer, maskLayer].every((index) => index >= 0));
+  assert.ok(bodyLayer < enemyLayer && enemyLayer < impactLayer && impactLayer < maskLayer);
+});
+
+test("hands campaign defeat off once while preserving the preview retry dialog", async () => {
+  const component = await readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8");
+
+  assert.match(component, /onDefeat\?: \(\) => void/);
+  assert.match(component, /"departing"/);
+  assert.match(component, /const defeatHandledRef = useRef\(false\)/);
+  assert.match(component, /if \(defeatHandledRef\.current\) return/);
+  assert.match(component, /sceneRef\.current = "departing";\s*setScene\("departing"\);\s*onDefeat\(\)/);
+  assert.ok((component.match(/completeDefeat\(world\)/g) ?? []).length >= 2);
+  assert.match(component, /setAnnouncement\("동기화 실패\. 2페이즈 시작점에서 즉시 재시도할 수 있습니다\."\)/);
+  assert.match(component, /sceneRef\.current = "defeat";\s*setScene\("defeat"\)/);
+  assert.match(component, /scene === "victory" \|\| scene === "defeat"/);
 });
 
 test("makes shield absorption, defeat, retry, destruction, and victory whiteout unambiguous", async () => {
@@ -226,6 +272,8 @@ test("makes shield absorption, defeat, retry, destruction, and victory whiteout 
   assert.match(component, /hud\.mode === "whiteout"/);
   assert.match(component, /WHITEOUT_HOLD_MS/);
   assert.match(component, /최종 보스 격파/);
+  assert.match(component, /CORE OPEN\. 클릭 피해가 두 배가 되며, 탄막은 계속됩니다\./);
+  assert.doesNotMatch(component, /탄막이 멈췄습니다/);
 });
 
 test("connects existing boss-stage music and preview scene jumps", async () => {
