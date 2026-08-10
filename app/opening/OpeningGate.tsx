@@ -1,34 +1,51 @@
 "use client";
 
-import Image from "next/image";
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { effectiveSfxVolume, readAudioSettings } from "../audio-settings";
 import { OPENING_RESTART_EVENT } from "./opening-events";
 import styles from "./OpeningGate.module.css";
 
-type OpeningPhase = "invitation" | "prologue" | "awakening" | "summon" | "alert" | "title";
+type OpeningPhase = "invitation" | "manyGuilds" | "erasure" | "lastGuild" | "frontier";
 
 const PHASE_DURATION: Partial<Record<OpeningPhase, number>> = {
-  prologue: 2_600,
-  awakening: 3_200,
-  summon: 3_400,
-  alert: 2_700,
-  title: 3_300,
+  manyGuilds: 2_200,
+  erasure: 2_700,
+  lastGuild: 2_300,
 };
 
 const NEXT_PHASE: Partial<Record<OpeningPhase, OpeningPhase>> = {
-  prologue: "awakening",
-  awakening: "summon",
-  summon: "alert",
-  alert: "title",
+  manyGuilds: "erasure",
+  erasure: "lastGuild",
+  lastGuild: "frontier",
 };
 
 const CUE_BY_PHASE: Partial<Record<OpeningPhase, { source: string; volume: number }>> = {
-  awakening: { source: "/assets/audio/weapons/blade-ring-02.ogg", volume: 0.58 },
-  summon: { source: "/assets/audio/weapons/blade-swing-02.ogg", volume: 0.48 },
-  alert: { source: "/assets/audio/weapons/blade-impact-heavy-01.ogg", volume: 0.62 },
-  title: { source: "/assets/audio/weapons/blade-impact-heavy-03.ogg", volume: 0.72 },
+  manyGuilds: { source: "/assets/audio/weapons/blade-ring-02.ogg", volume: 0.24 },
+  erasure: { source: "/assets/audio/weapons/blade-impact-heavy-01.ogg", volume: 0.32 },
+  lastGuild: { source: "/assets/audio/weapons/blade-impact-heavy-03.ogg", volume: 0.42 },
+  frontier: { source: "/assets/audio/weapons/blade-swing-02.ogg", volume: 0.34 },
 };
+
+const GUILD_LIGHTS = [
+  { left: "13%", top: "24%", delay: "0ms" },
+  { left: "30%", top: "38%", delay: "130ms" },
+  { left: "47%", top: "19%", delay: "250ms" },
+  { left: "71%", top: "27%", delay: "390ms" },
+  { left: "58%", top: "59%", delay: "520ms", last: true },
+  { left: "84%", top: "52%", delay: "670ms" },
+  { left: "23%", top: "66%", delay: "810ms" },
+];
+
+const ERASURE_FRAGMENTS = [
+  { left: "6%", top: "10%", delay: "0ms" },
+  { left: "17%", top: "78%", delay: "180ms" },
+  { left: "31%", top: "15%", delay: "340ms" },
+  { left: "44%", top: "74%", delay: "520ms" },
+  { left: "61%", top: "9%", delay: "690ms" },
+  { left: "75%", top: "69%", delay: "820ms" },
+  { left: "88%", top: "20%", delay: "980ms" },
+  { left: "94%", top: "58%", delay: "1.12s" },
+];
 
 export default function OpeningGate({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<OpeningPhase>("invitation");
@@ -78,8 +95,8 @@ export default function OpeningGate({ children }: { children: ReactNode }) {
 
   const beginSequence = useCallback(() => {
     stopCues();
-    setPhase("prologue");
-  }, [stopCues]);
+    moveToPhase("manyGuilds");
+  }, [moveToPhase, stopCues]);
 
   useEffect(() => {
     if (!openingVisible) return;
@@ -92,16 +109,15 @@ export default function OpeningGate({ children }: { children: ReactNode }) {
   }, [finishOpening, openingVisible]);
 
   useEffect(() => {
-    if (!openingVisible || phase === "invitation") return;
+    if (!openingVisible || phase === "invitation" || phase === "frontier") return;
     const duration = PHASE_DURATION[phase];
     if (!duration) return;
     const timer = window.setTimeout(() => {
       const nextPhase = NEXT_PHASE[phase];
       if (nextPhase) moveToPhase(nextPhase);
-      else finishOpening();
     }, duration);
     return () => window.clearTimeout(timer);
-  }, [finishOpening, moveToPhase, openingVisible, phase]);
+  }, [moveToPhase, openingVisible, phase]);
 
   useEffect(() => {
     let restartTimer: number | null = null;
@@ -130,32 +146,44 @@ export default function OpeningGate({ children }: { children: ReactNode }) {
           data-phase={phase}
           role="dialog"
           aria-modal="true"
-          aria-label="길드마스터 크로니클 오프닝"
+          aria-label="모험가 길드 오프닝"
         >
           <div className={styles.world} aria-hidden="true">
             <div className={styles.worldImage} />
+            <div className={styles.mapGrid} />
             <div className={styles.worldShadow} />
-            <div className={styles.worldWarmth} />
-            <div className={styles.lightSweep} />
+            <div className={styles.erasureVeil} />
+            <div className={styles.erasureFragments}>
+              {ERASURE_FRAGMENTS.map((fragment, index) => (
+                <i
+                  key={index}
+                  style={{
+                    left: fragment.left,
+                    top: fragment.top,
+                    animationDelay: fragment.delay,
+                  }}
+                />
+              ))}
+            </div>
+            <div className={styles.guildLights}>
+              {GUILD_LIGHTS.map((guild, index) => (
+                <i
+                  key={index}
+                  className={guild.last ? styles.lastLight : undefined}
+                  style={{ left: guild.left, top: guild.top, animationDelay: guild.delay }}
+                />
+              ))}
+            </div>
+            <div className={styles.lastGuildArt}><i /></div>
             <div className={styles.fog}><i /><i /><i /></div>
-            <div className={styles.rain}>
-              {Array.from({ length: 28 }, (_, index) => (
-                <i key={index} style={{ "--drop": index } as CSSProperties} />
-              ))}
-            </div>
-            <div className={styles.embers}>
-              {Array.from({ length: 18 }, (_, index) => (
-                <i key={index} style={{ "--ember": index } as CSSProperties} />
-              ))}
-            </div>
           </div>
 
           <div className={styles.letterbox} aria-hidden="true" />
 
           <header className={styles.topRail}>
-            <div className={styles.archiveMark} aria-label="Guildmaster Chronicle">
+            <div className={styles.brandMark} aria-label="모험가 길드">
               <span>G</span>
-              <div><b>GUILDMASTER</b><small>CHRONICLE · ARCHIVE 00</small></div>
+              <div><b>모험가 길드</b><small>세계에 마지막으로 남은 길드</small></div>
             </div>
             <button ref={skipRef} type="button" className={styles.skipButton} onClick={finishOpening}>
               건너뛰기 <kbd>ESC</kbd>
@@ -164,93 +192,49 @@ export default function OpeningGate({ children }: { children: ReactNode }) {
 
           <main className={styles.stage}>
             <div className={`${styles.beat} ${styles.invitationBeat}`}>
-              <p className={styles.eyebrow}>KINGDOM ARCHIVE · YEAR 428</p>
-              <h1>마지막 길드의<br /><em>문을 여시겠습니까?</em></h1>
-              <div className={styles.invitationRule}><i /><span>F</span><i /></div>
-              <button
-                type="button"
-                className={styles.beginButton}
-                onClick={beginSequence}
-              >
+              <p className={styles.eyebrow}>모험가 길드</p>
+              <h1>마지막 길드의<br /><em>이야기를 시작합니다.</em></h1>
+              <button type="button" className={styles.beginButton} onClick={beginSequence}>
                 <span className={styles.beginSeal}>G</span>
-                <span><small>음악과 함께 자동 재생</small><b>봉인된 기록을 깨운다</b></span>
+                <span><small>짧은 오프닝</small><b>이야기 시작</b></span>
               </button>
             </div>
 
-            <div className={`${styles.beat} ${styles.prologueBeat}`}>
-              <div className={styles.prologueIndex}><span>01</span><i /></div>
-              <p>그날 밤,</p>
-              <h2>마지막 길드의<br />불이 꺼졌다.</h2>
-              <small>왕국의 모든 원정 기록이 이곳에서 멈췄다.</small>
-            </div>
-
-            <div className={`${styles.beat} ${styles.awakeningBeat}`}>
-              <div className={styles.core} aria-hidden="true">
-                <i className={styles.coreHalo} />
-                <i className={styles.coreOrbitOne} />
-                <i className={styles.coreOrbitTwo} />
-                <i className={styles.coreScan} />
-                <span>G</span>
-              </div>
-              <div className={styles.systemReadout}>
-                <small>ARCHIVE CORE // RESTARTING</small>
-                <b>길드마스터 신호 확인</b>
-                <span><i /> 동기화율 97.4%</span>
+            <div className={`${styles.beat} ${styles.manyGuildsBeat}`}>
+              <div className={styles.storyCopy}>
+                <p>한때 이 세계에는</p>
+                <h2>수많은 길드가<br /><em>있었습니다.</em></h2>
               </div>
             </div>
 
-            <div className={`${styles.beat} ${styles.summonBeat}`}>
-              <div className={styles.summonCopy}>
-                <small>FIRST CONTRACT · UNIT 01</small>
-                <h2>견습 전사<br /><em>로안</em></h2>
-                <p>“명령을.”</p>
-                <span>HERO DATA GENERATING · COMPLETE</span>
+            <div className={`${styles.beat} ${styles.erasureBeat}`}>
+              <div className={styles.storyCopy}>
+                <p>하지만 어느 날부터</p>
+                <h2>세계가 조금씩<br /><em>사라지고 있습니다.</em></h2>
               </div>
-              <div className={styles.portal} aria-hidden="true"><i /><i /><i /></div>
-              <div className={styles.roan}>
-                <Image
-                  src="/assets/guild-members/roan/roan-idle-preview.webp"
-                  alt="검과 방패를 든 견습 전사 로안"
-                  width={512}
-                  height={512}
-                  priority
-                />
-              </div>
-              <div className={styles.unitStamp} aria-hidden="true"><b>F</b><small>REGISTERED</small></div>
             </div>
 
-            <div className={`${styles.beat} ${styles.alertBeat}`}>
-              <div className={styles.alertSignal} aria-hidden="true"><i /><i /><i /></div>
-              <div className={styles.alertCopy}>
-                <small>EMERGENCY SIGNAL · FOREST 01</small>
-                <h2>초보자의 숲<br /><em>구조 신호 감지</em></h2>
-                <p>첫 원정이 당신의 명령을 기다립니다.</p>
+            <div className={`${styles.beat} ${styles.lastGuildBeat}`}>
+              <div className={styles.storyCopy}>
+                <p>모든 불빛이 꺼진 뒤</p>
+                <h2>단 하나의 길드만<br /><em>남았습니다.</em></h2>
               </div>
-              <div className={styles.slimeLine} aria-hidden="true">
-                {[0, 1, 2].map((item) => (
-                  <Image
-                    key={item}
-                    src="/assets/monsters/stage-01/stage-01-01-small-green-slime.png"
-                    alt=""
-                    width={256}
-                    height={256}
-                  />
-                ))}
-              </div>
-              <div className={styles.scanLine} aria-hidden="true" />
             </div>
 
-            <div className={`${styles.beat} ${styles.titleBeat}`}>
-              <div className={styles.titleGlow} aria-hidden="true" />
-              <div className={styles.titleCrest} aria-hidden="true">G</div>
-              <p>THE FIRST PAGE AWAKENS</p>
-              <h1>GUILDMASTER<br /><em>CHRONICLE</em></h1>
-              <div className={styles.titleRule}><i /><span>◆</span><i /></div>
-              <strong>작은 길드가 전설이 되는 곳</strong>
-              <small>길드로 이동합니다</small>
+            <div className={`${styles.beat} ${styles.frontierBeat}`}>
+              <div className={styles.frontierCopy}>
+                <p>세계에 마지막으로 남은 길드</p>
+                <h2>몬스터를 토벌하고<br /><em>마지막 길드를 성장시키세요.</em></h2>
+              </div>
+              <div className={styles.frontierRoute} aria-label="몬스터 토벌로 성장하는 마지막 길드">
+                <span className={styles.routeGuild}><b>G</b><small>마지막 길드</small></span>
+                <span className={styles.routeCombat}><b>⚔</b><small>몬스터 토벌</small></span>
+                <span className={styles.growthRoute}><b>↑</b><small>길드 성장</small></span>
+              </div>
+              <button type="button" className={styles.startHuntButton} onClick={finishOpening}>
+                전투 시작
+              </button>
             </div>
-
-            <div className={styles.guildRise} aria-hidden="true"><i /></div>
           </main>
 
           <div className={styles.sequenceLine} aria-hidden="true"><i /></div>
