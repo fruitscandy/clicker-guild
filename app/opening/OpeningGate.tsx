@@ -212,7 +212,7 @@ export default function OpeningGate({ children }: { children: ReactNode }) {
             <div className={`${styles.beat} ${styles.erasureBeat}`}>
               <div className={styles.storyCopy}>
                 <p>하지만 어느 날부터</p>
-                <h2>세계가 조금씩<br /><em>사라지고 있습니다.</em></h2>
+                <h2>세계가 조금씩<br /><em className={styles.erasureLine}>사라지고 있습니다.</em></h2>
               </div>
             </div>
 

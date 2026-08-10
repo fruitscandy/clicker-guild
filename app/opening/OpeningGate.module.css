@@ -375,6 +375,7 @@
 .erasureBeat { justify-items: end; text-align: right; }
 .erasureBeat .storyCopy { justify-items: end; }
 .erasureBeat .storyCopy h2 em { color: #ddd9cb; }
+.erasureLine { display: inline-block; white-space: nowrap; }
 
 .frontierBeat {
   align-content: center;
@@ -549,17 +550,14 @@
   opacity: 1;
   transform: translateY(0) scale(1);
 }
+[data-phase="frontier"] .lastGuildArt {
+  opacity: 0;
+  visibility: hidden;
+  transition: none;
+}
 [data-phase="lastGuild"] .storyCopy { animation: copyIn .8s .15s both; }
 [data-phase="lastGuild"] .sequenceLine i { transform: translateX(-25%); }
 
-[data-phase="frontier"] .lastGuildArt {
-  right: auto;
-  left: -2vw;
-  bottom: -13vh;
-  width: min(31vw,390px);
-  opacity: .42;
-  transform: scale(.92);
-}
 [data-phase="frontier"] .frontierCopy { animation: copyIn .75s both; }
 [data-phase="frontier"] .frontierRoute { animation: routeIn .9s .3s both; }
 [data-phase="frontier"] .startHuntButton { animation: fadeUp .7s .65s both; }
@@ -586,7 +584,6 @@
   .manyGuildsBeat,.erasureBeat,.lastGuildBeat { padding: 8vh 8vw 12vh; }
   .storyCopy { max-width: 74vw; }
   .lastGuildArt { right: -3vw; bottom: 2vh; width: 55vw; }
-  [data-phase="frontier"] .lastGuildArt { left: -11vw; bottom: -8vh; width: 48vw; }
   .frontierRoute { width: 94vw; }
   .routeGuild,.routeCombat,.growthRoute { width: 30%; }
 }
@@ -620,7 +617,6 @@
   .growthRoute b { font-size: 22px; }
   .routeGuild small,.routeCombat small,.growthRoute small { font-size: 7px; }
   .startHuntButton { min-height: 52px; font-size: 15px; }
-  [data-phase="frontier"] .lastGuildArt { left: -25vw; bottom: -7vh; width: 76vw; }
   .sequenceLine { left: 6vw; right: 6vw; bottom: 19px; }
 }
 
