@@ -50,7 +50,7 @@ export function DeveloperUpgradePanel({ levels, savedLevels, labels, effectText,
           const cap = UPGRADE_CAPS[key];
           return (
             <article className={styles.card} key={key} data-upgrade-key={key}>
-              <Image className={styles.icon} src={UPGRADE_ICON_BY_KEY[key]} alt="" width={54} height={54} aria-hidden="true" />
+              <Image className={styles.icon} src={UPGRADE_ICON_BY_KEY[key]} alt="" width={54} height={54} unoptimized aria-hidden="true" />
               <div className={styles.copy}>
                 <span><strong>{labels[key]}</strong><small>저장 Lv.{savedLevels[key]}</small></span>
                 <p>{effectText(key, level)}</p>
