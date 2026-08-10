@@ -15,11 +15,10 @@ function encounterMultiplier(stage) {
   return stage % 3 === 0 ? 1.7 : 1.42;
 }
 
-function simulateFocusedClicks(balance, stage) {
+function simulateFocusedClicks(balance, stage, weaponTier = balance.expectedWeaponTierForStage(stage)) {
   const count = balance.monsterCountForStage(stage);
   const boss = stage % 3 === 0;
-  const tier = balance.expectedWeaponTierForStage(stage);
-  const damage = Math.round(balance.BASE_CLICK_DAMAGE * balance.weaponBalanceForTier(tier).damageScale);
+  const damage = Math.round(balance.BASE_CLICK_DAMAGE * balance.weaponBalanceForTier(weaponTier).damageScale);
   const totalHp = Math.round(balance.stageBaseHpFor(stage) * encounterMultiplier(stage));
   const weights = Array.from({ length: count }, (_, index) => boss && index === 0 ? 5 : index % 7 === 0 ? 1.75 : 0.82 + index % 4 * 0.16);
   const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
@@ -50,8 +49,9 @@ test("the opening pressure wave clears before the timer and the upgrade wave bec
   const stageTwoSeconds = simulateFocusedClicks(balance, 2) / 4;
   const firstBossSeconds = simulateFocusedClicks(balance, 3) / 4;
 
+  assert.equal(balance.BASE_ATTACK_RANGE, 11);
   assert.ok(stageOneSeconds >= 12 && stageOneSeconds <= 22, `stage 1 focused clear: ${stageOneSeconds}s`);
-  assert.ok(stageTwoSeconds >= 4 && stageTwoSeconds <= 8, `stage 2 focused clear: ${stageTwoSeconds}s`);
+  assert.ok(stageTwoSeconds >= 5 && stageTwoSeconds <= 10, `stage 2 focused clear: ${stageTwoSeconds}s`);
   assert.ok(firstBossSeconds >= 12 && firstBossSeconds <= 20, `stage 3 focused clear: ${firstBossSeconds}s`);
   assert.ok(balance.weaponBalanceForTier(1).damageScale >= 2, "the first craft should at least double click damage");
   assert.equal(balance.monsterCountForStage(1), 42);
@@ -69,6 +69,30 @@ test("the full first-clear route needs no guild research and fits the 10-20 minu
 
   assert.ok(quickRunMinutes >= balance.TARGET_RUN_MINUTES.min && quickRunMinutes <= balance.TARGET_RUN_MINUTES.max, `quick route: ${quickRunMinutes.toFixed(1)}m`);
   assert.ok(relaxedRunMinutes >= balance.TARGET_RUN_MINUTES.min && relaxedRunMinutes <= balance.TARGET_RUN_MINUTES.max, `relaxed route: ${relaxedRunMinutes.toFixed(1)}m`);
+});
+
+test("click weapon upgrades are the baseline progression even without optional research", async () => {
+  const balance = await loadBalanceModule();
+  const unupgradedBossSeconds = simulateFocusedClicks(balance, 3, 0) / 4;
+  const firstWeaponBossSeconds = simulateFocusedClicks(balance, 3, 1) / 4;
+  const expectedWeaponBossSeconds = simulateFocusedClicks(balance, 3) / 4;
+
+  assert.ok(unupgradedBossSeconds > 36, `unupgraded stage 3 clear should miss the boss timer: ${unupgradedBossSeconds}s`);
+  assert.ok(firstWeaponBossSeconds < 36, `the first weapon upgrade should make stage 3 viable: ${firstWeaponBossSeconds}s`);
+  assert.ok(expectedWeaponBossSeconds <= 20, `the intended weapon route should feel comfortable: ${expectedWeaponBossSeconds}s`);
+});
+
+test("the material-funded click weapon route clears every stage without optional research", async () => {
+  const balance = await loadBalanceModule();
+
+  for (let stage = 1; stage <= 30; stage += 1) {
+    const clearSeconds = simulateFocusedClicks(balance, stage) / 4;
+    const timeLimit = stage % 3 === 0 ? 36 : 26;
+    assert.ok(clearSeconds < timeLimit, `stage ${stage} weapon-only clear: ${clearSeconds}s / ${timeLimit}s`);
+  }
+
+  assert.ok(simulateFocusedClicks(balance, 3, 0) / 4 > 36, "the tier-1 weapon must not clear the whole game");
+  assert.equal(balance.EXPECTED_WEAPON_POWER_SPIKE_STAGES.length, balance.PLAYER_WEAPON_BALANCE.length - 1);
 });
 
 test("every weapon craft is an obvious power spike", async () => {
