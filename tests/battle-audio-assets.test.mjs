@@ -20,7 +20,7 @@ test("recorded gold drop samples are shipped and wired into battle audio", async
   assert.match(source, /prepareGoldCoinSamples/);
   assert.match(source, /playGoldCoinSample/);
   assert.match(source, /dropIndex % 3 === 0/);
-  assert.match(source, /const REWARD_MIX_GAIN = 1\.6/);
+  assert.match(source, /const REWARD_MIX_GAIN = 1\.85/);
   assert.match(source, /playGoldCoinSample\(context, start, dropIndex, rewardMix\)/);
 });
 
