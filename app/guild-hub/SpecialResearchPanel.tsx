@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import {
   SPECIAL_ATTACK_ORDER,
   SPECIAL_ATTACKS,
@@ -33,7 +34,7 @@ function SpellPreview({ kind }: { kind: SpecialAttackKind }) {
             key={index}
             style={{
               "--particle-angle": `${index * 45}deg`,
-              "--particle-distance": `${38 + index * 1.7}px`,
+              "--particle-distance": `${32 + index * 1.4}px`,
               "--particle-index": index,
             } as CSSProperties}
           />
@@ -42,6 +43,8 @@ function SpellPreview({ kind }: { kind: SpecialAttackKind }) {
     </span>
   );
 }
+
+const subscribeToClient = () => () => {};
 
 export function SpecialResearchPanel({
   purchasedIds,
@@ -52,12 +55,28 @@ export function SpecialResearchPanel({
   developerMode = false,
 }: SpecialResearchPanelProps) {
   const purchased = new Set(purchasedIds);
-  const completed = SPECIAL_ATTACK_ORDER.filter((kind) => purchased.has(SPECIAL_ATTACKS[kind].nodeId)).length;
   const [selectedKind, setSelectedKind] = useState<SpecialAttackKind | null>(null);
+  const isClient = useSyncExternalStore(subscribeToClient, () => true, () => false);
+  const boardSlot = isClient ? document.getElementById("guild-special-node-slot") : null;
+  const modalRoot = isClient ? document.body : null;
   const selectedAttack = selectedKind ? SPECIAL_ATTACKS[selectedKind] : null;
   const selectedNode = selectedAttack
     ? SPECIAL_RESEARCH_NODES.find((candidate) => candidate.id === selectedAttack.nodeId) ?? null
     : null;
+
+  useEffect(() => {
+    if (!selectedKind) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedKind(null);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [selectedKind]);
 
   function stateFor(kind: SpecialAttackKind) {
     const attack = SPECIAL_ATTACKS[kind];
@@ -78,108 +97,96 @@ export function SpecialResearchPanel({
             : affordable
               ? `${formatCost(node.cost)} G로 연구 가능`
               : `${formatCost(node.cost - gold)} G 부족`;
-    return { attack, node, isPurchased, hallLocked, prerequisitesMet, affordable, available, status };
+    const shortStatus = isPurchased
+      ? "완료"
+      : hallLocked
+        ? `본관 ${attack.hallLevel}`
+        : !prerequisitesMet
+          ? "기반 필요"
+          : `${formatCost(node.cost)} G`;
+    return { attack, node, isPurchased, hallLocked, prerequisitesMet, affordable, available, status, shortStatus };
   }
 
   const selectedState = selectedKind ? stateFor(selectedKind) : null;
 
-  return (
-    <section className={styles.panel} aria-labelledby="special-research-title">
-      <header className={styles.heading}>
-        <span className={styles.headingSeal} aria-hidden="true"><i />秘</span>
-        <span className={styles.headingCopy}>
-          <small>SEALED RITES · DETACHED SANCTUM</small>
-          <strong id="special-research-title">봉인 비술 제단</strong>
-          <p>길드 전술 연구판과 연결되지 않은 별도 비술입니다. 세 제단은 서로 선행 관계가 없습니다.</p>
-        </span>
-        <span className={styles.progressBadge}><b>{completed}</b> / 3 해금</span>
-      </header>
+  const nodeLayer = (
+    <div className={styles.nodeLayer} role="group" aria-label="연결선 없는 특수 공격 업그레이드">
+      {SPECIAL_ATTACK_ORDER.map((kind) => {
+        const { attack, isPurchased, hallLocked, prerequisitesMet, available, status, shortStatus } = stateFor(kind);
+        const isSelected = kind === selectedKind;
+        return (
+          <button
+            type="button"
+            key={kind}
+            data-kind={kind}
+            className={`${styles.specialNode} ${styles[kind]} ${isPurchased ? styles.purchased : ""} ${available ? styles.available : ""} ${hallLocked || !prerequisitesMet ? styles.locked : ""} ${isSelected ? styles.selected : ""}`}
+            style={{ "--special-accent": attack.accent } as CSSProperties}
+            onClick={() => setSelectedKind(kind)}
+            aria-label={`${attack.title} 특수 공격 상세보기: ${attack.description}. ${status}. 선택만으로는 구매되지 않습니다.`}
+            aria-pressed={isSelected}
+            aria-expanded={isSelected}
+            aria-controls="special-upgrade-dialog"
+            aria-haspopup="dialog"
+            title={`${attack.title} · ${status}`}
+          >
+            <span className={styles.specialBadge}>특수</span>
+            <span className={styles.nodeIcon}><SpellPreview kind={kind} /></span>
+            <span className={styles.nodeName}>{attack.title}</span>
+            <span className={styles.nodeCost}>{shortStatus}</span>
+            <span className={styles.statusMark} aria-hidden="true">{isPurchased ? "✓" : hallLocked || !prerequisitesMet ? "◆" : "+"}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 
-      <div className={styles.satelliteViewport}>
-        <div className={styles.satelliteField}>
-          <div className={styles.ritualGrid}>
-            {SPECIAL_ATTACK_ORDER.map((kind) => {
-              const { attack, isPurchased, hallLocked, prerequisitesMet, available, status } = stateFor(kind);
-              const isSelected = kind === selectedKind;
-
-              return (
-                <button
-                  type="button"
-                  key={kind}
-                  data-kind={kind}
-                  className={`${styles.specialNode} ${styles[kind]} ${isPurchased ? styles.unlocked : ""} ${hallLocked ? styles.locked : ""} ${isSelected ? styles.selected : ""}`}
-                  style={{ "--special-accent": attack.accent } as CSSProperties}
-                  onClick={() => setSelectedKind(kind)}
-                  aria-label={`${attack.title} 상세보기: ${attack.description}. ${status}. 선택만으로는 구매되지 않습니다.`}
-                  aria-pressed={isSelected}
-                  aria-expanded={isSelected}
-                  aria-controls="special-research-detail"
-                  title={`${attack.title} · ${status}`}
-                >
-                  <span className={styles.altarCrest} aria-hidden="true">{hallLocked ? "鎖" : attack.glyph}</span>
-                  <span className={styles.nodePreview}><SpellPreview kind={kind} /></span>
-                  <span className={styles.nodeCopy}><small>{attack.subtitle}</small><strong>{attack.title}</strong></span>
-                  <span className={styles.nodeStatus} aria-hidden="true">{isPurchased ? "✓" : hallLocked || !prerequisitesMet ? "◆" : available ? "+" : "G"}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {!selectedState && (
-            <div className={styles.selectionHint}>
-              <span aria-hidden="true">✦</span>
-              <strong>특수 공격 인장을 선택하세요</strong>
-              <p>번개·토네이도·메테오는 서로 연결되지 않아 원하는 순서로 연구할 수 있습니다.</p>
-            </div>
-          )}
-
+  const detailModal = selectedState && selectedAttack && selectedNode ? (
+    <div className={styles.modalBackdrop} onMouseDown={(event) => event.target === event.currentTarget && setSelectedKind(null)}>
+      <section
+        id="special-upgrade-dialog"
+        className={styles.detailPanel}
+        style={{ "--special-accent": selectedAttack.accent } as CSSProperties}
+        role="dialog"
+        aria-modal="true"
+        aria-live="polite"
+        aria-label={`${selectedAttack.title} 특수 공격 상세 정보`}
+      >
+        <button type="button" autoFocus className={styles.detailClose} onClick={() => setSelectedKind(null)} aria-label="특수 공격 설명 닫기">×</button>
+        <div className={styles.detailVisual}>
+          <SpellPreview kind={selectedKind!} />
+          <span className={styles.detailGlyph} aria-hidden="true">{selectedState.hallLocked ? "鎖" : selectedAttack.glyph}</span>
         </div>
-      </div>
 
-      {selectedState && selectedAttack && selectedNode && (
-            <aside
-              id="special-research-detail"
-              className={styles.detailPanel}
-              style={{ "--special-accent": selectedAttack.accent } as CSSProperties}
-              aria-live="polite"
-              aria-label={`${selectedAttack.title} 특수 공격 상세 정보`}
-            >
-              <button type="button" className={styles.detailClose} onClick={() => setSelectedKind(null)} aria-label="특수 공격 설명 닫기">×</button>
-              <div className={styles.detailVisual}>
-                <SpellPreview kind={selectedKind!} />
-                <span className={styles.detailGlyph} aria-hidden="true">{selectedState.hallLocked ? "鎖" : selectedAttack.glyph}</span>
-              </div>
+        <div className={styles.detailCopy}>
+          <small>특수 공격 · 연결선 없는 독립 노드</small>
+          <h4>{selectedAttack.title}</h4>
+          <p>{selectedAttack.description}</p>
+          <em>{selectedState.status}</em>
+        </div>
 
-              <div className={styles.detailCopy}>
-                <small>{selectedAttack.subtitle} · 독립 연구</small>
-                <h4>{selectedAttack.title}</h4>
-                <p>{selectedAttack.description}</p>
-                <em>{selectedState.status}</em>
-              </div>
+        <dl className={styles.detailFacts}>
+          <div><dt>피해</dt><dd>클릭 공격력 ×{selectedAttack.damageMultiplier.toFixed(2)}</dd></div>
+          <div><dt>발동 주기</dt><dd>{(selectedAttack.cooldownMs / 1000).toFixed(1)}초</dd></div>
+          <div><dt>범위</dt><dd>반경 {selectedAttack.radius}</dd></div>
+          <div><dt>특성</dt><dd>{selectedKind === "lightning" ? "연쇄 감전" : selectedKind === "tornado" ? "3연타 · 견인" : "대폭발 · 넉백"}</dd></div>
+          <div><dt>연구 비용</dt><dd>{formatCost(selectedNode.cost)} G</dd></div>
+          <div><dt>해금 조건</dt><dd>{selectedState.hallLocked ? `길드 본관 Lv.${selectedAttack.hallLevel}` : selectedState.prerequisitesMet ? "충족" : "길드의 기반 연구"}</dd></div>
+        </dl>
 
-              <dl className={styles.detailFacts}>
-                <div><dt>피해</dt><dd>클릭 공격력 ×{selectedAttack.damageMultiplier.toFixed(2)}</dd></div>
-                <div><dt>발동 주기</dt><dd>{(selectedAttack.cooldownMs / 1000).toFixed(1)}초</dd></div>
-                <div><dt>범위</dt><dd>반경 {selectedAttack.radius}</dd></div>
-                <div><dt>특성</dt><dd>{selectedKind === "lightning" ? "연쇄 감전" : selectedKind === "tornado" ? "3연타 · 견인" : "대폭발 · 넉백"}</dd></div>
-                <div><dt>연구 비용</dt><dd>{formatCost(selectedNode.cost)} G</dd></div>
-                <div><dt>해금 조건</dt><dd>{selectedState.hallLocked ? `길드 본관 Lv.${selectedAttack.hallLevel}` : selectedState.prerequisitesMet ? "충족" : "길드의 기반 연구"}</dd></div>
-              </dl>
+        <div className={styles.detailAction}>
+          <p><strong>구매 전 효과를 확인하세요.</strong><span>이 버튼을 눌러야 골드를 사용하고 연구합니다.</span></p>
+          <button type="button" disabled={!selectedState.available} onClick={() => selectedState.available && onPurchase(selectedNode)}>
+            {selectedState.isPurchased ? "특수 공격 연구 완료" : selectedState.status}
+          </button>
+        </div>
+      </section>
+    </div>
+  ) : null;
 
-              <div className={styles.detailAction}>
-                <p><strong>인장 선택은 설명만 엽니다.</strong><span>아래 버튼을 눌러야 골드를 사용하고 해금합니다.</span></p>
-                <button
-                  type="button"
-                  disabled={!selectedState.available}
-                  onClick={() => selectedState.available && onPurchase(selectedNode)}
-                >
-                  {selectedState.isPurchased ? "특수 공격 해금 완료" : selectedState.status}
-                </button>
-              </div>
-            </aside>
-      )}
-
-      <p className={styles.footnote}><b>독립 연구 규칙</b> 세 인장은 선행 순서가 없습니다. 해금하면 전투 중 각자 충전되고 플레이어 무기 공격력을 기준으로 자동 발동합니다.</p>
-    </section>
+  return (
+    <>
+      {boardSlot ? createPortal(nodeLayer, boardSlot) : null}
+      {modalRoot && detailModal ? createPortal(detailModal, modalRoot) : null}
+    </>
   );
 }
