@@ -33,11 +33,13 @@ type TavernHallProps = {
   onRequestSale: (id: string) => void;
   onCancelSale: () => void;
   onConfirmSale: () => void;
+  tutorialFreeTenRecruit?: boolean;
 };
 
 const fallbackProgress: MemberProgress = { level: 1, xp: 0 };
 
 function portraitSource(id: string) {
+  if (id === "finn") return "/assets/guild-members/finn/finn-portrait.webp";
   return `/assets/guild-members/${id}/${id}-idle-preview.webp`;
 }
 
@@ -125,7 +127,7 @@ function RecruitReveal({ sequence, results, members, formatNumber }: RecruitReve
   </div>;
 }
 
-export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel, gold, recruitResults, recruitSequence, pendingSaleId, formatNumber, getAttack, onRecruit, onToggleParty, onRequestSale, onCancelSale, onConfirmSale }: TavernHallProps) {
+export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel, gold, recruitResults, recruitSequence, pendingSaleId, formatNumber, getAttack, onRecruit, onToggleParty, onRequestSale, onCancelSale, onConfirmSale, tutorialFreeTenRecruit = false }: TavernHallProps) {
   const ownedMembers = ownedIds.map((id) => members.find((member) => member.id === id)).filter((member): member is MemberDefinition => Boolean(member));
   const partyMembers = partyIds.map((id) => members.find((member) => member.id === id)).filter((member): member is MemberDefinition => Boolean(member));
   const pendingSaleMember = members.find((member) => member.id === pendingSaleId) ?? null;
@@ -159,7 +161,7 @@ export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel,
     <div className={styles.interior}>
       <div className={styles.recruitCounter}>
         <div className={styles.recruitPitch}>
-          <span className={styles.contractSeal}>契</span>
+          <span className={styles.contractSeal} aria-hidden="true">✦</span>
           <span className="eyebrow">RANDOM GUILD CONTRACT</span>
           <h4>길드원 영입</h4>
           <p>낮은 등급일수록 자주, 높은 등급일수록 드물게 등장합니다. 이미 보유한 길드원은 등급별 판매가로 즉시 정산됩니다.</p>
@@ -167,15 +169,15 @@ export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel,
             <button type="button" onClick={() => onRecruit(1)} disabled={gold < RECRUIT_COSTS.single}>
               <small>SINGLE CONTRACT</small><strong>1명 영입</strong><em>{formatNumber(RECRUIT_COSTS.single)} G</em>
             </button>
-            <button type="button" className={styles.tenRecruitButton} onClick={() => onRecruit(10)} disabled={gold < RECRUIT_COSTS.ten}>
-              <small>10% BUNDLE DISCOUNT</small><strong>10명 영입</strong><em>{formatNumber(RECRUIT_COSTS.ten)} G · 1명당 270 G</em>
+            <button type="button" className={styles.tenRecruitButton} onClick={() => onRecruit(10)} disabled={!tutorialFreeTenRecruit && gold < RECRUIT_COSTS.ten} data-tutorial="recruit-ten">
+              <small>{tutorialFreeTenRecruit ? "FIRST CONTRACT GIFT" : "10% BUNDLE DISCOUNT"}</small><strong>{tutorialFreeTenRecruit ? "무료 10명 영입" : "10명 영입"}</strong><em>{tutorialFreeTenRecruit ? "튜토리얼 최초 1회 · 0 G" : `${formatNumber(RECRUIT_COSTS.ten)} G · 1명당 270 G`}</em>
             </button>
           </div>
         </div>
 
         <div className={styles.rateBoard}>
           <div className={styles.rateBoardHeader}>
-            <span className={styles.oddsSeal}>%</span>
+            <span className={styles.oddsSeal} aria-hidden="true"><i /><i /><i /><i /><i /></span>
             <div><small>CONTRACT PROBABILITY</small><strong>등급별 영입 확률</strong><em>여관 Lv.{tavernLevel} 적용 중</em></div>
             <b>B+ {formatRecruitRate(highRankChance)}</b>
           </div>
@@ -189,7 +191,7 @@ export function TavernHall({ members, ownedIds, progress, partyIds, tavernLevel,
         </div>
       </div>
 
-      <section className={styles.resultSection} aria-labelledby="latest-recruit-title" aria-live="polite">
+      <section className={styles.resultSection} aria-labelledby="latest-recruit-title" aria-live="polite" data-tutorial="recruit-results">
         <div className={styles.resultHeading}>
           <div><span>LATEST CONTRACTS</span><strong id="latest-recruit-title">최신 영입 결과</strong></div>
           {recruitResults.length > 0 && <b>{recruitResults.length} CONTRACTS OPENED</b>}

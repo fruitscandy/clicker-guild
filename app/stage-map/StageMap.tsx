@@ -378,6 +378,7 @@ export function StageMap({
                     )}
                     style={{ left: `${x}%`, top: `${y}%` }}
                     disabled={state === "locked"}
+                    data-tutorial={stageNumber === 1 ? "stage-1" : undefined}
                     aria-current={state === "current" ? "step" : undefined}
                     aria-label={`스테이지 ${stageNumber}, ${stage.name}, ${stage.boss ? "지역 보스, " : ""}${label}`}
                     title={`${stage.name} · ${label}`}

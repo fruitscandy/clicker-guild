@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { effectiveSfxVolume, readAudioSettings } from "../audio-settings";
+import { TUTORIAL_START_EVENT } from "../tutorial/tutorial-events";
 import { OPENING_RESTART_EVENT } from "./opening-events";
 import styles from "./OpeningGate.module.css";
 
@@ -80,6 +81,7 @@ export default function OpeningGate({ children }: { children: ReactNode }) {
   const finishOpening = useCallback(() => {
     stopCues();
     setOpeningVisible(false);
+    window.dispatchEvent(new Event(TUTORIAL_START_EVENT));
   }, [stopCues]);
 
   const moveToPhase = useCallback((nextPhase: OpeningPhase) => {

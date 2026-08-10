@@ -191,6 +191,7 @@ test("runs portrait-driven gacha recruitment, party formation, and member sales 
   assert.match(tavern, /정말 판매하시겠습니까/);
   assert.doesNotMatch(tavern, /여관주인 마르타|innkeeperBar/);
   assert.match(tavern, /finnCorrection/);
+  assert.match(tavern, /finn-portrait\.webp/);
   assert.match(tavern, /-idle-preview\.webp/);
   assert.match(tavernStyles, /\.recruitCounter/);
   assert.match(tavernStyles, /\.resultGrid/);

@@ -67,6 +67,9 @@ import { SPECIAL_RESEARCH_NODES } from "./special-attacks";
 import { StageMap } from "./stage-map";
 import { canAffordWeaponRecipe, consumeWeaponRecipe, materialIconVars, migrateMaterialInventory, stageMaterialById, stageMaterialFor, weaponMaterialRecipe } from "./stage-materials";
 import { formatRecruitRate, highRankRecruitChance, MEMBER_SALE_PRICES, RECRUIT_COSTS, rollRecruitMembers, settleRecruitment, type RecruitResult } from "./tavern-gacha";
+import { GameTutorial } from "./tutorial/GameTutorial";
+import { TUTORIAL_START_EVENT } from "./tutorial/tutorial-events";
+import { isTutorialStep, recoverTutorialStep, type TutorialStep } from "./tutorial/tutorial-state";
 import { UPGRADE_ICON_BY_KEY } from "./upgrade-icons";
 
 type LootPhase = "idle" | "fighting" | "collecting" | "complete";
@@ -141,6 +144,7 @@ type SaveState = {
   upgrades: Record<UpgradeKey, number>;
   nodes: string[];
   autoAdvance: boolean;
+  tutorialStep: TutorialStep;
 };
 
 const SAVE_KEY = "guildmaster-clicker-save-v1";
@@ -186,14 +190,15 @@ const initialState: SaveState = {
   selectedStage: 1,
   unlockedStage: 1,
   cleared: [],
-  owned: ["roan"],
-  party: ["roan"],
-  progress: { roan: { level: 1, xp: 0 } },
+  owned: [],
+  party: [],
+  progress: {},
   guildHallLevel: 1,
   weaponLevel: 0,
   upgrades: { range: 0, critical: 0, shockwave: 0, time: 0, tavern: 0, gold: 0, guild: 0, autoAttack: 0 },
   nodes: ["foundation"],
   autoAdvance: true,
+  tutorialStep: "hunt",
 };
 
 function cloneSaveState(state: SaveState): SaveState {
@@ -354,6 +359,7 @@ export default function Game() {
   const [defeat, setDefeat] = useState(false);
   const [battleDeadline, setBattleDeadline] = useState<number | null>(null);
   const [developerMode, setDeveloperMode] = useState(false);
+  const [tutorialActive, setTutorialActive] = useState(false);
   const [developerToolsAvailable, setDeveloperToolsAvailable] = useState(false);
   const [developerStage, setDeveloperStage] = useState<number | null>(null);
   const [developerClickLevel, setDeveloperClickLevel] = useState(CLICK_ATTACK_PATTERNS.length - 1);
@@ -383,6 +389,7 @@ export default function Game() {
   const revealedLootIds = useRef(new Set<string>());
   const lootTimers = useRef<number[]>([]);
   const developerEntrySave = useRef<SaveState | null>(null);
+  const tutorialRecruitLock = useRef(false);
   const closeNotice = useCallback(() => setNotice(null), []);
 
   function showNotice(title: string, message: string, options: Omit<GameNotice, "title" | "message"> = {}) {
@@ -410,7 +417,8 @@ export default function Game() {
   const guildMultiplier = guildAttackMultiplier(effectiveUpgrades.guild);
   const assistMultiplier = 1 + traitCounts.support * .12 + traitCounts.vanguard * .08;
   const goldMultiplier = raidGoldMultiplier(effectiveUpgrades.gold);
-  const battleSeconds = (developerMode ? DEV_BATTLE_SECONDS : stage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + effectiveUpgrades.time * BATTLE_TIME_PER_LEVEL + traitCounts.support * 3;
+  const tutorialBattleTimer = !developerMode && save.tutorialStep === "battle" && stage.stage === 1;
+  const battleSeconds = (tutorialBattleTimer ? 90 : developerMode ? DEV_BATTLE_SECONDS : stage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + effectiveUpgrades.time * BATTLE_TIME_PER_LEVEL + traitCounts.support * 3;
   const battleTimeLeft = battleDeadline ? Math.max(0, Math.ceil((battleDeadline - now) / 1000)) : battleSeconds;
   const lootCollecting = lootPhase === "collecting";
   const combatLocked = battleActive || lootCollecting || victory || defeat;
@@ -474,6 +482,8 @@ export default function Game() {
         const migratedSelectedStage = Math.min(STAGE_COUNT, Math.max(1, loaded.selectedStage ?? 1));
         const migratedUnlockedStage = Math.min(STAGE_COUNT, Math.max(1, loaded.unlockedStage ?? 1));
         const migratedCleared = (loaded.cleared ?? []).filter((stageNumber) => stageNumber >= 1 && stageNumber <= STAGE_COUNT);
+        const loadedTutorialStep = isTutorialStep(loaded.tutorialStep) ? loaded.tutorialStep : "done";
+        const migratedTutorialStep = recoverTutorialStep(loadedTutorialStep, migratedCleared.includes(1));
         setSave({
           ...initialState,
           ...loaded,
@@ -487,6 +497,7 @@ export default function Game() {
           weaponLevel: migratedWeaponLevel,
           nodes: migratedNodes,
           upgrades: migratedUpgrades,
+          tutorialStep: migratedTutorialStep,
         });
         if (completedLegacyCitadel) {
           setNotice({ title: "저장 데이터 이전 완료", message: "기존 성채 완성 기록을 새 핵심 강화 8종과 특수 공격 완성 상태로 이전했습니다." });
@@ -510,6 +521,12 @@ export default function Game() {
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 100);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const startTutorial = () => setTutorialActive(true);
+    window.addEventListener(TUTORIAL_START_EVENT, startTutorial);
+    return () => window.removeEventListener(TUTORIAL_START_EVENT, startTutorial);
   }, []);
 
   const clearLootTimers = useCallback(() => {
@@ -550,6 +567,7 @@ export default function Game() {
         cleared: firstClear ? [...current.cleared, stage.stage] : current.cleared,
         unlockedStage: firstClear ? Math.min(STAGE_COUNT, Math.max(current.unlockedStage, stage.stage + 1)) : current.unlockedStage,
         progress,
+        tutorialStep: current.tutorialStep === "battle" && stage.stage === 1 ? "return" : current.tutorialStep,
       };
     });
 
@@ -635,6 +653,12 @@ export default function Game() {
         ...current,
         gold: current.gold + defeatSalvage.gold,
         materials: { ...current.materials, [stageMaterial.id]: (current.materials[stageMaterial.id] ?? 0) + defeatSalvage.material },
+        tutorialStep: current.tutorialStep === "battle" ? "retry" : current.tutorialStep,
+      }));
+    } else if (!developerMode) {
+      setSave((current) => ({
+        ...current,
+        tutorialStep: current.tutorialStep === "battle" ? "retry" : current.tutorialStep,
       }));
     }
     lootPlan.current = [];
@@ -776,14 +800,11 @@ export default function Game() {
 
   function startStage(stageNumber = stage.stage) {
     unlockBattleAudio();
-    if (!save.party.length && !developerMode) {
-      showNotice("출전 준비가 필요합니다", "출전할 길드원이 없습니다. 여관에서 새 길드원을 고용하고 파티에 편성하세요.", { tone: "warning" });
-      return;
-    }
     const nextStage = getStage(stageNumber);
     playExpeditionStartSound(nextStage.boss);
     const nextMaterial = stageMaterialFor(stageNumber);
-    const durationSeconds = (developerMode ? DEV_BATTLE_SECONDS : nextStage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + effectiveUpgrades.time * BATTLE_TIME_PER_LEVEL + traitCounts.support * 3;
+    const tutorialFirstBattle = !developerMode && save.tutorialStep === "stage" && stageNumber === 1;
+    const durationSeconds = (tutorialFirstBattle ? 90 : developerMode ? DEV_BATTLE_SECONDS : nextStage.boss ? BOSS_BATTLE_SECONDS : NORMAL_BATTLE_SECONDS) + effectiveUpgrades.time * BATTLE_TIME_PER_LEVEL + traitCounts.support * 3;
     const monsters = spawnMonsterPack(nextStage);
     const rewardGold = Math.round(nextStage.gold * goldMultiplier);
     clearLootTimers();
@@ -812,7 +833,11 @@ export default function Game() {
     setBattleDeadline(Date.now() + durationSeconds * 1000);
     setFieldMonsters(monsters);
     if (developerMode) setDeveloperStage(stageNumber);
-    else setSave((current) => ({ ...current, selectedStage: stageNumber }));
+    else setSave((current) => ({
+      ...current,
+      selectedStage: stageNumber,
+      tutorialStep: current.tutorialStep === "stage" && stageNumber === 1 ? "battle" : current.tutorialStep,
+    }));
     setStagePicker(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -838,6 +863,12 @@ export default function Game() {
     lootPlan.current = [];
     lootDropsRef.current = [];
     revealedLootIds.current.clear();
+    setActiveFacility("hall");
+    setSave((current) => ({
+      ...current,
+      tutorialStep: current.tutorialStep === "return" ? "tavern" : current.tutorialStep === "retry" ? "hunt" : current.tutorialStep,
+    }));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function retreatBattle() {
@@ -887,7 +918,13 @@ export default function Game() {
     setSave((current) => {
       const materials = consumeWeaponRecipe(current.materials, recipe);
       if (!materials || current.gold < nextWeapon.cost) return current;
-      return { ...current, gold: current.gold - nextWeapon.cost, materials, weaponLevel: nextLevel };
+      return {
+        ...current,
+        gold: current.gold - nextWeapon.cost,
+        materials,
+        weaponLevel: nextLevel,
+        tutorialStep: current.tutorialStep === "upgrade" ? "complete" : current.tutorialStep,
+      };
     });
     setTerritoryPulse((current) => current + 1);
     playProgressionSound("weapon-craft", nextLevel);
@@ -931,8 +968,11 @@ export default function Game() {
   }
 
   function recruitGuildMembers(count: 1 | 10) {
-    const cost = count === 1 ? RECRUIT_COSTS.single : RECRUIT_COSTS.ten;
+    const tutorialFreeTen = save.tutorialStep === "recruit" && count === 10;
+    if (tutorialFreeTen && tutorialRecruitLock.current) return;
+    const cost = tutorialFreeTen ? 0 : count === 1 ? RECRUIT_COSTS.single : RECRUIT_COSTS.ten;
     if (save.gold < cost) return showNotice("골드가 부족합니다", `${count}명 영입에 필요한 골드가 부족합니다.`, { tone: "warning" });
+    if (tutorialFreeTen) tutorialRecruitLock.current = true;
 
     const rolls = rollRecruitMembers(MEMBERS, count, effectiveUpgrades.tavern);
     const settlement = settleRecruitment(save.owned, rolls);
@@ -947,7 +987,9 @@ export default function Game() {
         ...current,
         gold: current.gold - cost + settlement.refund,
         owned: [...current.owned, ...settlement.newMemberIds],
+        party: tutorialFreeTen ? settlement.newMemberIds.slice(0, 4) : current.party,
         progress,
+        tutorialStep: tutorialFreeTen ? "recruitResult" : current.tutorialStep,
       };
     });
     playGuildMemberHireSound(count);
@@ -986,11 +1028,40 @@ export default function Game() {
     setPendingSaleId(null);
     playMenuTabSound();
     setActiveFacility(facility);
+    setSave((current) => ({
+      ...current,
+      tutorialStep: current.tutorialStep === "tavern" && facility === "tavern"
+        ? "recruit"
+        : current.tutorialStep === "forge" && facility === "forge"
+          ? "upgrade"
+          : current.tutorialStep,
+    }));
   }
 
   function openHuntingGround() {
     playMenuTabSound();
     setStagePicker(true);
+    setSave((current) => ({
+      ...current,
+      tutorialStep: current.tutorialStep === "hunt" ? "stage" : current.tutorialStep,
+    }));
+  }
+
+  function skipTutorial() {
+    setSave((current) => ({ ...current, tutorialStep: "done" }));
+    setTutorialActive(false);
+  }
+
+  function advanceTutorial() {
+    if (save.tutorialStep === "recruitResult") {
+      setSave((current) => ({ ...current, tutorialStep: "forge" }));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    if (save.tutorialStep === "complete") {
+      setSave((current) => ({ ...current, tutorialStep: "done" }));
+      setTutorialActive(false);
+    }
   }
 
   function toggleParty(id: string) {
@@ -1016,6 +1087,8 @@ export default function Game() {
   function performReset() {
     localStorage.removeItem(SAVE_KEY);
     developerEntrySave.current = null;
+    tutorialRecruitLock.current = false;
+    setTutorialActive(false);
     setSave(initialState);
     clearLootTimers();
     victoryLock.current = true;
@@ -1194,6 +1267,7 @@ export default function Game() {
             onRequestSale={requestMemberSale}
             onCancelSale={() => setPendingSaleId(null)}
             onConfirmSale={confirmMemberSale}
+            tutorialFreeTenRecruit={tutorialActive && save.tutorialStep === "recruit"}
           />
           </>}
           </div>
@@ -1213,7 +1287,22 @@ export default function Game() {
           </div>
 
           <div className="battle-layout">
-            <div className={`arena hack-arena mass-swarm has-forge-cursor panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier} loot-phase-${lootPhase}`} style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties} onPointerDown={attackField} onPointerMove={trackWeaponCursor} onPointerLeave={() => setWeaponCursor((cursor) => ({ ...cursor, visible: false }))} role="application" aria-label="플레이어의 강화 무기로 클릭한 위치를 공격하고 길드원은 자동 공격하는 몬스터 전장">
+            <div
+              className={`arena hack-arena mass-swarm has-forge-cursor panel field-tone-${fieldAsset.tone} click-style-${activeClickPattern.tier} loot-phase-${lootPhase}`}
+              style={{ "--field-art-position": fieldAsset.objectPosition } as React.CSSProperties}
+              onPointerDown={attackField}
+              onPointerMove={trackWeaponCursor}
+              onPointerLeave={() => setWeaponCursor((cursor) => ({ ...cursor, visible: false }))}
+              onKeyDown={(event) => {
+                if (!battleActive || (event.key !== "Enter" && event.key !== " ")) return;
+                event.preventDefault();
+                directAttackAt(autoAttackPoint.x, autoAttackPoint.y);
+              }}
+              role="application"
+              tabIndex={battleActive ? 0 : -1}
+              data-tutorial="battlefield"
+              aria-label="플레이어의 강화 무기로 클릭한 위치를 공격하고 길드원은 자동 공격하는 몬스터 전장"
+            >
               <Image className="field-background-art" src={fieldAsset.source} alt="" fill sizes="(max-width: 1180px) 100vw, 900px" priority={stage.stage <= 10} unoptimized draggable={false} />
               <div className="environment-tag"><span>{BIOME_DETAILS[stage.region.hue].label}</span><small>{BIOME_DETAILS[stage.region.hue].description}</small></div>
               <div className="battle-banner"><span>{stage.boss ? "BOSS SWARM" : `STAGE ${stage.stage}`}</span><strong>{stage.name} 무리</strong></div>
@@ -1349,8 +1438,8 @@ export default function Game() {
             </aside>
           </div>
 
-          {victory && <div className="victory-overlay" role="dialog" aria-modal="true" aria-labelledby="victory-title"><div className="victory-card"><div className="victory-crest" aria-hidden="true"><span>★</span></div><div className="victory-heading"><p>EXPEDITION COMPLETE</p><span className="victory-divider" aria-hidden="true"><i>◆</i></span><h2 id="victory-title">{fieldMonsters.length}마리 처치 완료!</h2><small>{stage.region.name}의 위협을 몰아냈습니다</small></div><div className="outcome-rewards" aria-label="획득 보상"><span>{developerMode ? <><i className="reward-glyph">◇</i><small>전투 기록</small><b>저장 안 됨</b></> : <><i className="reward-glyph">●</i><small>골드</small><b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span className="material-victory-reward"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} /><small>{stageMaterial.name}</small><b>+{stageMaterial.rewardAmount}</b></span>}{!developerMode && <span><i className="reward-glyph reward-xp">✦</i><small>경험치</small><b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span className="boss-clear-reward"><i className="reward-glyph">♜</i><small>군주 토벌</small><b>완료</b></span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? STAGE_COUNT : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(STAGE_COUNT, stage.stage + 1))}><small>모험 계속하기</small><span>다음 지역</span><b aria-hidden="true">›</b></button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}><small>같은 지역</small><span>재전투</span></button><button className="text-button" onClick={returnToGuild}>영지로 복귀</button></div></div></div>}
-          {defeat && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">⚑</span><p>EXPEDITION FAILED</p><h2>공세 실패</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드 전투가 종료되었습니다." : "제한 시간 안에 적을 모두 처치하지 못했습니다."}</strong>{!developerMode && <span>회수 전리품 · 골드 +{compactNumber(defeatSalvage.gold)} · {stageMaterial.name} +{defeatSalvage.material}</span>}<span>이번 전리품으로 바로 강화하거나 같은 웨이브를 재도전하세요.</span></div><button className="primary-button" onClick={returnToGuild}>영지로 복귀</button></div></div>}
+          {victory && <div className="victory-overlay" role="dialog" aria-modal="true" aria-labelledby="victory-title"><div className="victory-card"><div className="victory-crest" aria-hidden="true"><span>★</span></div><div className="victory-heading"><p>EXPEDITION COMPLETE</p><span className="victory-divider" aria-hidden="true"><i>◆</i></span><h2 id="victory-title">{fieldMonsters.length}마리 처치 완료!</h2><small>{stage.region.name}의 위협을 몰아냈습니다</small></div><div className="outcome-rewards" aria-label="획득 보상"><span>{developerMode ? <><i className="reward-glyph">◇</i><small>전투 기록</small><b>저장 안 됨</b></> : <><i className="reward-glyph">●</i><small>골드</small><b>+{compactNumber(stage.gold * goldMultiplier)}</b></>}</span>{!developerMode && <span className="material-victory-reward"><i className="stage-material-icon reward-material-icon" style={materialIconVars(stageMaterial) as React.CSSProperties} /><small>{stageMaterial.name}</small><b>+{stageMaterial.rewardAmount}</b></span>}{!developerMode && <span><i className="reward-glyph reward-xp">✦</i><small>경험치</small><b>+{compactNumber(stage.xp)}</b></span>}{stage.boss && <span className="boss-clear-reward"><i className="reward-glyph">♜</i><small>군주 토벌</small><b>완료</b></span>}</div><div className="outcome-actions">{stage.stage < (developerMode ? STAGE_COUNT : save.unlockedStage) && <button className="primary-button" onClick={() => startStage(Math.min(STAGE_COUNT, stage.stage + 1))}><small>모험 계속하기</small><span>다음 지역</span><b aria-hidden="true">›</b></button>}<button className="secondary-button" onClick={() => startStage(stage.stage)}><small>같은 지역</small><span>재전투</span></button><button className="text-button" onClick={returnToGuild} data-tutorial="return-guild">영지로 복귀</button></div></div></div>}
+          {defeat && <div className="victory-overlay defeat-overlay"><div className="victory-card defeat-card"><span className="victory-star">⚑</span><p>EXPEDITION FAILED</p><h2>공세 실패</h2><div className="defeat-copy"><strong>{developerMode ? "개발자 모드 전투가 종료되었습니다." : "제한 시간 안에 적을 모두 처치하지 못했습니다."}</strong>{!developerMode && <span>회수 전리품 · 골드 +{compactNumber(defeatSalvage.gold)} · {stageMaterial.name} +{defeatSalvage.material}</span>}<span>이번 전리품으로 바로 강화하거나 같은 웨이브를 재도전하세요.</span></div><button className="primary-button" onClick={returnToGuild} data-tutorial="return-guild">영지로 복귀</button></div></div>}
         </section>
       )}
 
@@ -1365,6 +1454,12 @@ export default function Game() {
           title="사냥터 지도 · 토벌 목표 선택"
         />
       )}
+      <GameTutorial
+        active={tutorialActive && !developerMode && save.tutorialStep !== "done" && !(save.tutorialStep === "battle" && lootCollecting)}
+        step={save.tutorialStep}
+        onSkip={skipTutorial}
+        onAdvance={advanceTutorial}
+      />
       <GameNoticeDialog notice={notice} onClose={closeNotice} onConfirm={confirmNotice} />
       <footer className="game-footer"><span>GUILDMASTER CHRONICLE · LOCAL BUILD</span><span>작은 길드가 전설이 되는 곳</span></footer>
     </main>
