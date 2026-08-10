@@ -43,19 +43,26 @@ function simulateFocusedClicks(balance, stage, weaponTier = balance.expectedWeap
   return clicks;
 }
 
-test("the opening pressure wave clears before the timer and the upgrade wave becomes a massacre", async () => {
+test("every region gets harder in the intuitive first, second, boss order", async () => {
   const balance = await loadBalanceModule();
-  const stageOneSeconds = simulateFocusedClicks(balance, 1) / 4;
-  const stageTwoSeconds = simulateFocusedClicks(balance, 2) / 4;
-  const firstBossSeconds = simulateFocusedClicks(balance, 3) / 4;
 
   assert.equal(balance.BASE_ATTACK_RANGE, 11);
-  assert.ok(stageOneSeconds >= 12 && stageOneSeconds <= 22, `stage 1 focused clear: ${stageOneSeconds}s`);
-  assert.ok(stageTwoSeconds >= 5 && stageTwoSeconds <= 10, `stage 2 focused clear: ${stageTwoSeconds}s`);
-  assert.ok(firstBossSeconds >= 12 && firstBossSeconds <= 20, `stage 3 focused clear: ${firstBossSeconds}s`);
   assert.ok(balance.weaponBalanceForTier(1).damageScale >= 2, "the first craft should at least double click damage");
   assert.equal(balance.monsterCountForStage(1), 42);
   assert.equal(balance.monsterCountForStage(2), 68);
+
+  for (let region = 0; region < 10; region += 1) {
+    const firstStage = region * 3 + 1;
+    const firstSeconds = simulateFocusedClicks(balance, firstStage) / 4;
+    const secondSeconds = simulateFocusedClicks(balance, firstStage + 1) / 4;
+    const bossSeconds = simulateFocusedClicks(balance, firstStage + 2) / 4;
+
+    assert.ok(firstSeconds < secondSeconds, `region ${region + 1}: wave 1 ${firstSeconds}s should be easier than wave 2 ${secondSeconds}s`);
+    assert.ok(secondSeconds < bossSeconds, `region ${region + 1}: wave 2 ${secondSeconds}s should be easier than boss ${bossSeconds}s`);
+    assert.ok(firstSeconds >= balance.TARGET_CLEAR_SECONDS.opening.min && firstSeconds <= balance.TARGET_CLEAR_SECONDS.opening.max, `region ${region + 1} wave 1: ${firstSeconds}s`);
+    assert.ok(secondSeconds >= balance.TARGET_CLEAR_SECONDS.escalation.min && secondSeconds <= balance.TARGET_CLEAR_SECONDS.escalation.max, `region ${region + 1} wave 2: ${secondSeconds}s`);
+    assert.ok(bossSeconds >= balance.TARGET_CLEAR_SECONDS.boss.min && bossSeconds <= balance.TARGET_CLEAR_SECONDS.boss.max, `region ${region + 1} boss: ${bossSeconds}s`);
+  }
 });
 
 test("the full first-clear route needs no guild research and fits the 10-20 minute target", async () => {
