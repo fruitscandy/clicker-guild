@@ -22,18 +22,21 @@ test("connects every guild member skill manifest entry to the runtime resolver",
   assert.match(resolverSource, /GUILD_MEMBER_SKILL_VFX_DURATION_MS = 1050/);
 });
 
-test("renders dedicated art for skills while retaining generic passive attacks", async () => {
+test("renders member-specific art for both basic attacks and skills with a safe fallback", async () => {
   const [game, css] = await Promise.all([
     readFile(new URL("app/Game.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
   ]);
 
-  assert.match(game, /effect\.skill \? guildMemberSkillVfxSource\(effect\.memberId\) : null/);
-  assert.match(game, /skillVfxSource \? <>/);
+  assert.match(game, /const memberVfxSource = guildMemberSkillVfxSource\(effect\.memberId\)/);
+  assert.match(game, /effect\.skill \? "is-skill" : "is-basic"/);
+  assert.match(game, /memberVfxSource \? <>/);
   assert.match(game, /className="member-skill-vfx-art"/);
   assert.match(game, /className="member-projectile primary"/);
   assert.match(game, /skill \? GUILD_MEMBER_SKILL_VFX_DURATION_MS : 720/);
   assert.match(css, /\.member-skill-vfx-art/);
+  assert.match(css, /\.member-weapon-fx\.is-basic \.member-skill-vfx-art/);
+  assert.match(css, /@keyframes memberBasicVfxArt/);
   assert.match(css, /@keyframes memberSkillVfxArt/);
   assert.match(css, /prefers-reduced-motion: reduce/);
 });
