@@ -926,6 +926,13 @@
   box-shadow: inset 0 0 0 3px rgba(255, 239, 169, .72);
 }
 
+.weaponCursorLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
 .bossOverlay,
 .guildOverlay {
   position: absolute;
@@ -943,7 +950,9 @@
   left: 50%;
   width: min(560px, 68%);
   padding: 8px 12px 9px;
+  opacity: var(--boss-reveal, 1);
   transform: translateX(-50%);
+  transition: opacity .22s linear;
 }
 
 .bossOverlay > span,
@@ -1147,11 +1156,16 @@
 :global(.game-shell.finale-active .arena > .gold-loot-layer),
 :global(.game-shell.finale-active .arena > .loot-tally),
 :global(.game-shell.finale-active .arena > .swarm-hud),
-:global(.game-shell.finale-active .arena > .field-click-guide),
-:global(.game-shell.finale-active .arena > [data-weapon-tier]) {
+:global(.game-shell.finale-active .arena > .field-click-guide) {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
+}
+
+@media (pointer: fine) {
+  .battleSurface .canvas {
+    cursor: none;
+  }
 }
 
 :global(.game-shell.finale-active > .topbar),

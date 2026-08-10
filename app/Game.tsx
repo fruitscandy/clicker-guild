@@ -1427,6 +1427,8 @@ export default function Game() {
                 loadout={finaleLoadout}
                 mode={developerMode ? "preview" : "campaign"}
                 presentation="embedded"
+                cursorWeapon={activeClickPattern}
+                initialCursorPoint={weaponCursor}
                 onModeChange={setFinaleVisualMode}
                 onExit={leaveFinale}
                 onVictory={completeFinale}

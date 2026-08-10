@@ -108,8 +108,32 @@ test("same seed and inputs produce deterministic phase-two patterns", () => {
   assert.notDeepEqual(different.bullets, first.bullets);
 });
 
-test("boss damage requires an actual click inside the generous 220px target", () => {
+test("boss reveal locks damage without consuming a click or cooldown", () => {
+  let world = engine.createFinaleWorld(loadout(), { seed: 6 });
+  const initialHp = world.boss.hp;
+  const initialSerial = world.nextAttackSerial;
+  world = bossClick(world, 0);
+  assert.equal(world.boss.hp, initialHp);
+  assert.equal(world.attackEvent, null);
+  assert.equal(world.clicksLanded, 0);
+  assert.equal(world.clicksMissed, 0);
+  assert.equal(world.clicksRejected, 0);
+  assert.equal(world.nextAttackSerial, initialSerial);
+
+  world = advance(world, engine.FINALE_BOSS_ATTACKABLE_MS + 16);
+  world = bossClick(world, 0);
+  assert.equal(world.boss.hp, initialHp - world.stats.clickDamage);
+
+  world = engine.forceFinaleMode(world, "field");
+  assert.equal(world.modeElapsedMs, 0);
+  const replayHp = world.boss.hp;
+  world = bossClick(world, 1_000);
+  assert.equal(world.boss.hp, replayHp, "re-entering field mode must replay the protected reveal");
+});
+
+test("boss damage requires an actual click inside the 156px silhouette target", () => {
   let world = engine.createFinaleWorld(loadout(), { seed: 7 });
+  world = advance(world, engine.FINALE_BOSS_ATTACKABLE_MS + 16);
   const initialHp = world.boss.hp;
   world = engine.attackFinaleBoss(world, world.boss.x + world.boss.clickRadius + 1, world.boss.y, 0);
   assert.equal(world.boss.hp, initialHp);
@@ -121,11 +145,13 @@ test("boss damage requires an actual click inside the generous 220px target", ()
   assert.equal(world.clicksLanded, 1);
   assert.equal(world.attackEvent.kind, "hit");
   assert.ok(world.boss.flashMs >= 160, "a hit should keep the whole boss visibly flashing across several frames");
-  assert.equal(world.boss.clickRadius * 2, 220);
+  assert.equal(world.boss.clickRadius, engine.FINALE_BOSS_CLICK_RADIUS);
+  assert.equal(world.boss.clickRadius * 2, 156);
 });
 
 test("click damage has a strict eight-clicks-per-second cap", () => {
   let world = engine.createFinaleWorld(loadout(), { seed: 8 });
+  world = advance(world, engine.FINALE_BOSS_ATTACKABLE_MS + 16);
   world = bossClick(world, 0);
   const hpAfterFirst = world.boss.hp;
   world = bossClick(world, 124);
@@ -162,9 +188,38 @@ test("field collapse leads to a fresh phase two without replaying phase one", ()
   world = advance(world, 32);
   assert.equal(world.mode, "bulletHell");
   assert.equal(world.phase, 2);
+  assert.equal(world.boss.y, 150, "phase-two boss should clear the compact HP overlay");
   assert.equal(world.boss.hp, 42);
   assert.equal(world.cycle, "dodge");
   assert.equal(world.player.shield, 1);
+});
+
+test("one run reaches the ending from protected reveal through both combat phases", () => {
+  let world = engine.createFinaleWorld(loadout({ hallLevel: 6 }), { seed: 101 });
+  world = advance(world, engine.FINALE_BOSS_ATTACKABLE_MS + 16);
+  let attackTime = 10_000;
+  while (world.mode === "field") {
+    world = bossClick(world, attackTime);
+    attackTime += engine.FINALE_CLICK_INTERVAL_MS;
+  }
+  assert.equal(world.mode, "collapse");
+
+  world = advance(world, engine.FINALE_COLLAPSE_MS + 16);
+  assert.equal(world.mode, "bulletHell");
+  world.player.invulnerableMs = 999_999;
+  world = advance(world, engine.FINALE_DODGE_MS + 16);
+  assert.equal(world.cycle, "opening");
+  while (world.mode === "bulletHell") {
+    world = bossClick(world, attackTime);
+    attackTime += engine.FINALE_CLICK_INTERVAL_MS;
+  }
+  assert.equal(world.mode, "destruction");
+  assert.equal(world.status, "playing");
+
+  world = advance(world, engine.FINALE_DESTRUCTION_MS + 16);
+  assert.equal(world.mode, "whiteout");
+  assert.equal(world.status, "victory");
+  assert.equal(world.victory, true);
 });
 
 test("phase two repeats a six-second dodge and 2.5-second double-damage opening", () => {

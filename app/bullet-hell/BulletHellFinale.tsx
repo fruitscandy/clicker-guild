@@ -17,6 +17,7 @@ import {
   playStageClearSound,
   unlockBattleAudio,
 } from "../battle-audio";
+import { WeaponCursor, type WeaponView } from "../guild-hub/WeaponArt";
 import {
   FINALE_BULLET_ASSETS,
   FINALE_GUILD_ATLAS,
@@ -27,6 +28,9 @@ import {
   attackFinaleBoss,
   createFinaleWorld,
   deriveFinaleStats,
+  FINALE_BOSS_ATTACKABLE_MS,
+  FINALE_BOSS_CLICK_RADIUS,
+  FINALE_BOSS_REVEAL_MS,
   FINALE_HEIGHT,
   FINALE_WIDTH,
   forceFinaleMode,
@@ -71,6 +75,7 @@ type FinaleScene = "intro" | "running" | "paused" | "victory" | "defeat";
 type VirtualDirection = "up" | "down" | "left" | "right" | "focus";
 type PlayerImpact = FinalePlayerHitEvent & { ageMs: number };
 type AttackImpact = FinaleAttackEvent & { ageMs: number };
+type WeaponCursorPoint = { x: number; y: number; visible: boolean };
 
 type HudSnapshot = {
   playerHp: number;
@@ -88,12 +93,15 @@ type HudSnapshot = {
   clicksLanded: number;
   clicksMissed: number;
   elapsedMs: number;
+  modeElapsedMs: number;
 };
 
 export type BulletHellFinaleProps = {
   loadout: FinaleLoadout;
   mode: "campaign" | "preview";
   presentation?: "standalone" | "embedded";
+  cursorWeapon?: WeaponView;
+  initialCursorPoint?: WeaponCursorPoint;
   seed?: number;
   onModeChange?: (mode: FinaleMode) => void;
   onExit: () => void;
@@ -102,6 +110,11 @@ export type BulletHellFinaleProps = {
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.max(minimum, Math.min(maximum, value));
+}
+
+function smoothstep(value: number) {
+  const normalized = clamp(value, 0, 1);
+  return normalized * normalized * (3 - 2 * normalized);
 }
 
 function snapshotFromWorld(world: FinaleWorld): HudSnapshot {
@@ -121,6 +134,7 @@ function snapshotFromWorld(world: FinaleWorld): HudSnapshot {
     clicksLanded: world.clicksLanded,
     clicksMissed: world.clicksMissed,
     elapsedMs: world.elapsedMs,
+    modeElapsedMs: world.modeElapsedMs,
   };
 }
 
@@ -206,139 +220,315 @@ function drawNullBackground(context: CanvasRenderingContext2D, world: FinaleWorl
   context.restore();
 }
 
+function traceArchivistHead(context: CanvasRenderingContext2D) {
+  context.beginPath();
+  context.moveTo(-31, -71);
+  context.lineTo(-7, -77);
+  context.lineTo(25, -72);
+  context.lineTo(37, -43);
+  context.lineTo(27, -13);
+  context.lineTo(6, -2);
+  context.lineTo(-23, -12);
+  context.lineTo(-39, -42);
+  context.closePath();
+}
+
+function traceArchivistMantle(context: CanvasRenderingContext2D) {
+  context.beginPath();
+  context.moveTo(-22, -12);
+  context.lineTo(-64, 4);
+  context.lineTo(-51, 29);
+  context.lineTo(-38, 19);
+  context.lineTo(-31, 68);
+  context.lineTo(-11, 57);
+  context.lineTo(0, 78);
+  context.lineTo(14, 55);
+  context.lineTo(35, 68);
+  context.lineTo(39, 20);
+  context.lineTo(56, 29);
+  context.lineTo(68, 1);
+  context.lineTo(25, -12);
+  context.closePath();
+}
+
+function drawArchivistSilhouette(
+  context: CanvasRenderingContext2D,
+  fill: string | CanvasGradient,
+  stroke?: string,
+  lineWidth = 1,
+) {
+  context.fillStyle = fill;
+  traceArchivistMantle(context);
+  context.fill();
+  traceArchivistHead(context);
+  context.fill();
+  if (!stroke) return;
+  context.strokeStyle = stroke;
+  context.lineWidth = lineWidth;
+  traceArchivistMantle(context);
+  context.stroke();
+  traceArchivistHead(context);
+  context.stroke();
+}
+
+function drawBossEntranceEnergy(context: CanvasRenderingContext2D, world: FinaleWorld, reducedMotion: boolean) {
+  if (world.mode !== "field") return;
+  const progress = clamp(world.modeElapsedMs / FINALE_BOSS_REVEAL_MS, 0, 1);
+  if (progress >= 1) return;
+  const energy = Math.sin(progress * Math.PI);
+  const converge = smoothstep((progress - .08) / .7);
+  const entranceConverge = reducedMotion ? 1 : converge;
+  const { x, y } = world.boss;
+
+  context.save();
+  context.fillStyle = `rgba(3,1,10,${energy * .14})`;
+  context.fillRect(0, 0, FINALE_WIDTH, FINALE_HEIGHT);
+  context.translate(x, y);
+
+  const aura = context.createRadialGradient(0, 0, 12, 0, 0, 182);
+  aura.addColorStop(0, `rgba(225,242,255,${energy * .16})`);
+  aura.addColorStop(.28, `rgba(85,35,116,${energy * .22})`);
+  aura.addColorStop(.62, `rgba(143,45,43,${energy * .16})`);
+  aura.addColorStop(1, "transparent");
+  context.fillStyle = aura;
+  context.fillRect(-190, -190, 380, 380);
+
+  context.strokeStyle = `rgba(143,74,171,${energy * .5})`;
+  context.lineWidth = 2;
+  context.setLineDash([9, 13]);
+  context.beginPath();
+  context.arc(0, 0, 150 - entranceConverge * 62, -Math.PI * .86, Math.PI * .38);
+  context.stroke();
+  context.strokeStyle = `rgba(228,168,83,${energy * .4})`;
+  context.beginPath();
+  context.arc(0, 0, 128 - entranceConverge * 48, Math.PI * .18, Math.PI * 1.55);
+  context.stroke();
+
+  if (!reducedMotion) {
+    for (let index = 0; index < 18; index += 1) {
+      const baseAngle = index * 2.399963 + (index % 3) * .17;
+      const angle = baseAngle + (1 - converge) * (1.5 + index % 4 * .2);
+      const startRadius = 168 + index % 5 * 13;
+      const radius = startRadius * (1 - converge) + (34 + index % 4 * 9) * converge;
+      const px = Math.cos(angle) * radius;
+      const py = Math.sin(angle) * radius * .72;
+      const previousRadius = radius + 13 + index % 3 * 5;
+      context.strokeStyle = index % 3 === 0
+        ? `rgba(255,53,147,${energy * .34})`
+        : index % 2 === 0
+          ? `rgba(62,236,236,${energy * .42})`
+          : `rgba(231,171,91,${energy * .36})`;
+      context.lineWidth = 1 + index % 2;
+      context.beginPath();
+      context.moveTo(Math.cos(angle - .08) * previousRadius, Math.sin(angle - .08) * previousRadius * .72);
+      context.lineTo(px, py);
+      context.stroke();
+      context.save();
+      context.translate(px, py);
+      context.rotate(angle + Math.PI / 4);
+      context.fillStyle = context.strokeStyle;
+      context.fillRect(-2 - index % 2, -2 - index % 3, 4 + index % 2 * 2, 4 + index % 3 * 2);
+      context.restore();
+    }
+  }
+  context.restore();
+}
+
 function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reducedMotion: boolean) {
   if (world.mode === "whiteout") return;
   const { x, y } = world.boss;
   const seconds = reducedMotion ? 0 : world.elapsedMs / 1_000;
   const field = world.mode === "field" || world.mode === "collapse";
   const opening = world.mode === "bulletHell" && world.cycle === "opening";
+  const revealProgress = world.mode === "field"
+    ? clamp(world.modeElapsedMs / FINALE_BOSS_REVEAL_MS, 0, 1)
+    : 1;
+  const assembly = smoothstep((revealProgress - .2) / .62);
+  const eyeIgnition = smoothstep((revealProgress - .7) / .3);
+  const collapseProgress = world.mode === "collapse"
+    ? clamp(world.modeElapsedMs / world.stats.collapseDurationMs, 0, 1)
+    : 0;
   const destructionProgress = world.mode === "destruction"
     ? clamp(world.modeElapsedMs / world.stats.destructionDurationMs, 0, 1)
     : 0;
-  const pulse = reducedMotion ? 1 : 1 + Math.sin(seconds * 4.1) * .035;
-  const emergence = world.mode === "field" ? clamp(world.elapsedMs / 900, 0, 1) : 1;
-  const emergenceEase = 1 - Math.pow(1 - emergence, 3);
-  const emergenceJitter = !reducedMotion && emergence < 1
-    ? Math.sin(world.elapsedMs * .12) * (1 - emergence) * 13
-    : 0;
+  const pulse = reducedMotion ? 1 : 1 + Math.sin(seconds * 3.7) * .025;
   const hitStrength = clamp(world.boss.flashMs / BOSS_HIT_FLASH_MS, 0, 1);
   const hitPhase = 1 - hitStrength;
   const recoil = reducedMotion
     ? 0
-    : Math.sin(hitPhase * Math.PI * 2.4) * hitStrength * 7 * (world.clicksLanded % 2 ? 1 : -1);
-  const squash = reducedMotion ? 0 : Math.sin(hitPhase * Math.PI) * hitStrength * .055;
-  const coreColor = opening ? "#fff2ae" : field ? "#f2c76f" : "#69eff8";
-  const dangerColor = field ? "#8f302a" : "#ff4cae";
+    : Math.sin(hitPhase * Math.PI * 2.4) * hitStrength * 6 * (world.clicksLanded % 2 ? 1 : -1);
+  const squash = reducedMotion ? 0 : Math.sin(hitPhase * Math.PI) * hitStrength * .05;
+  const signalJitter = reducedMotion ? 0 : Math.sin(world.elapsedMs * .091) * (1 - revealProgress) * 9;
+  const coreColor = opening ? "#fff0a4" : field ? "#f0c66e" : "#bffcff";
+  const cyan = field ? "#50d7d3" : "#00ead7";
+  const magenta = field ? "#9f4778" : "#ff2b8c";
+  const bodyOpacity = assembly * (1 - collapseProgress * .5) * (1 - destructionProgress * .76);
+  const destructionMotion = reducedMotion ? 0 : destructionProgress;
+  const attackableVisual = world.mode === "field" || world.mode === "bulletHell";
 
   context.save();
-  context.translate(x + recoil + emergenceJitter, y);
+  context.translate(x + signalJitter, y);
   context.scale(
-    pulse * (1 + destructionProgress * .16) * (1 + squash) * (.72 + emergenceEase * .28),
-    pulse * (1 + destructionProgress * .16) * (1 - squash * .72) * (.72 + emergenceEase * .28),
+    .94 * pulse * (destructionMotion ? 1 - destructionMotion * .78 : 1),
+    .94 * pulse * (1 + destructionMotion * .12),
   );
-  context.globalAlpha = emergenceEase * (1 - destructionProgress * .82);
+  context.globalAlpha = bodyOpacity;
 
-  const aura = context.createRadialGradient(0, 0, 12, 0, 0, opening ? 136 : 114);
-  aura.addColorStop(0, opening ? "rgba(255,238,143,.55)" : field ? "rgba(147,48,40,.35)" : "rgba(88,229,240,.36)");
-  aura.addColorStop(.48, opening ? "rgba(255,219,107,.16)" : "rgba(255,64,157,.09)");
+  const aura = context.createRadialGradient(0, -8, 8, 0, -2, opening ? 142 : 118);
+  aura.addColorStop(0, opening ? "rgba(255,238,143,.48)" : field ? "rgba(121,38,45,.32)" : "rgba(46,220,230,.3)");
+  aura.addColorStop(.48, opening ? "rgba(255,211,89,.13)" : "rgba(126,47,161,.11)");
   aura.addColorStop(1, "transparent");
   context.fillStyle = aura;
-  context.fillRect(-145, -145, 290, 290);
-
-  if (hitStrength > 0) {
-    context.save();
-    context.globalCompositeOperation = "screen";
-    context.globalAlpha = .2 + hitStrength * .46;
-    context.lineWidth = 3;
-    context.strokeStyle = "#5ff5ff";
-    context.translate(reducedMotion ? 0 : -5 * hitStrength, 0);
-    drawHexagon(context, field ? 67 : 62);
-    context.stroke();
-    context.strokeStyle = "#ff5cad";
-    context.translate(reducedMotion ? 0 : 10 * hitStrength, 0);
-    drawHexagon(context, field ? 67 : 62);
-    context.stroke();
-    context.restore();
-  }
+  context.fillRect(-150, -150, 300, 300);
 
   context.save();
-  context.rotate(reducedMotion ? 0 : seconds * (field ? .12 : .28));
-  context.strokeStyle = opening ? "rgba(255,244,177,.95)" : `${coreColor}a8`;
-  context.lineWidth = opening ? 4 : 2;
-  context.setLineDash(field ? [18, 7, 3, 7] : [8, 9]);
-  context.beginPath();
-  context.arc(0, 0, opening ? 91 : 82, 0, Math.PI * 2);
-  context.stroke();
+  context.globalCompositeOperation = "screen";
+  context.globalAlpha = bodyOpacity * (.18 + hitStrength * .22);
+  context.translate(-4 - recoil - hitStrength * (reducedMotion ? 0 : 4), 1);
+  context.scale(1 + squash, 1 - squash * .7);
+  drawArchivistSilhouette(context, cyan);
+  context.translate(9 + recoil * 2 + hitStrength * (reducedMotion ? 0 : 8), -2);
+  drawArchivistSilhouette(context, magenta);
+  context.restore();
+
+  const bodyGradient = context.createLinearGradient(-18, -82, 22, 78);
+  bodyGradient.addColorStop(0, field ? "#1c1720" : "#111827");
+  bodyGradient.addColorStop(.42, "#05070d");
+  bodyGradient.addColorStop(1, field ? "#1a1013" : "#02040a");
+  drawArchivistSilhouette(context, bodyGradient, field ? "rgba(230,183,99,.68)" : "rgba(77,234,232,.7)", 1.5);
+
+  context.save();
+  context.globalCompositeOperation = "screen";
+  for (let index = 0; index < 6; index += 1) {
+    const sliceY = -60 + index * 24;
+    const offset = reducedMotion ? 0 : Math.sin(seconds * 9 + index * 2.7) * (index % 2 ? 5 : 8);
+    const width = 31 + (index * 17) % 54;
+    context.globalAlpha = bodyOpacity * (.12 + (index % 3) * .045);
+    context.fillStyle = index % 2 ? magenta : cyan;
+    context.fillRect(-width / 2 + offset, sliceY, width, index % 3 === 0 ? 3 : 1.5);
+  }
   context.restore();
 
   context.save();
-  if (!reducedMotion && !field && Math.floor(seconds * 12) % 8 === 0) context.translate(4, 0);
-  drawHexagon(context, field ? 63 : 58);
-  context.fillStyle = field ? "rgba(40,25,20,.95)" : "rgba(2,5,10,.96)";
-  context.fill();
-  context.strokeStyle = dangerColor;
-  context.lineWidth = 5;
-  context.stroke();
-  drawHexagon(context, field ? 49 : 45);
-  context.strokeStyle = coreColor;
+  context.globalAlpha = bodyOpacity * .34;
+  context.strokeStyle = field ? "rgba(239,198,119,.43)" : "rgba(103,236,240,.48)";
   context.lineWidth = 2;
+  context.setLineDash([8, 7]);
+  context.beginPath();
+  context.moveTo(-45, -5);
+  context.lineTo(-75, -23);
+  context.lineTo(-87, -8);
+  context.lineTo(-66, 9);
+  context.moveTo(44, -7);
+  context.lineTo(78, -28);
+  context.lineTo(90, -12);
+  context.lineTo(64, 11);
   context.stroke();
+  context.restore();
+
+  for (let index = 0; index < 8; index += 1) {
+    const angle = index * Math.PI / 4 + seconds * (field ? .08 : .2) * (index % 2 ? -1 : 1);
+    const radius = 88 + index % 3 * 8 + destructionMotion * (90 + index * 7);
+    const fragmentAlpha = bodyOpacity * (.22 + index % 3 * .08) * (1 - destructionProgress);
+    context.save();
+    context.translate(Math.cos(angle) * radius, Math.sin(angle) * radius * .72);
+    context.rotate(angle + seconds * .3);
+    context.globalAlpha = fragmentAlpha;
+    context.fillStyle = index % 3 === 0 ? magenta : index % 2 ? coreColor : cyan;
+    context.fillRect(-6 - index % 2 * 3, -1.5, 12 + index % 2 * 6, 3);
+    context.restore();
+  }
+
+  context.save();
+  context.fillStyle = "rgba(0,0,0,.88)";
+  context.strokeStyle = field ? "rgba(184,91,74,.66)" : "rgba(255,48,142,.64)";
+  context.lineWidth = 1.5;
+  context.beginPath();
+  context.moveTo(-20, -61);
+  context.lineTo(-2, -70);
+  context.lineTo(21, -59);
+  context.lineTo(18, -24);
+  context.lineTo(-2, -14);
+  context.lineTo(-22, -27);
+  context.closePath();
+  context.fill();
+  context.stroke();
+  context.restore();
+
+  const fissureWidth = opening ? 8 : 2.5 + eyeIgnition * 2.5;
+  context.save();
+  context.globalCompositeOperation = "screen";
+  context.shadowColor = coreColor;
+  context.shadowBlur = opening ? 28 : 14 + eyeIgnition * 8;
+  context.fillStyle = world.boss.flashMs > 0 ? "#ffffff" : coreColor;
+  context.globalAlpha = eyeIgnition;
+  context.beginPath();
+  context.moveTo(-fissureWidth * .35, -60);
+  context.lineTo(fissureWidth * .45, -49);
+  context.lineTo(-fissureWidth * .2, -39);
+  context.lineTo(fissureWidth * .6, -29);
+  context.lineTo(0, -19);
+  context.lineTo(-fissureWidth * .75, -31);
+  context.lineTo(fissureWidth * .1, -42);
+  context.closePath();
+  context.fill();
+  context.restore();
+
+  context.save();
+  context.globalCompositeOperation = "screen";
+  context.globalAlpha = eyeIgnition * (opening ? .92 : .52);
+  context.shadowColor = coreColor;
+  context.shadowBlur = opening ? 22 : 11;
+  context.fillStyle = world.boss.flashMs > 0 ? "#ffffff" : coreColor;
+  context.beginPath();
+  context.moveTo(-12 - (opening ? 4 : 0), -42);
+  context.lineTo(-2, -46);
+  context.lineTo(13 + (opening ? 4 : 0), -42);
+  context.lineTo(2, -38);
+  context.closePath();
+  context.fill();
   context.restore();
 
   if (hitStrength > 0) {
     context.save();
     context.globalCompositeOperation = "screen";
-    context.globalAlpha = hitStrength * .52;
-    context.fillStyle = "#ffffff";
-    drawHexagon(context, field ? 63 : 58);
-    context.fill();
+    context.globalAlpha = hitStrength * .58;
+    drawArchivistSilhouette(context, "#ffffff");
     context.restore();
   }
-
-  context.save();
-  context.rotate(field ? Math.PI / 6 : 0);
-  context.strokeStyle = "rgba(246,237,207,.45)";
-  context.lineWidth = 3;
-  context.beginPath();
-  context.moveTo(-46, -16);
-  context.lineTo(-9, -4);
-  context.lineTo(8, -36);
-  context.moveTo(5, 38);
-  context.lineTo(17, 5);
-  context.lineTo(46, 18);
-  context.stroke();
   context.restore();
 
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.shadowColor = coreColor;
-  context.shadowBlur = world.boss.flashMs > 0 ? 30 : 13;
-  context.fillStyle = world.boss.flashMs > 0 ? "#ffffff" : coreColor;
-  context.font = field ? "900 26px Georgia, serif" : "900 20px ui-monospace, monospace";
-  context.fillText(field ? "消" : opening ? "OPEN" : "NULL", 0, -2);
-  context.shadowBlur = 0;
-
-  if (opening) {
-    context.fillStyle = "#fff0a8";
-    context.font = "900 11px ui-monospace, monospace";
-    context.fillText("CLICK DAMAGE ×2", 0, 113);
-  }
-  context.restore();
-
-  if (world.mode === "destruction" && !reducedMotion) {
+  if (attackableVisual && eyeIgnition > 0) {
     context.save();
     context.translate(x, y);
-    context.strokeStyle = `rgba(255,245,218,${1 - destructionProgress})`;
-    context.lineWidth = 3;
-    for (let index = 0; index < 12; index += 1) {
-      const angle = index * Math.PI / 6 + .13;
-      const inner = 24 + destructionProgress * 36;
-      const outer = 52 + destructionProgress * 180;
+    context.globalAlpha = eyeIgnition * (opening ? .92 : .34);
+    context.strokeStyle = opening ? "#fff0a4" : coreColor;
+    context.lineWidth = opening ? 3 : 1.5;
+    context.setLineDash(opening ? [12, 5] : [8, 10]);
+    context.rotate(reducedMotion ? 0 : seconds * (opening ? .22 : .08));
+    context.beginPath();
+    context.arc(0, 0, FINALE_BOSS_CLICK_RADIUS, 0, Math.PI * 2);
+    context.stroke();
+    context.restore();
+  }
+
+  if (world.mode === "destruction") {
+    context.save();
+    context.translate(x, y);
+    context.globalCompositeOperation = "screen";
+    context.strokeStyle = `rgba(232,255,255,${1 - destructionProgress})`;
+    context.lineWidth = 2.5;
+    for (let index = 0; index < 14; index += 1) {
+      const angle = index * Math.PI / 7 + .13;
+      const inner = 18 + destructionMotion * 32;
+      const outer = 54 + destructionMotion * (150 + index % 4 * 18);
       context.beginPath();
       context.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
       context.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer);
       context.stroke();
     }
+    context.fillStyle = `rgba(230,255,255,${.92 * destructionProgress})`;
+    context.fillRect(-1.5, -84 - destructionMotion * 30, 3, 168 + destructionMotion * 60);
     context.restore();
   }
 }
@@ -689,6 +879,7 @@ function drawWorld(
     drawNullBackground(context, world, reducedMotion);
   }
 
+  drawBossEntranceEnergy(context, world, reducedMotion);
   drawBoss(context, world, reducedMotion);
   if (world.mode === "bulletHell") {
     drawGuildBody(context, world, loadout, images, reducedMotion);
@@ -714,6 +905,8 @@ export function BulletHellFinale({
   loadout,
   mode,
   presentation = "standalone",
+  cursorWeapon,
+  initialCursorPoint,
   seed = 20260810,
   onModeChange,
   onExit,
@@ -740,11 +933,17 @@ export function BulletHellFinale({
   const [scene, setScene] = useState<FinaleScene>("running");
   const [hud, setHud] = useState(() => snapshotFromWorld(initialWorld));
   const [announcement, setAnnouncement] = useState("마지막 스테이지에 기록 말소자가 모습을 드러냅니다.");
+  const [weaponCursorPoint, setWeaponCursorPoint] = useState<WeaponCursorPoint>(() => initialCursorPoint
+    ? { ...initialCursorPoint }
+    : { x: 50, y: 50, visible: false });
   const stats = useMemo(() => deriveFinaleStats(loadout), [loadout]);
   const bossPercent = hud.bossMaxHp ? clamp(hud.bossHp / hud.bossMaxHp * 100, 0, 100) : 0;
   const cyclePercent = hud.mode === "bulletHell"
     ? clamp(hud.cycleRemainingMs / (hud.cycle === "dodge" ? stats.dodgeDurationMs : stats.openingDurationMs) * 100, 0, 100)
     : 0;
+  const bossRevealOpacity = hud.mode === "field"
+    ? smoothstep((hud.modeElapsedMs - FINALE_BOSS_ATTACKABLE_MS + 400) / 400)
+    : 1;
   const musicSignal = finaleMusicForMode(hud.mode);
 
   useEffect(() => {
@@ -862,7 +1061,7 @@ export function BulletHellFinale({
           ? `코어가 닫혀 피해가 감소했습니다. ${event.damage.toFixed(1)} 피해.`
           : `기록 말소자 타격. ${event.damage.toFixed(1)} 피해.`);
     } else if (event?.kind === "miss") {
-      setAnnouncement("공격이 빗나갔습니다. 보스 문양 안쪽을 직접 클릭하세요.");
+      setAnnouncement("공격이 빗나갔습니다. 기록 말소자의 검은 몸체를 직접 클릭하세요.");
     }
     if (before.mode !== next.mode) {
       previousModeRef.current = next.mode;
@@ -1011,11 +1210,22 @@ export function BulletHellFinale({
     };
   }, [renderCanvas, scene]);
 
+  const trackFinaleWeaponCursor = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (event.pointerType !== "mouse") return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setWeaponCursorPoint({
+      x: clamp((event.clientX - rect.left) / Math.max(1, rect.width) * 100, 0, 100),
+      y: clamp((event.clientY - rect.top) / Math.max(1, rect.height) * 100, 0, 100),
+      visible: true,
+    });
+  };
+
   const handleArenaPointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (scene !== "running" || event.button > 0) return;
     const world = worldRef.current;
     if (world.mode !== "field" && world.mode !== "bulletHell") return;
     event.preventDefault();
+    trackFinaleWeaponCursor(event);
     unlockBattleAudio();
     const rect = event.currentTarget.getBoundingClientRect();
     const scale = Math.max(.001, Math.min(rect.width / FINALE_WIDTH, rect.height / FINALE_HEIGHT));
@@ -1127,6 +1337,7 @@ export function BulletHellFinale({
   const phaseLabel = hud.mode === "field" || hud.mode === "collapse" ? "PHASE 1" : "PHASE 2";
   const phaseTwo = hud.mode === "bulletHell" || hud.mode === "destruction" || hud.mode === "whiteout";
   const guildPercent = hud.playerMaxHp ? clamp(hud.playerHp / hud.playerMaxHp * 100, 0, 100) : 0;
+  const showWeaponCursor = Boolean(cursorWeapon) && scene === "running" && (hud.mode === "field" || hud.mode === "bulletHell");
 
   const battleSurface = <div
     ref={arenaRef}
@@ -1142,11 +1353,17 @@ export function BulletHellFinale({
       className={styles.canvas}
       tabIndex={0}
       onPointerDown={handleArenaPointerDown}
+      onPointerMove={trackFinaleWeaponCursor}
+      onPointerLeave={() => setWeaponCursorPoint((current) => ({ ...current, visible: false }))}
       aria-describedby="finale-controls"
       aria-label={hud.mode === "field" ? "마지막 스테이지에 그대로 등장한 기록 말소자를 클릭 공격하는 전장" : "WASD로 길드 건물을 움직이며 기록 말소자를 클릭 공격하는 탄막 전장"}
     />
 
-    <div className={styles.bossOverlay} data-finale-overlay="boss">
+    {showWeaponCursor && cursorWeapon && <div className={styles.weaponCursorLayer} aria-hidden="true">
+      <WeaponCursor weapon={cursorWeapon} point={weaponCursorPoint} />
+    </div>}
+
+    <div className={styles.bossOverlay} data-finale-overlay="boss" style={{ "--boss-reveal": bossRevealOpacity } as CSSProperties}>
       <span><b>기록 말소자</b><em>{hud.mode === "bulletHell" && hud.cycle === "opening" ? "CORE OPEN ×2" : phaseLabel}</em><strong>{Math.ceil(bossPercent)}%</strong></span>
       <div
         className={styles.bossBar}

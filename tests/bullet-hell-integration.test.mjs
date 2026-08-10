@@ -14,6 +14,8 @@ test("continues stage 10-3 inside the same arena instead of replacing the game s
   assert.doesNotMatch(game, /if \(finaleMode\) \{\s*return <BulletHellFinale/);
   assert.match(game, /const combatLocked = finaleMode \|\| battleActive/);
   assert.match(game, /presentation="embedded"/);
+  assert.match(game, /cursorWeapon=\{activeClickPattern\}/);
+  assert.match(game, /initialCursorPoint=\{weaponCursor\}/);
   assert.match(game, /onModeChange=\{setFinaleVisualMode\}/);
   assert.match(game, /seamlessFinale \? finaleFieldAsset\.source : fieldAsset\.source/);
   assert.match(game, /onPointerDown=\{seamlessFinale \? undefined : attackField\}/);
@@ -47,6 +49,52 @@ test("uses deliberate boss clicks in both phases and contains no automatic final
   assert.match(engine, /next\.stats\.clickIntervalMs/);
   assert.doesNotMatch(component, /drawPlayerShot|world\.shots\.forEach|finaleDroneOffsets/);
   assert.doesNotMatch(component, /UPGRADE TRANSLATION|WEAPON TIER|PARTY \{/);
+});
+
+test("keeps the equipped sword cursor while narrowing attacks to the assembled boss body", async () => {
+  const [component, engine, css] = await Promise.all([
+    readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8"),
+    readFile(new URL("app/bullet-hell/engine.ts", root), "utf8"),
+    readFile(new URL("app/bullet-hell/BulletHellFinale.module.css", root), "utf8"),
+  ]);
+
+  assert.match(component, /import \{ WeaponCursor, type WeaponView \}/);
+  assert.match(component, /cursorWeapon\?: WeaponView/);
+  assert.match(component, /initialCursorPoint\?: WeaponCursorPoint/);
+  assert.match(component, /initialCursorPoint[\s\S]*?\{ \.\.\.initialCursorPoint \}/);
+  assert.match(component, /<WeaponCursor weapon=\{cursorWeapon\} point=\{weaponCursorPoint\}/);
+  assert.match(component, /onPointerMove=\{trackFinaleWeaponCursor\}/);
+  assert.match(component, /onPointerLeave=\{\(\) => setWeaponCursorPoint/);
+  assert.match(engine, /FINALE_BOSS_CLICK_RADIUS = 78/);
+  assert.match(engine, /bossClickRadius: FINALE_BOSS_CLICK_RADIUS/);
+  assert.match(css, /\.weaponCursorLayer\s*\{[\s\S]*?z-index: 10;[\s\S]*?pointer-events: none;/);
+  assert.match(css, /@media \(pointer: fine\)[\s\S]*?\.battleSurface \.canvas\s*\{[\s\S]*?cursor: none;/);
+  assert.doesNotMatch(css, /finale-active \.arena > \[data-weapon-tier\]/);
+});
+
+test("assembles an original archivist silhouette from ominous energy before it becomes attackable", async () => {
+  const component = await readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8");
+  const engine = await readFile(new URL("app/bullet-hell/engine.ts", root), "utf8");
+
+  assert.match(engine, /FINALE_BOSS_REVEAL_MS = 1_800/);
+  assert.match(engine, /FINALE_BOSS_ATTACKABLE_MS = 1_700/);
+  assert.match(engine, /mode === "field" && next\.modeElapsedMs < FINALE_BOSS_ATTACKABLE_MS/);
+  assert.match(component, /function drawBossEntranceEnergy/);
+  assert.match(component, /world\.modeElapsedMs \/ FINALE_BOSS_REVEAL_MS/);
+  assert.match(component, /function traceArchivistHead/);
+  assert.match(component, /function traceArchivistMantle/);
+  assert.match(component, /drawArchivistSilhouette/);
+  assert.match(component, /const cyan = field/);
+  assert.match(component, /const magenta = field/);
+  assert.match(component, /const attackableVisual = world\.mode === "field" \|\| world\.mode === "bulletHell"/);
+  assert.match(component, /context\.arc\(0, 0, FINALE_BOSS_CLICK_RADIUS/);
+  assert.doesNotMatch(component, /FINALE_BOSS_CLICK_RADIUS \+ 6/);
+  assert.doesNotMatch(component, /context\.fillText\(field \? "消"/);
+  assert.doesNotMatch(component, /context\.fillText\("CLICK DAMAGE ×2"/);
+
+  const energyLayer = component.indexOf("drawBossEntranceEnergy(context, world, reducedMotion);");
+  const bossLayer = component.indexOf("drawBoss(context, world, reducedMotion);");
+  assert.ok(energyLayer >= 0 && bossLayer >= 0 && energyLayer < bossLayer);
 });
 
 test("removes explanatory panels and exposes only compact accessible combat overlays", async () => {

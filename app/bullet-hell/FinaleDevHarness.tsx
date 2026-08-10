@@ -1,12 +1,26 @@
 "use client";
 
 import { useMemo, useState, type CSSProperties } from "react";
+import type { WeaponView } from "../guild-hub/WeaponArt";
 import BulletHellFinale from "./BulletHellFinale";
 import type { FinaleLoadout } from "./engine";
 
 const HALL_MIN = 1;
 const HALL_MAX = 6;
 const SEED_MAX = 2_147_483_647;
+const PREVIEW_CURSOR_WEAPON: WeaponView = {
+  key: "myriad-blades-one",
+  weaponName: "길드마스터 신검",
+  title: "만검귀일",
+  subtitle: "장착 무기 커서 미리보기",
+  glyph: "神",
+  tier: 14,
+  visualHits: 25,
+  variants: 4,
+  duration: 2_200,
+  cost: 0,
+  damageScale: 1,
+};
 
 type HarnessResult = "victory" | "exit" | null;
 
@@ -95,6 +109,7 @@ export function FinaleDevHarness() {
       key={`finale-event-preview-${hallLevel}-${sessionSeed}-${sessionVersion}`}
       loadout={loadout}
       mode="preview"
+      cursorWeapon={PREVIEW_CURSOR_WEAPON}
       seed={sessionSeed}
       onExit={() => {
         setPlaying(false);

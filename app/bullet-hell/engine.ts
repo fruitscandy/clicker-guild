@@ -8,6 +8,9 @@ export const FINALE_DODGE_MS = 6_000;
 export const FINALE_OPENING_MS = 2_500;
 export const FINALE_COLLAPSE_MS = 1_800;
 export const FINALE_DESTRUCTION_MS = 1_600;
+export const FINALE_BOSS_REVEAL_MS = 1_800;
+export const FINALE_BOSS_ATTACKABLE_MS = 1_700;
+export const FINALE_BOSS_CLICK_RADIUS = 78;
 
 const FIXED_STEP_MS = 16;
 const MAX_UPDATE_MS = 512;
@@ -327,7 +330,7 @@ export function deriveFinaleStats(loadout: FinaleLoadout): FinaleStats {
     clickDamage,
     openingMultiplier: 2,
     clickIntervalMs: FINALE_CLICK_INTERVAL_MS,
-    bossClickRadius: 110,
+    bossClickRadius: FINALE_BOSS_CLICK_RADIUS,
     dodgeDurationMs: FINALE_DODGE_MS,
     openingDurationMs: FINALE_OPENING_MS,
     collapseDurationMs: FINALE_COLLAPSE_MS,
@@ -538,7 +541,7 @@ function configurePhaseTwo(world: FinaleWorld) {
   world.phase = 2;
   world.boss.phase = 2;
   world.boss.x = FINALE_WIDTH / 2;
-  world.boss.y = 118;
+  world.boss.y = 150;
   world.boss.hp = PHASE_TWO_HP;
   world.boss.maxHp = PHASE_TWO_HP;
   world.boss.phaseElapsed = 0;
@@ -850,6 +853,7 @@ export function attackFinaleBoss(
   next.defeat = false;
   const attackable = next.status === "playing" && (next.mode === "field" || next.mode === "bulletHell");
   if (!attackable) return next;
+  if (next.mode === "field" && next.modeElapsedMs < FINALE_BOSS_ATTACKABLE_MS) return next;
 
   const attackX = finiteOr(x, Number.NEGATIVE_INFINITY);
   const attackY = finiteOr(y, Number.NEGATIVE_INFINITY);
