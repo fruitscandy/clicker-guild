@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- animated VFX layers need direct local image elements without layout wrappers */
+
 import type { CSSProperties } from "react";
 import {
   SPECIAL_ATTACK_ORDER,
@@ -19,38 +21,48 @@ type SpecialAttackLayerProps = {
   now: number;
 };
 
-const LIGHTNING_SEGMENTS = [
-  { x: -23, y: -184, length: 86, angle: 16, width: 9 },
-  { x: -12, y: -106, length: 72, angle: -21, width: 8 },
-  { x: -24, y: -40, length: 70, angle: 18, width: 7 },
-  { x: -10, y: 22, length: 58, angle: -13, width: 6 },
-];
-
 function LightningEffect() {
   return (
     <div className={styles.lightningStage}>
+      <i className={styles.lightningStormVeil} />
       <i className={styles.lightningCloud} />
-      <i className={styles.lightningSkyFlash} />
-      <span className={styles.lightningBolt}>
-        {LIGHTNING_SEGMENTS.map((segment, index) => (
-          <i
-            key={index}
-            style={{
-              "--bolt-x": `${segment.x}px`,
-              "--bolt-y": `${segment.y}px`,
-              "--bolt-length": `${segment.length}px`,
-              "--bolt-angle": `${segment.angle}deg`,
-              "--bolt-width": `${segment.width}px`,
-              "--bolt-index": index,
-            } as CSSProperties}
-          />
+      <span className={styles.lightningChargeArcs}>
+        {Array.from({ length: 6 }, (_, index) => (
+          <i key={index} style={{ "--charge-angle": `${index * 60}deg` } as CSSProperties} />
         ))}
       </span>
+      <i className={styles.lightningSkyFlash} />
+      <svg className={styles.lightningBolt} viewBox="0 0 460 540" preserveAspectRatio="none">
+        <g className={styles.lightningBoltGlow}>
+          <path pathLength="100" d="M244 0 L216 36 L238 67 L198 97 L226 126 L178 163 L205 194 L157 231 L193 257 L144 294 L174 324 L127 361 L164 391 L115 429 L151 459 L102 497 L126 535" />
+          <path pathLength="100" d="M198 97 L164 101 L145 122 L96 151" />
+          <path pathLength="100" d="M157 231 L201 228 L232 247 L294 276" />
+          <path pathLength="100" d="M127 361 L90 367 L61 390 L22 409" />
+          <path pathLength="100" d="M115 429 L166 429 L204 450 L274 463" />
+        </g>
+        <g className={styles.lightningBoltCore}>
+          <path pathLength="100" d="M244 0 L216 36 L238 67 L198 97 L226 126 L178 163 L205 194 L157 231 L193 257 L144 294 L174 324 L127 361 L164 391 L115 429 L151 459 L102 497 L126 535" />
+          <path pathLength="100" d="M198 97 L164 101 L145 122 L96 151" />
+          <path pathLength="100" d="M157 231 L201 228 L232 247 L294 276" />
+          <path pathLength="100" d="M127 361 L90 367 L61 390 L22 409" />
+          <path pathLength="100" d="M115 429 L166 429 L204 450 L274 463" />
+        </g>
+      </svg>
       <span className={styles.lightningBranches}>
         {Array.from({ length: 8 }, (_, index) => (
           <i key={index} style={{ "--branch-index": index } as CSSProperties} />
         ))}
       </span>
+      <span className={styles.lightningAfterbolts}>
+        {Array.from({ length: 3 }, (_, index) => (
+          <i key={index} style={{
+            "--afterbolt-x": `${(index - 1) * 82 - 4}px`,
+            "--afterbolt-angle": `${(index - 1) * 17}deg`,
+            "--afterbolt-delay": `${590 + index * 92}ms`,
+          } as CSSProperties} />
+        ))}
+      </span>
+      <img className={styles.lightningImpactTexture} src="/assets/vfx/special/special-lightning-impact-v3-alpha.webp" alt="" draggable={false} />
       <i className={styles.lightningImpact} />
       <i className={styles.lightningGroundArc} />
       <span className={styles.lightningSparks}>
@@ -69,15 +81,38 @@ function LightningEffect() {
 function TornadoEffect() {
   return (
     <div className={styles.tornadoStage}>
+      <i className={styles.tornadoPressure} />
+      <span className={styles.tornadoInflow}>
+        {Array.from({ length: 16 }, (_, index) => (
+          <i key={index} style={{
+            "--inflow-angle": `${index * 22.5}deg`,
+            "--inflow-delay": `${index % 5 * 34}ms`,
+            "--inflow-length": `${92 + index % 4 * 28}px`,
+          } as CSSProperties} />
+        ))}
+      </span>
+      <i className={styles.tornadoSeed} />
       <i className={styles.tornadoDust} />
       <i className={styles.tornadoCore} />
+      <img className={styles.tornadoTexture} src="/assets/vfx/special/special-tornado-funnel-v3-alpha.webp" alt="" draggable={false} />
+      <span className={styles.tornadoFilaments}>
+        {Array.from({ length: 28 }, (_, index) => (
+          <i key={index} style={{
+            "--filament-x": `${(index % 7 - 3) * 24}px`,
+            "--filament-height": `${118 + index % 6 * 43}px`,
+            "--filament-width": `${82 + index % 5 * 28}px`,
+            "--filament-delay": `${380 + index % 9 * 86}ms`,
+            "--filament-duration": `${720 + index % 4 * 150}ms`,
+          } as CSSProperties} />
+        ))}
+      </span>
       <span className={styles.tornadoBands}>
-        {Array.from({ length: 7 }, (_, index) => (
+        {Array.from({ length: 9 }, (_, index) => (
           <i key={index} style={{ "--band-index": index } as CSSProperties} />
         ))}
       </span>
       <span className={styles.tornadoDebris}>
-        {Array.from({ length: 14 }, (_, index) => (
+        {Array.from({ length: 22 }, (_, index) => (
           <i key={index} style={{
             "--debris-angle": `${index * 25.72}deg`,
             "--debris-radius": `${76 + index % 5 * 25}px`,
@@ -95,12 +130,19 @@ function MeteorEffect() {
   return (
     <div className={styles.meteorStage}>
       <span className={styles.meteorFlight}>
+        <i className={styles.meteorBowShock} />
         <i className={styles.meteorTrailWide} />
         <i className={styles.meteorTrailHot} />
         <i className={styles.meteorRock}><b /><em /></i>
       </span>
       <i className={styles.meteorGroundWarning} />
+      <img className={styles.meteorImpactTexture} src="/assets/vfx/special/special-meteor-impact-v3-alpha.webp" alt="" draggable={false} />
       <i className={styles.meteorImpactFlash} />
+      <span className={styles.meteorBlastRays}>
+        {Array.from({ length: 12 }, (_, index) => (
+          <i key={index} style={{ "--blast-angle": `${index * 30}deg` } as CSSProperties} />
+        ))}
+      </span>
       <i className={styles.meteorShockwave} />
       <i className={styles.meteorCrater} />
       <span className={styles.meteorFragments}>
@@ -108,7 +150,7 @@ function MeteorEffect() {
           <i key={index} style={{
             "--fragment-angle": `${index * 22.5}deg`,
             "--fragment-distance": `${92 + index % 4 * 31}px`,
-            "--fragment-delay": `${720 + index % 3 * 24}ms`,
+            "--fragment-delay": `${980 + index % 3 * 24}ms`,
           } as CSSProperties} />
         ))}
       </span>
@@ -117,7 +159,7 @@ function MeteorEffect() {
           <i key={index} style={{
             "--smoke-x": `${(index - 3) * 34}px`,
             "--smoke-y": `${-26 - Math.abs(index - 3) * 9}px`,
-            "--smoke-delay": `${760 + index * 42}ms`,
+            "--smoke-delay": `${1_020 + index * 42}ms`,
           } as CSSProperties} />
         ))}
       </span>

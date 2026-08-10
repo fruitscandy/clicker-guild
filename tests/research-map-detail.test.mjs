@@ -76,10 +76,11 @@ test("mounts disconnected special attacks inside the same board and opens a purc
   assert.match(styles, /\.specialNode\[data-kind="lightning"\]/);
   assert.match(styles, /\.specialNode\[data-kind="tornado"\]/);
   assert.match(styles, /\.specialNode\[data-kind="meteor"\]/);
-  assert.match(specialPanel, /previewLightningBolt/);
-  assert.match(specialPanel, /previewTornadoBands/);
-  assert.match(specialPanel, /previewMeteorRock/);
-  assert.doesNotMatch(`${specialPanel}\n${styles}`, /--spell-art|\/assets\/vfx\/special\//);
+  assert.match(specialPanel, /previewArtwork/);
+  assert.match(specialPanel, /special-lightning-v3\.webp/);
+  assert.match(specialPanel, /special-tornado-v3\.webp/);
+  assert.match(specialPanel, /special-meteor-v3\.webp/);
+  assert.doesNotMatch(`${specialPanel}\n${styles}`, /--spell-art/);
   assert.doesNotMatch(styles, /outerOrbit|ritualGrid|satelliteField/);
   assert.match(styles, /\.detailPanel/);
 });

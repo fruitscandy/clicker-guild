@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- this fixed-size animated preview uses project-local artwork */
+
 import { useEffect, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -20,6 +22,12 @@ type SpecialResearchPanelProps = {
   developerMode?: boolean;
 };
 
+const SPECIAL_PREVIEW_ART: Record<SpecialAttackKind, string> = {
+  lightning: "/assets/vfx/special/special-lightning-v3.webp",
+  tornado: "/assets/vfx/special/special-tornado-v3.webp",
+  meteor: "/assets/vfx/special/special-meteor-v3.webp",
+};
+
 function SpellPreview({ kind }: { kind: SpecialAttackKind }) {
   const attack = SPECIAL_ATTACKS[kind];
   return (
@@ -28,26 +36,9 @@ function SpellPreview({ kind }: { kind: SpecialAttackKind }) {
       style={{ "--special-accent": attack.accent } as CSSProperties}
       aria-hidden="true"
     >
+      <img className={styles.previewArtwork} src={SPECIAL_PREVIEW_ART[kind]} alt="" draggable={false} />
       <i className={styles.previewField} />
-      {kind === "lightning" ? (
-        <>
-          <i className={styles.previewLightningCloud} />
-          <span className={styles.previewLightningBolt}><i /><i /><i /></span>
-          <i className={styles.previewLightningImpact} />
-        </>
-      ) : kind === "tornado" ? (
-        <>
-          <i className={styles.previewTornadoCore} />
-          <span className={styles.previewTornadoBands}><i /><i /><i /><i /></span>
-          <i className={styles.previewTornadoBase} />
-        </>
-      ) : (
-        <>
-          <i className={styles.previewMeteorTrail} />
-          <i className={styles.previewMeteorRock} />
-          <i className={styles.previewMeteorImpact} />
-        </>
-      )}
+      <i className={styles.previewSheen} />
       <span className={styles.previewParticles}>
         {Array.from({ length: 8 }, (_, index) => (
           <i

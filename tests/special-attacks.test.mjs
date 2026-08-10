@@ -93,19 +93,36 @@ test("새 특수공격 원화만으로 전장 연출을 구성하고 기존 합�
   assert.match(layer, /meteorFlight/);
   assert.match(layer, /specialMonsterEffectStyle/);
   assert.doesNotMatch(layer, /effectTitle|--spell-art|attack\.art/);
-  assert.doesNotMatch(panel, /previewArtwork|--spell-art|attack\.art/);
-  assert.doesNotMatch(`${layer}\n${layerStyles}\n${panel}\n${panelStyles}`, /\/assets\/vfx\/special\//);
+  assert.doesNotMatch(panel, /--spell-art|attack\.art/);
+  assert.doesNotMatch(`${layer}\n${layerStyles}`, /special-(?:lightning|tornado|meteor)-v2|(?:tornado-twirl|meteor-explosion|lightning-arc)\.png/);
+  assert.match(layer, /special-lightning-impact-v3-alpha\.webp/);
+  assert.match(layer, /special-tornado-funnel-v3-alpha\.webp/);
+  assert.match(layer, /special-meteor-impact-v3-alpha\.webp/);
   assert.match(layerStyles, /@keyframes lightningBoltForm/);
+  assert.match(layerStyles, /@keyframes lightningChargeArc/);
   assert.match(layerStyles, /@keyframes tornadoBandSpin/);
+  assert.match(layerStyles, /@keyframes tornadoInflow/);
   assert.match(layerStyles, /@keyframes meteorFlight/);
+  assert.match(layerStyles, /@keyframes meteorBlastRay/);
   assert.match(layerStyles, /monsterElectricCage/);
   assert.match(layerStyles, /monsterTornadoPull/);
   assert.match(layerStyles, /monsterMeteorKnockback/);
   assert.match(layer, /specialMonsterClassName/);
   assert.match(panel, /특수 공격/);
-  assert.match(panel, /previewLightningBolt/);
-  assert.match(panel, /previewTornadoBands/);
-  assert.match(panel, /previewMeteorRock/);
+  assert.match(panel, /previewArtwork/);
+  assert.match(panel, /special-lightning-v3\.webp/);
+  assert.match(panel, /special-tornado-v3\.webp/);
+  assert.match(panel, /special-meteor-v3\.webp/);
+  assert.match(panelStyles, /\.previewArtwork/);
+  assert.match(panelStyles, /@keyframes previewSheen/);
+  for (const kind of ["lightning", "tornado", "meteor"]) {
+    const artwork = await readFile(new URL(`../public/assets/vfx/special/special-${kind}-v3.webp`, import.meta.url));
+    assert.ok(artwork.byteLength > 50_000, `${kind} node art`);
+  }
+  for (const filename of ["special-lightning-impact-v3-alpha.webp", "special-tornado-funnel-v3-alpha.webp", "special-meteor-impact-v3-alpha.webp"]) {
+    const texture = await readFile(new URL(`../public/assets/vfx/special/${filename}`, import.meta.url));
+    assert.ok(texture.byteLength > 70_000, filename);
+  }
   assert.doesNotMatch(panel, /연결선 없는 독립 노드|detailGlyph/);
   assert.match(audio, /playLightning/);
   assert.match(audio, /playTornado/);

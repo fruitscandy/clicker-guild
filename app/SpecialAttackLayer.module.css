@@ -27,9 +27,24 @@
 
 /* Lightning is assembled from a cloud flash, a segmented bolt and live ground arcs. */
 .lightningStage {
-  width: 380px;
-  height: 520px;
-  translate: -50% -82%;
+  width: 460px;
+  height: 620px;
+  translate: -50% -86%;
+}
+
+.lightningStormVeil {
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  top: 44%;
+  width: 1180px;
+  height: 720px;
+  translate: -50% -50%;
+  background:
+    radial-gradient(ellipse at 50% 34%, rgba(30, 69, 132, .42), rgba(7, 14, 29, .24) 43%, transparent 72%),
+    repeating-radial-gradient(ellipse at 50% 36%, transparent 0 36px, rgba(73, 142, 230, .035) 38px 42px, transparent 45px 70px);
+  mix-blend-mode: multiply;
+  animation: lightningStormVeil 1.45s ease-out both;
 }
 
 .lightningCloud {
@@ -46,7 +61,30 @@
     radial-gradient(ellipse at 78% 65%, rgba(81, 117, 168, .52), transparent 48%);
   filter: blur(8px) drop-shadow(0 10px 18px rgba(45, 113, 212, .5));
   mix-blend-mode: screen;
-  animation: lightningCloudGather .78s ease-out both;
+  animation: lightningCloudGather 1.05s ease-out both;
+}
+
+.lightningChargeArcs {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 94px;
+  width: 1px;
+  height: 1px;
+}
+
+.lightningChargeArcs > i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 86px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(123, 216, 255, .54), white 70%, transparent);
+  border-radius: 99px;
+  filter: drop-shadow(0 0 6px #42bfff);
+  rotate: var(--charge-angle);
+  transform-origin: 0 50%;
+  animation: lightningChargeArc .38s calc(var(--charge-index) * 42ms) ease-in-out 2 alternate both;
 }
 
 .lightningSkyFlash {
@@ -55,33 +93,33 @@
   inset: -30% -96% -4%;
   background: radial-gradient(ellipse at 50% 20%, rgba(244, 252, 255, .96), rgba(96, 192, 255, .32) 18%, rgba(61, 108, 215, .11) 42%, transparent 68%);
   mix-blend-mode: screen;
-  animation: lightningSkyFlash .84s steps(2, end) both;
+  animation: lightningSkyFlash 1.18s steps(2, end) both;
 }
 
 .lightningBolt {
   position: absolute;
   z-index: 6;
-  left: 50%;
-  bottom: 71px;
-  width: 1px;
-  height: 1px;
-  filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 10px #54ccff) drop-shadow(0 0 24px #3677ff);
+  inset: 22px 0 58px;
+  width: 460px;
+  height: 540px;
+  overflow: visible;
+  filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 13px #54ccff) drop-shadow(0 0 30px #3677ff);
 }
 
-.lightningBolt > i {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: var(--bolt-width);
-  height: var(--bolt-length);
-  background: linear-gradient(90deg, #68bfff, #fff 32% 68%, #85ebff);
-  border-radius: 999px 999px 56% 56%;
-  clip-path: polygon(34% 0, 100% 0, 67% 42%, 96% 42%, 18% 100%, 38% 52%, 0 52%);
+.lightningBolt path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: bevel;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
   opacity: 0;
-  transform: translate(var(--bolt-x), var(--bolt-y)) rotate(var(--bolt-angle)) scaleY(.08);
-  transform-origin: 50% 0;
-  animation: lightningBoltForm .56s calc(80ms + var(--bolt-index) * 24ms) steps(2, end) both;
+  animation: lightningBoltForm .86s 130ms cubic-bezier(.16, .72, .2, 1) both;
 }
+
+.lightningBolt path:not(:first-child) { animation: lightningBranchTrace .62s 370ms ease-out both; }
+.lightningBoltGlow path { stroke: rgba(55, 143, 255, .6); stroke-width: 14px; filter: blur(6px); }
+.lightningBoltCore path { stroke: #effdff; stroke-width: 3px; }
+.lightningBoltCore path:first-child { stroke-width: 5px; }
 
 .lightningBranches,
 .lightningSparks {
@@ -104,7 +142,7 @@
   filter: drop-shadow(0 0 6px #44bfff);
   opacity: 0;
   transform-origin: 0 50%;
-  animation: lightningBranch .7s 210ms ease-out both;
+  animation: lightningBranch .78s 470ms ease-out both;
 }
 
 .lightningBranches > i:nth-child(1) { rotate: 7deg; scale: 1 .6; }
@@ -115,6 +153,44 @@
 .lightningBranches > i:nth-child(6) { rotate: 225deg; scale: .7 .6; }
 .lightningBranches > i:nth-child(7) { rotate: 279deg; scale: .5 .55; }
 .lightningBranches > i:nth-child(8) { rotate: 326deg; scale: .9 .66; }
+
+.lightningAfterbolts {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 70px;
+  width: 1px;
+  height: 1px;
+}
+
+.lightningAfterbolts > i {
+  position: absolute;
+  left: var(--afterbolt-x);
+  bottom: 0;
+  width: 8px;
+  height: 150px;
+  background: linear-gradient(90deg, #5ebeff, white 38% 68%, #7de8ff);
+  clip-path: polygon(34% 0, 100% 0, 61% 38%, 100% 38%, 15% 100%, 39% 54%, 0 54%);
+  filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 11px #47c2ff);
+  rotate: var(--afterbolt-angle);
+  transform-origin: 50% 100%;
+  animation: lightningAfterbolt .42s var(--afterbolt-delay) steps(2, end) both;
+}
+
+.lightningImpactTexture {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: -168px;
+  width: 500px;
+  height: 500px;
+  translate: -50% 0;
+  object-fit: cover;
+  mix-blend-mode: normal;
+  opacity: 0;
+  filter: saturate(1.15) contrast(1.18) drop-shadow(0 0 18px #248cff);
+  animation: lightningImpactTexture 1.02s 440ms cubic-bezier(.08, .7, .16, 1) both;
+}
 
 .lightningImpact {
   position: absolute;
@@ -128,7 +204,7 @@
   border-radius: 50%;
   filter: blur(2px);
   mix-blend-mode: screen;
-  animation: lightningImpact .86s 180ms ease-out both;
+  animation: lightningImpact 1.02s 470ms ease-out both;
 }
 
 .lightningGroundArc {
@@ -144,7 +220,7 @@
   border-left-color: rgba(73, 187, 255, .3);
   border-radius: 50%;
   box-shadow: 0 0 16px #49c7ff, inset 0 0 13px rgba(98, 213, 255, .65);
-  animation: lightningGroundArc .72s 210ms ease-out both;
+  animation: lightningGroundArc .92s 490ms ease-out both;
 }
 
 .lightningSparks > i {
@@ -159,15 +235,66 @@
   opacity: 0;
   transform-origin: 0 50%;
   rotate: var(--spark-angle);
-  animation: lightningSpark .52s var(--spark-delay) ease-out both;
+  animation: lightningSpark .72s calc(var(--spark-delay) + 300ms) ease-out both;
 }
 
 /* Tornado uses independent rotating bands so the wind keeps moving instead of popping in as one image. */
 .tornadoStage {
-  width: 460px;
-  height: 430px;
-  translate: -50% -69%;
+  width: 560px;
+  height: 470px;
+  translate: -50% -72%;
   animation: tornadoStageDrift var(--effect-duration) ease-in-out both;
+}
+
+.tornadoPressure {
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  bottom: -30px;
+  width: 980px;
+  height: 520px;
+  translate: -50% 0;
+  background: radial-gradient(ellipse at 50% 82%, rgba(85, 225, 195, .22), rgba(8, 43, 44, .18) 40%, transparent 70%);
+  mix-blend-mode: screen;
+  animation: tornadoPressure var(--effect-duration) ease-in-out both;
+}
+
+.tornadoInflow {
+  position: absolute;
+  z-index: 9;
+  left: 50%;
+  bottom: 46px;
+  width: 1px;
+  height: 1px;
+}
+
+.tornadoInflow > i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--inflow-length);
+  height: 5px;
+  background: linear-gradient(90deg, transparent, rgba(229, 255, 246, .76) 42%, #fff 78%, transparent);
+  border-radius: 99px;
+  filter: blur(.3px) drop-shadow(0 0 7px #57dec2);
+  rotate: var(--inflow-angle);
+  transform-origin: 0 50%;
+  animation: tornadoInflow .62s var(--inflow-delay) cubic-bezier(.3, .02, .35, 1) both;
+}
+
+.tornadoSeed {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  bottom: 39px;
+  width: 82px;
+  height: 29px;
+  translate: -50% 50%;
+  background: conic-gradient(transparent, #eafff7, transparent 31%, #54d9bd, transparent 63%, #caffef, transparent);
+  border-radius: 50%;
+  filter: drop-shadow(0 0 13px #61e4c7);
+  mask: radial-gradient(ellipse, transparent 34%, #000 41% 64%, transparent 70%);
+  animation: tornadoSeedGrow .78s linear both;
 }
 
 .tornadoDust {
@@ -183,7 +310,7 @@
     repeating-radial-gradient(ellipse, rgba(224, 209, 162, .16) 0 4px, transparent 7px 15px);
   border-radius: 50%;
   filter: blur(6px);
-  animation: tornadoDustPulse 1.1s linear infinite, tornadoReveal var(--effect-duration) ease-in-out both;
+  animation: tornadoDustPulse 1.1s linear infinite, tornadoDustBuild var(--effect-duration) ease-in-out both;
 }
 
 .tornadoCore {
@@ -191,44 +318,98 @@
   z-index: 2;
   left: 50%;
   bottom: 39px;
-  width: 122px;
+  width: 190px;
   height: 314px;
   translate: -50% 0;
   background:
-    linear-gradient(90deg, transparent, rgba(226, 255, 245, .34) 26%, rgba(102, 231, 200, .66) 49%, rgba(238, 255, 247, .38) 67%, transparent),
-    linear-gradient(180deg, rgba(170, 241, 224, .08), rgba(64, 189, 170, .38) 62%, rgba(25, 100, 96, .06));
-  clip-path: polygon(25% 0, 75% 0, 64% 34%, 88% 60%, 66% 100%, 34% 100%, 12% 60%, 36% 34%);
-  filter: blur(7px) drop-shadow(0 0 25px rgba(80, 229, 199, .72));
-  animation: tornadoCoreBreathe .72s ease-in-out infinite alternate, tornadoReveal var(--effect-duration) ease-in-out both;
+    repeating-linear-gradient(167deg, transparent 0 18px, rgba(238, 255, 249, .3) 20px 24px, rgba(72, 203, 181, .12) 27px 33px, transparent 37px 52px),
+    linear-gradient(90deg, transparent, rgba(226, 255, 245, .14) 21%, rgba(73, 207, 184, .36) 48%, rgba(238, 255, 247, .18) 72%, transparent),
+    linear-gradient(180deg, rgba(170, 241, 224, .03), rgba(42, 165, 150, .24) 64%, rgba(18, 79, 78, .02));
+  border-radius: 48% 52% 34% 38%;
+  filter: blur(10px) drop-shadow(0 0 25px rgba(80, 229, 199, .52));
+  mask: linear-gradient(180deg, transparent, #000 14% 91%, transparent);
+  animation: tornadoCoreBreathe .72s ease-in-out infinite alternate, tornadoCoreBuild var(--effect-duration) ease-in-out both;
+}
+
+.tornadoCore::before,
+.tornadoCore::after {
+  position: absolute;
+  inset: 4% 18%;
+  content: "";
+  background: repeating-linear-gradient(22deg, transparent 0 23px, rgba(234, 255, 248, .68) 26px 30px, transparent 34px 48px);
+  filter: blur(2px);
+  animation: tornadoInnerShear .44s ease-in-out infinite alternate;
+}
+
+.tornadoCore::after { inset: 12% 4%; rotate: 21deg; opacity: .58; animation-direction: alternate-reverse; }
+
+.tornadoTexture {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 17px;
+  width: 450px;
+  height: 450px;
+  translate: -50% 0;
+  object-fit: cover;
+  mix-blend-mode: normal;
+  opacity: 0;
+  filter: saturate(1.12) contrast(1.14) drop-shadow(0 0 20px rgba(81, 222, 194, .78));
+  animation: tornadoTextureBuild var(--effect-duration) ease-in-out both;
+}
+
+.tornadoFilaments {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 43px;
+  width: 1px;
+  height: 1px;
+}
+
+.tornadoFilaments > i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--filament-width);
+  height: 34px;
+  border-top: 2px solid rgba(230, 255, 247, .46);
+  border-right: 1px solid rgba(78, 221, 194, .3);
+  border-radius: 50%;
+  filter: blur(1.1px) drop-shadow(0 0 7px rgba(88, 220, 191, .72));
+  opacity: 0;
+  animation: tornadoFilamentRise var(--filament-duration) var(--filament-delay) cubic-bezier(.18, .48, .35, 1) infinite;
 }
 
 .tornadoBands {
   position: absolute;
   z-index: 5;
   inset: 0;
-  filter: drop-shadow(0 0 9px rgba(104, 245, 214, .68));
+  filter: blur(.35px) drop-shadow(0 0 10px rgba(104, 245, 214, .48));
 }
 
 .tornadoBands > i {
   position: absolute;
   left: 50%;
-  border: 7px solid transparent;
-  border-top-color: rgba(231, 255, 246, .9);
-  border-right-color: rgba(93, 232, 202, .78);
-  border-bottom-color: rgba(65, 173, 162, .28);
+  border: 2px solid transparent;
+  border-top-color: rgba(231, 255, 246, .44);
+  border-right-color: rgba(93, 232, 202, .34);
+  border-bottom-color: rgba(65, 173, 162, .14);
   border-radius: 50%;
   translate: -50% 0;
   transform: skewX(-12deg);
-  animation: tornadoBandSpin .74s linear infinite, tornadoReveal var(--effect-duration) ease-in-out both;
+  animation: tornadoBandSpin .74s linear infinite, tornadoBandBuild var(--effect-duration) ease-in-out both;
 }
 
-.tornadoBands > i:nth-child(1) { bottom: 40px; width: 92px; height: 28px; animation-duration: .52s, var(--effect-duration); }
-.tornadoBands > i:nth-child(2) { bottom: 78px; width: 138px; height: 36px; animation-duration: .6s, var(--effect-duration); animation-direction: reverse, normal; }
-.tornadoBands > i:nth-child(3) { bottom: 121px; width: 188px; height: 45px; animation-duration: .68s, var(--effect-duration); }
-.tornadoBands > i:nth-child(4) { bottom: 166px; width: 238px; height: 54px; animation-duration: .76s, var(--effect-duration); animation-direction: reverse, normal; }
-.tornadoBands > i:nth-child(5) { bottom: 214px; width: 284px; height: 61px; animation-duration: .84s, var(--effect-duration); }
-.tornadoBands > i:nth-child(6) { bottom: 261px; width: 318px; height: 66px; animation-duration: .92s, var(--effect-duration); animation-direction: reverse, normal; }
-.tornadoBands > i:nth-child(7) { bottom: 306px; width: 344px; height: 70px; animation-duration: 1s, var(--effect-duration); }
+.tornadoBands > i:nth-child(1) { bottom: 40px; width: 82px; height: 24px; animation-duration: .46s, var(--effect-duration); }
+.tornadoBands > i:nth-child(2) { bottom: 72px; width: 116px; height: 31px; animation-duration: .52s, var(--effect-duration); animation-direction: reverse, normal; }
+.tornadoBands > i:nth-child(3) { bottom: 105px; width: 154px; height: 37px; animation-duration: .58s, var(--effect-duration); }
+.tornadoBands > i:nth-child(4) { bottom: 139px; width: 193px; height: 43px; animation-duration: .64s, var(--effect-duration); animation-direction: reverse, normal; }
+.tornadoBands > i:nth-child(5) { bottom: 176px; width: 233px; height: 50px; animation-duration: .7s, var(--effect-duration); }
+.tornadoBands > i:nth-child(6) { bottom: 215px; width: 274px; height: 56px; animation-duration: .76s, var(--effect-duration); animation-direction: reverse, normal; }
+.tornadoBands > i:nth-child(7) { bottom: 255px; width: 312px; height: 61px; animation-duration: .82s, var(--effect-duration); }
+.tornadoBands > i:nth-child(8) { bottom: 296px; width: 346px; height: 66px; animation-duration: .9s, var(--effect-duration); animation-direction: reverse, normal; }
+.tornadoBands > i:nth-child(9) { bottom: 337px; width: 374px; height: 70px; animation-duration: .98s, var(--effect-duration); }
 
 .tornadoDebris {
   position: absolute;
@@ -249,7 +430,7 @@
   border-radius: 40% 60% 35% 55%;
   box-shadow: 0 0 6px rgba(202, 244, 210, .6);
   transform-origin: 4px calc(var(--debris-height) * -1);
-  animation: tornadoDebrisOrbit 1.15s var(--debris-delay) linear infinite, tornadoReveal var(--effect-duration) ease-in-out both;
+  animation: tornadoDebrisOrbit 1.15s var(--debris-delay) linear infinite, tornadoDebrisBuild var(--effect-duration) ease-in-out both;
 }
 
 .tornadoGroundSpiral {
@@ -264,14 +445,28 @@
   border-radius: 50%;
   filter: blur(2px) drop-shadow(0 0 15px rgba(79, 218, 190, .74));
   mask: radial-gradient(ellipse, transparent 41%, #000 45% 59%, transparent 64%);
-  animation: tornadoGroundSpin .82s linear infinite, tornadoReveal var(--effect-duration) ease-in-out both;
+  animation: tornadoGroundSpin .82s linear infinite, tornadoGroundBuild var(--effect-duration) ease-in-out both;
 }
 
 /* Meteor has a moving rock, hot trail, timed impact, debris and smoke. */
 .meteorStage {
-  width: 620px;
-  height: 520px;
-  translate: -50% -72%;
+  width: 760px;
+  height: 620px;
+  translate: -50% -78%;
+}
+
+.meteorStage::after {
+  position: absolute;
+  z-index: 7;
+  left: 50%;
+  bottom: -45px;
+  width: 1260px;
+  height: 720px;
+  translate: -50% 0;
+  content: "";
+  background: radial-gradient(ellipse at 50% 82%, rgba(255, 251, 219, .92), rgba(255, 146, 49, .42) 16%, rgba(255, 57, 16, .15) 34%, transparent 67%);
+  mix-blend-mode: screen;
+  animation: meteorFieldFlash 1.3s var(--effect-delay) ease-out both;
 }
 
 .meteorFlight {
@@ -281,7 +476,23 @@
   bottom: 69px;
   width: 1px;
   height: 1px;
-  animation: meteorFlight var(--effect-delay) cubic-bezier(.46, .03, .86, .32) both;
+  animation: meteorFlight var(--effect-delay) cubic-bezier(.34, .02, .82, .24) both;
+}
+
+.meteorBowShock {
+  position: absolute;
+  z-index: 9;
+  left: -66px;
+  top: -62px;
+  width: 132px;
+  height: 118px;
+  border: 5px solid rgba(255, 238, 170, .86);
+  border-top-color: transparent;
+  border-left-color: transparent;
+  border-radius: 50%;
+  filter: blur(1px) drop-shadow(0 0 13px #ff6120);
+  rotate: 40deg;
+  animation: meteorBowShock .18s ease-in-out infinite alternate;
 }
 
 .meteorFlight::before,
@@ -311,7 +522,7 @@
   height: 76px;
   transform: rotate(39deg);
   transform-origin: 100% 50%;
-  clip-path: polygon(0 46%, 100% 0, 100% 100%);
+  clip-path: polygon(0 48%, 22% 34%, 15% 51%, 40% 27%, 32% 55%, 60% 34%, 52% 61%, 77% 40%, 100% 24%, 100% 76%, 76% 60%, 59% 70%, 42% 58%, 24% 68%);
 }
 
 .meteorTrailWide {
@@ -334,19 +545,19 @@
 
 .meteorRock {
   position: absolute;
-  left: -38px;
-  top: -37px;
-  width: 78px;
-  height: 74px;
+  left: -50px;
+  top: -42px;
+  width: 100px;
+  height: 84px;
   background:
     radial-gradient(circle at 34% 25%, #fff3a8 0 3%, #ffb043 6%, transparent 14%),
-    linear-gradient(132deg, transparent 0 48%, rgba(255, 154, 53, .7) 49% 54%, transparent 56%),
+    linear-gradient(132deg, transparent 0 43%, rgba(255, 154, 53, .82) 44% 49%, transparent 51%),
+    linear-gradient(36deg, transparent 0 59%, rgba(255, 80, 24, .72) 60% 64%, transparent 66%),
     radial-gradient(circle at 70% 35%, #7c331f 0 13%, transparent 14%),
     radial-gradient(circle at 28% 70%, #51251a 0 16%, transparent 17%),
-    linear-gradient(145deg, #d36b36, #82391f 38%, #3e1d16 68%, #1b0d0b);
-  border: 3px solid #32140e;
-  clip-path: polygon(41% 0, 72% 7%, 97% 34%, 86% 70%, 64% 100%, 29% 92%, 3% 64%, 10% 27%);
-  box-shadow: 0 0 0 4px rgba(255, 104, 31, .48), 0 0 18px 8px #ff5b1d, 0 0 45px 13px rgba(255, 54, 15, .8);
+    linear-gradient(145deg, #df7a40 0 12%, #9a4728 13% 32%, #5a291e 33% 58%, #2d1713 59% 82%, #160b09);
+  clip-path: polygon(10% 28%, 27% 3%, 48% 17%, 68% 0, 80% 22%, 99% 35%, 88% 55%, 96% 78%, 72% 85%, 56% 100%, 35% 84%, 12% 92%, 18% 66%, 0 51%);
+  filter: drop-shadow(0 0 5px #ff9c42) drop-shadow(0 0 16px #ff541c) drop-shadow(0 0 28px rgba(255, 48, 13, .78));
   rotate: -18deg;
   animation: meteorRockSpin .32s linear infinite;
 }
@@ -381,19 +592,57 @@
   animation: meteorWarning var(--effect-delay) ease-in both;
 }
 
+.meteorImpactTexture {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  bottom: -100px;
+  width: 560px;
+  height: 560px;
+  translate: -50% 0;
+  object-fit: cover;
+  mix-blend-mode: normal;
+  opacity: 0;
+  filter: saturate(1.12) contrast(1.15) drop-shadow(0 0 24px rgba(255, 72, 19, .78));
+  animation: meteorImpactTexture 1.48s var(--effect-delay) cubic-bezier(.08, .7, .16, 1) both;
+}
+
 .meteorImpactFlash {
   position: absolute;
   z-index: 9;
   left: 50%;
   bottom: 52px;
-  width: 220px;
-  height: 220px;
+  width: 300px;
+  height: 300px;
   translate: -50% 50%;
   background: radial-gradient(circle, #fff 0 3%, #fff4ae 7%, #ffc23e 14%, rgba(255, 70, 20, .92) 27%, rgba(255, 39, 10, .28) 48%, transparent 68%);
   border-radius: 50%;
   filter: blur(2px);
   mix-blend-mode: screen;
-  animation: meteorImpactFlash .88s var(--effect-delay) ease-out both;
+  animation: meteorImpactFlash 1.28s var(--effect-delay) ease-out both;
+}
+
+.meteorBlastRays {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  bottom: 53px;
+  width: 1px;
+  height: 1px;
+}
+
+.meteorBlastRays > i {
+  position: absolute;
+  left: 0;
+  top: -5px;
+  width: 245px;
+  height: 10px;
+  background: linear-gradient(90deg, #fff9cc, #ffad32 20%, rgba(255, 68, 18, .55) 58%, transparent);
+  border-radius: 99px;
+  filter: blur(1px) drop-shadow(0 0 10px #ff4b1c);
+  rotate: var(--blast-angle);
+  transform-origin: 0 50%;
+  animation: meteorBlastRay 1.02s var(--effect-delay) cubic-bezier(.08, .72, .15, 1) both;
 }
 
 .meteorShockwave {
@@ -401,15 +650,15 @@
   z-index: 10;
   left: 50%;
   bottom: 34px;
-  width: 220px;
-  height: 66px;
+  width: 280px;
+  height: 82px;
   translate: -50% 50%;
   border: 6px solid rgba(255, 225, 144, .94);
   border-right-color: rgba(255, 81, 23, .35);
   border-left-color: rgba(255, 81, 23, .35);
   border-radius: 50%;
   box-shadow: 0 0 28px #ff6528, inset 0 0 20px rgba(255, 74, 20, .76);
-  animation: meteorShockwave 1s var(--effect-delay) cubic-bezier(.08, .7, .14, 1) both;
+  animation: meteorShockwave 1.16s var(--effect-delay) cubic-bezier(.08, .7, .14, 1) both;
 }
 
 .meteorCrater {
@@ -609,27 +858,46 @@
 :global(.pack-monster.special-meteor-target .pack-monster-art-frame) { animation: monsterMeteorKnockback .68s cubic-bezier(.06, .76, .18, 1) both; }
 :global(.pack-monster.special-meteor-target .monster-sprite) { animation: monsterMeteorKnockbackSprite .68s cubic-bezier(.06, .76, .18, 1) both; }
 
-@keyframes lightningCloudGather { 0% { opacity: 0; scale: .7 .35; } 22%, 72% { opacity: .9; scale: 1; } 100% { opacity: 0; scale: 1.15 .8; } }
-@keyframes lightningSkyFlash { 0%, 15%, 34%, 100% { opacity: 0; } 9%, 24% { opacity: 1; } }
-@keyframes lightningBoltForm { 0% { opacity: 0; transform: translate(var(--bolt-x), var(--bolt-y)) rotate(var(--bolt-angle)) scaleY(.08); } 18%, 52% { opacity: 1; transform: translate(var(--bolt-x), var(--bolt-y)) rotate(var(--bolt-angle)) scaleY(1); } 68% { opacity: .28; } 76% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--bolt-x), var(--bolt-y)) rotate(var(--bolt-angle)) scaleY(1.05); } }
+@keyframes lightningStormVeil { 0% { opacity: 0; scale: .72; } 18%, 58% { opacity: 1; scale: 1; } 72% { opacity: .38; } 100% { opacity: 0; scale: 1.16; } }
+@keyframes lightningCloudGather { 0% { opacity: 0; scale: .54 .2; filter: blur(14px); } 18% { opacity: .48; scale: .86 .55; } 38%, 68% { opacity: 1; scale: 1.08 1; filter: blur(6px) drop-shadow(0 10px 20px rgba(45, 113, 212, .66)); } 100% { opacity: 0; scale: 1.24 .82; } }
+@keyframes lightningChargeArc { 0% { opacity: 0; transform: translateX(14px) scaleX(.12); } 42% { opacity: 1; } 100% { opacity: .15; transform: translateX(82px) scaleX(1); } }
+@keyframes lightningSkyFlash { 0%, 34%, 43%, 59%, 100% { opacity: 0; } 36%, 48% { opacity: .72; } 45%, 55% { opacity: 1; } }
+@keyframes lightningBoltForm { 0% { opacity: 0; stroke-dashoffset: 100; } 7% { opacity: 1; } 62% { opacity: 1; stroke-dashoffset: 0; } 73% { opacity: .24; } 84% { opacity: 1; } 100% { opacity: 0; stroke-dashoffset: 0; } }
+@keyframes lightningBranchTrace { 0% { opacity: 0; stroke-dashoffset: 100; } 18% { opacity: 1; } 64% { opacity: .86; stroke-dashoffset: 0; } 100% { opacity: 0; stroke-dashoffset: 0; } }
+@keyframes lightningAfterbolt { 0% { opacity: 0; scale: 1 .02; } 14%, 48% { opacity: 1; scale: 1 1; } 64% { opacity: .18; } 78% { opacity: 1; } 100% { opacity: 0; scale: .72 1.08; } }
+@keyframes lightningImpactTexture { 0% { opacity: 0; scale: .08; } 12% { opacity: 1; scale: .72; } 30%, 56% { opacity: 1; scale: 1.04; } 100% { opacity: 0; scale: 1.38; } }
 @keyframes lightningBranch { 0% { opacity: 0; transform: scaleX(.06); } 20% { opacity: 1; } 58% { opacity: .78; transform: scaleX(1); } 100% { opacity: 0; transform: scaleX(1.35); } }
-@keyframes lightningImpact { 0% { opacity: 0; scale: .12; } 20% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 2.15; } }
-@keyframes lightningGroundArc { 0% { opacity: 0; scale: .12; } 24% { opacity: 1; } 100% { opacity: 0; scale: 2.05; } }
+@keyframes lightningImpact { 0% { opacity: 0; scale: .04; } 10% { opacity: 1; scale: .82; } 23% { opacity: 1; scale: 1.18; } 100% { opacity: 0; scale: 2.9; } }
+@keyframes lightningGroundArc { 0% { opacity: 0; scale: .08; } 17% { opacity: 1; scale: .78; } 34% { opacity: .92; } 100% { opacity: 0; scale: 2.75; } }
 @keyframes lightningSpark { 0% { opacity: 0; transform: translateX(6px) scaleX(.12); } 24% { opacity: 1; } 100% { opacity: 0; transform: translateX(var(--spark-distance)) scaleX(.55); } }
-@keyframes tornadoStageDrift { 0% { opacity: 0; transform: translateY(42px) scale(.52, .72); } 12% { opacity: 1; transform: translateY(0) scale(1); } 82% { opacity: 1; transform: translateY(-8px) scale(1.03); } 100% { opacity: 0; transform: translateY(-40px) scale(.72, 1.15); } }
-@keyframes tornadoReveal { 0%, 100% { opacity: 0; } 9%, 83% { opacity: 1; } }
+@keyframes tornadoStageDrift { 0% { opacity: 1; transform: translateY(24px); } 78% { opacity: 1; transform: translateY(-7px); } 100% { opacity: 0; transform: translateY(-46px) scale(.82, 1.12); } }
+@keyframes tornadoPressure { 0% { opacity: 0; scale: .5; } 12% { opacity: .42; } 31%, 78% { opacity: 1; scale: 1.04; } 100% { opacity: 0; scale: 1.22; } }
+@keyframes tornadoInflow { 0% { opacity: 0; transform: translateX(265px) scaleX(.08); } 16% { opacity: .86; } 74% { opacity: 1; transform: translateX(52px) scaleX(1); } 100% { opacity: 0; transform: translateX(8px) scaleX(.18); } }
+@keyframes tornadoSeedGrow { 0% { opacity: 0; scale: .08; rotate: 0deg; } 28% { opacity: 1; } 100% { opacity: 0; scale: 3.35 2.1; rotate: 780deg; } }
+@keyframes tornadoTextureBuild { 0%, 9% { opacity: 0; transform: translateY(58px) scale(.12, .04); clip-path: inset(87% 0 0); } 19% { opacity: .58; transform: translateY(26px) scale(.48, .34); clip-path: inset(54% 0 0); } 34%, 78% { opacity: .82; transform: translateY(0) scale(1); clip-path: inset(0); } 88% { opacity: .55; transform: translateY(-12px) scale(1.06); } 100% { opacity: 0; transform: translateY(-38px) scale(.82, 1.16); } }
+@keyframes tornadoDustBuild { 0% { opacity: 0; scale: .18; } 10% { opacity: .42; } 28%, 82% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 1.25; } }
+@keyframes tornadoCoreBuild { 0%, 8% { opacity: 0; scale: .18 .03; transform-origin: 50% 100%; } 19% { opacity: .66; scale: .48 .28; } 34%, 82% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: .76 1.17; } }
+@keyframes tornadoBandBuild { 0%, 9% { opacity: 0; scale: .12 .04; transform-origin: 50% 100%; } 22% { opacity: .62; scale: .52 .31; } 35%, 82% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: .8 1.14; } }
+@keyframes tornadoDebrisBuild { 0%, 17% { opacity: 0; } 29%, 82% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes tornadoGroundBuild { 0% { opacity: 0; scale: .06; } 15% { opacity: 1; scale: .45; } 31%, 82% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 1.25; } }
 @keyframes tornadoDustPulse { to { rotate: 360deg; } }
 @keyframes tornadoCoreBreathe { to { scale: 1.18 .96; filter: blur(5px) drop-shadow(0 0 34px rgba(80, 229, 199, .88)); } }
+@keyframes tornadoInnerShear { to { translate: 18px -5px; skew: -12deg; opacity: .58; } }
+@keyframes tornadoFilamentRise { 0% { opacity: 0; transform: translate(-50%, 0) scale(.08) rotate(0); } 18% { opacity: .82; } 62% { opacity: .92; transform: translate(calc(-50% + var(--filament-x)), calc(var(--filament-height) * -.72)) scale(.8) rotate(190deg); } 100% { opacity: 0; transform: translate(calc(-50% - var(--filament-x)), calc(var(--filament-height) * -1)) scale(1.08) rotate(350deg); } }
 @keyframes tornadoBandSpin { to { transform: skewX(-12deg) rotate(360deg); } }
 @keyframes tornadoDebrisOrbit { from { transform: rotate(var(--debris-angle)) translateX(var(--debris-radius)) translateY(calc(var(--debris-height) * -1)) rotate(0); } to { transform: rotate(calc(var(--debris-angle) + 360deg)) translateX(var(--debris-radius)) translateY(calc(var(--debris-height) * -1)) rotate(-720deg); } }
 @keyframes tornadoGroundSpin { to { rotate: 360deg; } }
-@keyframes meteorFlight { 0% { opacity: 0; transform: translate(-330px, -330px) scale(.44); } 8% { opacity: 1; } 88% { opacity: 1; transform: translate(-22px, -24px) scale(1); } 100% { opacity: 0; transform: translate(0) scale(1.12); } }
+@keyframes meteorFlight { 0% { opacity: 0; transform: translate(-520px, -480px) scale(.04); } 7% { opacity: .72; } 28% { opacity: 1; transform: translate(-430px, -390px) scale(.12); } 54% { opacity: 1; transform: translate(-305px, -275px) scale(.3); } 76% { opacity: 1; transform: translate(-154px, -142px) scale(.62); } 91% { opacity: 1; transform: translate(-42px, -39px) scale(1.02); } 100% { opacity: 0; transform: translate(0) scale(1.48); } }
+@keyframes meteorBowShock { to { scale: 1.16 .82; opacity: .62; } }
 @keyframes meteorTrailFlicker { to { scale: 1.08 .72; opacity: .74; } }
 @keyframes meteorFlameTongue { to { scale: 1.12 .56; opacity: .68; } }
 @keyframes meteorRockSpin { to { rotate: 342deg; } }
 @keyframes meteorWarning { 0% { opacity: 0; scale: .55; } 34% { opacity: .52; } 72% { opacity: 1; scale: 1.02; } 100% { opacity: 0; scale: .3; } }
-@keyframes meteorImpactFlash { 0% { opacity: 0; scale: .08; } 14% { opacity: 1; scale: 1.05; } 100% { opacity: 0; scale: 2.5; } }
-@keyframes meteorShockwave { 0% { opacity: 0; scale: .08; } 19% { opacity: 1; } 100% { opacity: 0; scale: 2.5; } }
+@keyframes meteorFieldFlash { 0% { opacity: 0; scale: .18; } 6% { opacity: 1; } 25% { opacity: .78; scale: 1.02; } 58% { opacity: .34; } 100% { opacity: 0; scale: 1.36; } }
+@keyframes meteorImpactTexture { 0% { opacity: 0; scale: .05; } 8% { opacity: 1; scale: .62; } 22%, 52% { opacity: 1; scale: 1.05; } 100% { opacity: 0; scale: 1.48; } }
+@keyframes meteorImpactFlash { 0% { opacity: 0; scale: .03; } 7% { opacity: 1; scale: .82; } 23%, 42% { opacity: 1; scale: 1.34; } 100% { opacity: 0; scale: 3.35; } }
+@keyframes meteorBlastRay { 0% { opacity: 0; transform: scaleX(.03); } 9% { opacity: 1; } 38%, 55% { opacity: .88; transform: scaleX(1); } 100% { opacity: 0; transform: scaleX(1.72); } }
+@keyframes meteorShockwave { 0% { opacity: 0; scale: .04; } 10% { opacity: 1; } 28% { opacity: .92; } 100% { opacity: 0; scale: 3.35; } }
 @keyframes meteorCrater { 0% { opacity: 0; scale: .2; } 18%, 72% { opacity: .88; scale: 1; } 100% { opacity: 0; scale: 1.2; } }
 @keyframes meteorFragmentFly { 0% { opacity: 0; transform: translateX(8px) translateY(0) rotate(0); } 16% { opacity: 1; } 100% { opacity: 0; transform: translateX(var(--fragment-distance)) translateY(-58px) rotate(460deg); } }
 @keyframes meteorSmokeRise { 0% { opacity: 0; transform: translate(0) scale(.25); } 24% { opacity: .72; } 100% { opacity: 0; transform: translate(var(--smoke-x), var(--smoke-y)) scale(1.7); } }

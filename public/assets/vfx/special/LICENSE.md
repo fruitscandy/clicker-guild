@@ -31,3 +31,16 @@ The following WebP files are project-authored, AI-assisted spell illustrations g
 - `special-meteor-v2.webp`: molten meteor impact on a black VFX-compositing background
 
 Each source was generated without text, logos, characters, or third-party game branding, then resized to a 640×640 WebP for the combat effect and matching upgrade thumbnail.
+
+### V3 staged-effect artwork
+
+The following project-authored, AI-assisted artwork was generated with OpenAI image generation on 2026-08-10. The square node illustrations were resized to 512×512 WebP. The impact/funnel textures were resized to 768×768 WebP and their pure-black generation backgrounds were converted to transparency for in-game compositing.
+
+- `special-lightning-v3.webp`: painted lightning research-node illustration
+- `special-tornado-v3.webp`: painted tornado research-node illustration
+- `special-meteor-v3.webp`: painted meteor research-node illustration
+- `special-lightning-impact-v3-alpha.webp`: transparent electric ground-impact texture
+- `special-tornado-funnel-v3-alpha.webp`: transparent turbulent funnel texture
+- `special-meteor-impact-v3-alpha.webp`: transparent fire, debris, and shock-impact texture
+
+The combat textures are never shown as standalone spell cards. They are composited beneath procedural SVG/CSS motion: top-down lightning tracing, inward wind collection and funnel growth, and a distance-scaled meteor flight followed by impact.

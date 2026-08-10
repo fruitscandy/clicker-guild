@@ -108,7 +108,7 @@ export function useSpecialAttackController<T extends SpecialAttackMonster>({
           moveTargets(kind, center, targetIds, pulse);
           damageMonsters(targetIds, specialAttackDamage(kind, playerDamage, pulse), impactTier);
           playSpecialAttackSound(kind, "pulse");
-        }, attack.delayMs + 220 + pulse * 520);
+        }, attack.delayMs + 360 + pulse * 520);
       });
     } else {
       queueTimer(() => {
