@@ -43,6 +43,29 @@ test("uses deliberate boss clicks in both phases and contains no automatic final
   assert.doesNotMatch(component, /UPGRADE TRANSLATION|WEAPON TIER|PARTY \{/);
 });
 
+test("stacks visible boss-hit feedback without letting rate-limited clicks erase it", async () => {
+  const component = await readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8");
+
+  assert.match(component, /const attackImpactsRef = useRef<AttackImpact\[\]>\(\[\]\)/);
+  assert.match(component, /event && event\.kind !== "rate-limited"/);
+  assert.match(component, /slice\(-MAX_ATTACK_IMPACTS\)/);
+  assert.match(component, /attackImpactsRef\.current[\s\S]*?\.map\(\(impact\)[\s\S]*?\.filter\(\(impact\)/);
+  assert.match(component, /FINALE_VFX_ASSETS\.steelSlash/);
+  assert.match(component, /FINALE_VFX_ASSETS\.impactFlash/);
+  assert.match(component, /FINALE_VFX_ASSETS\.impactRing/);
+  assert.match(component, /FINALE_VFX_ASSETS\.spark/);
+  assert.match(component, /WEAK! ×2/);
+  assert.match(component, /GUARD 35%/);
+  assert.match(component, /DIRECT HIT/);
+  assert.match(component, /world\.boss\.flashMs \/ BOSS_HIT_FLASH_MS/);
+  assert.match(component, /const recoil = reducedMotion/);
+  assert.doesNotMatch(component, /Math\.random/);
+
+  const collapseLayer = component.indexOf("drawCollapse(context, world, reducedMotion);");
+  const attackLayer = component.indexOf("attackImpacts.forEach((impact) => drawAttackImpact(context, impact, images, reducedMotion));");
+  assert.ok(collapseLayer >= 0 && attackLayer >= 0 && collapseLayer < attackLayer);
+});
+
 test("renders the smaller guild under enemy bullets while keeping the exact white hit point on top", async () => {
   const component = await readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8");
 

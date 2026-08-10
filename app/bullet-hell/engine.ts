@@ -875,7 +875,7 @@ export function attackFinaleBoss(
     : 1;
   const damage = Math.min(next.boss.hp, next.stats.clickDamage * multiplier);
   next.boss.hp = Math.max(0, next.boss.hp - damage);
-  next.boss.flashMs = 88;
+  next.boss.flashMs = 190;
   next.player.damageDealt += damage;
   next.clicksLanded += 1;
   next.score += Math.round(damage * 250);

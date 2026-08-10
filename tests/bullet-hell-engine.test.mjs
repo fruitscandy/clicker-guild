@@ -120,6 +120,7 @@ test("boss damage requires an actual click inside the generous 220px target", ()
   assert.equal(world.boss.hp, initialHp - world.stats.clickDamage);
   assert.equal(world.clicksLanded, 1);
   assert.equal(world.attackEvent.kind, "hit");
+  assert.ok(world.boss.flashMs >= 160, "a hit should keep the whole boss visibly flashing across several frames");
   assert.equal(world.boss.clickRadius * 2, 220);
 });
 

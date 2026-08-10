@@ -1,32 +1,27 @@
 import assert from "node:assert/strict";
-import { readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const tracksSource = await readFile("app/bgm/tracks.ts", "utf8");
 const controllerSource = await readFile("app/bgm/BgmController.tsx", "utf8");
 
-test("Crown of Ruin is shipped in a non-empty finale scene pool", async () => {
-  const asset = await stat("public/assets/audio/bgm/crown-of-ruin.wav");
-  assert.ok(asset.size > 2_000_000, "finale BGM should contain the generated full loop");
-  assert.match(tracksSource, /id: "crown-of-ruin"[\s\S]*?sceneId: "finale"/);
-  assert.match(tracksSource, /source: "\/assets\/audio\/bgm\/crown-of-ruin\.wav"/);
-  assert.match(tracksSource, /\["guild", "field-select", "battle", "boss", "finale"\]/);
+test("the finale reuses the existing rotating boss-track pool", () => {
+  assert.doesNotMatch(tracksSource, /"finale"/);
+  assert.doesNotMatch(tracksSource, /crown-of-ruin/);
+  assert.match(tracksSource, /\["guild", "field-select", "battle", "boss"\]/);
+  assert.match(tracksSource, /id: "fantasy-boss-battle"[\s\S]*?sceneId: "boss"/);
+  assert.match(tracksSource, /id: "fantasy-boss-battle-take-2"[\s\S]*?sceneId: "boss"/);
 });
 
-test("the finale DOM contract preserves phase one music and starts Crown in phase two", () => {
+test("every finale phase preserves the current boss flow instead of swapping tracks", () => {
   assert.match(controllerSource, /value === "phase-one"/);
   assert.match(controllerSource, /value === "collapse"/);
   assert.match(controllerSource, /value === "phase-two"/);
   assert.match(controllerSource, /value === "destruction"/);
   assert.match(controllerSource, /value === "whiteout"/);
-  assert.match(
-    controllerSource,
-    /finaleMusic === "phase-one" \|\| finaleMusic === "collapse"\) return "boss"/,
-  );
-  assert.match(
-    controllerSource,
-    /finaleMusic === "phase-two" \|\| finaleMusic === "destruction" \|\| finaleMusic === "whiteout"\) return "finale"/,
-  );
+  assert.match(controllerSource, /if \(finaleMusic !== "none"\) return "boss"/);
+  assert.doesNotMatch(controllerSource, /return "finale"/);
+  assert.match(controllerSource, /guild: 0, "field-select": 0, battle: 0, boss: 0/);
   assert.match(controllerSource, /const CROSSFADE_MS = 1_150/);
   assert.match(controllerSource, /attributeFilter: \["class", "data-finale-music"\]/);
 });

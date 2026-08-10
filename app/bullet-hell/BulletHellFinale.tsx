@@ -44,6 +44,9 @@ import styles from "./BulletHellFinale.module.css";
 const CAMPAIGN_REVEAL_MS = 1_850;
 const PREVIEW_REVEAL_MS = 480;
 const WHITEOUT_HOLD_MS = 1_550;
+const ATTACK_IMPACT_LIFETIME_MS = 720;
+const MAX_ATTACK_IMPACTS = 6;
+const BOSS_HIT_FLASH_MS = 190;
 const FIELD_BACKGROUND = "/assets/fields/field-10-ancient-dragon-sanctuary-hq.webp";
 const MOVEMENT_KEY_BY_CODE: Record<string, string> = {
   KeyW: "w",
@@ -214,12 +217,21 @@ function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reduced
     ? clamp(world.modeElapsedMs / world.stats.destructionDurationMs, 0, 1)
     : 0;
   const pulse = reducedMotion ? 1 : 1 + Math.sin(seconds * 4.1) * .035;
+  const hitStrength = clamp(world.boss.flashMs / BOSS_HIT_FLASH_MS, 0, 1);
+  const hitPhase = 1 - hitStrength;
+  const recoil = reducedMotion
+    ? 0
+    : Math.sin(hitPhase * Math.PI * 2.4) * hitStrength * 7 * (world.clicksLanded % 2 ? 1 : -1);
+  const squash = reducedMotion ? 0 : Math.sin(hitPhase * Math.PI) * hitStrength * .055;
   const coreColor = opening ? "#fff2ae" : field ? "#f2c76f" : "#69eff8";
   const dangerColor = field ? "#8f302a" : "#ff4cae";
 
   context.save();
-  context.translate(x, y);
-  context.scale(pulse * (1 + destructionProgress * .16), pulse * (1 + destructionProgress * .16));
+  context.translate(x + recoil, y);
+  context.scale(
+    pulse * (1 + destructionProgress * .16) * (1 + squash),
+    pulse * (1 + destructionProgress * .16) * (1 - squash * .72),
+  );
   context.globalAlpha = 1 - destructionProgress * .82;
 
   const aura = context.createRadialGradient(0, 0, 12, 0, 0, opening ? 136 : 114);
@@ -228,6 +240,22 @@ function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reduced
   aura.addColorStop(1, "transparent");
   context.fillStyle = aura;
   context.fillRect(-145, -145, 290, 290);
+
+  if (hitStrength > 0) {
+    context.save();
+    context.globalCompositeOperation = "screen";
+    context.globalAlpha = .2 + hitStrength * .46;
+    context.lineWidth = 3;
+    context.strokeStyle = "#5ff5ff";
+    context.translate(reducedMotion ? 0 : -5 * hitStrength, 0);
+    drawHexagon(context, field ? 67 : 62);
+    context.stroke();
+    context.strokeStyle = "#ff5cad";
+    context.translate(reducedMotion ? 0 : 10 * hitStrength, 0);
+    drawHexagon(context, field ? 67 : 62);
+    context.stroke();
+    context.restore();
+  }
 
   context.save();
   context.rotate(reducedMotion ? 0 : seconds * (field ? .12 : .28));
@@ -252,6 +280,16 @@ function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reduced
   context.lineWidth = 2;
   context.stroke();
   context.restore();
+
+  if (hitStrength > 0) {
+    context.save();
+    context.globalCompositeOperation = "screen";
+    context.globalAlpha = hitStrength * .52;
+    context.fillStyle = "#ffffff";
+    drawHexagon(context, field ? 63 : 58);
+    context.fill();
+    context.restore();
+  }
 
   context.save();
   context.rotate(field ? Math.PI / 6 : 0);
@@ -468,36 +506,143 @@ function drawPlayerCore(context: CanvasRenderingContext2D, world: FinaleWorld, f
   context.restore();
 }
 
-function drawAttackImpact(context: CanvasRenderingContext2D, impact: AttackImpact, reducedMotion: boolean) {
-  const duration = impact.kind === "hit" ? 290 : 180;
+function drawAttackImpact(
+  context: CanvasRenderingContext2D,
+  impact: AttackImpact,
+  images: Map<string, HTMLImageElement>,
+  reducedMotion: boolean,
+) {
+  const duration = impact.kind === "hit" ? ATTACK_IMPACT_LIFETIME_MS : 180;
   const progress = clamp(impact.ageMs / duration, 0, 1);
   if (progress >= 1 || impact.kind === "rate-limited") return;
   context.save();
   context.translate(impact.x, impact.y);
-  context.globalAlpha = 1 - progress;
   if (impact.kind === "miss") {
+    context.globalAlpha = 1 - progress;
     context.strokeStyle = "rgba(215,226,225,.7)";
     context.setLineDash([3, 5]);
     context.beginPath();
     context.arc(0, 0, 18 + progress * 18, 0, Math.PI * 2);
     context.stroke();
   } else {
-    const spread = reducedMotion ? 24 : 20 + progress * 24;
-    context.strokeStyle = impact.multiplier > 1 ? "#fff1a8" : "#eafcff";
-    context.shadowColor = impact.multiplier > 1 ? "#ffd35a" : "#69edf6";
-    context.shadowBlur = 15;
-    context.lineWidth = impact.multiplier > 1 ? 5 : 3;
-    context.beginPath();
-    context.moveTo(-spread, -spread);
-    context.lineTo(spread, spread);
-    context.moveTo(spread, -spread);
-    context.lineTo(-spread, spread);
-    context.stroke();
-    context.shadowBlur = 0;
-    context.fillStyle = impact.multiplier > 1 ? "#fff0a4" : "#ffffff";
-    context.font = "900 14px ui-monospace, monospace";
+    const opening = impact.multiplier > 1;
+    const guarded = impact.multiplier < 1;
+    const accent = opening ? "#ffe27a" : guarded ? "#6cecf5" : "#f6f2df";
+    const flash = images.get(FINALE_VFX_ASSETS.impactFlash);
+    const ring = images.get(FINALE_VFX_ASSETS.impactRing);
+    const slash = images.get(FINALE_VFX_ASSETS.steelSlash);
+    const spark = images.get(FINALE_VFX_ASSETS.spark);
+    const baseAngle = ((impact.serial % 9) - 4) * .075 - .34;
+
+    context.globalCompositeOperation = "screen";
+    if (impact.ageMs < 190) {
+      const flashProgress = clamp(impact.ageMs / 190, 0, 1);
+      const size = (guarded ? 82 : opening ? 154 : 126) + flashProgress * 48;
+      context.globalAlpha = (1 - flashProgress) * (guarded ? .58 : .94);
+      if (flash?.complete && flash.naturalWidth > 0) {
+        context.drawImage(flash, -size / 2, -size / 2, size, size);
+      } else {
+        context.fillStyle = accent;
+        context.beginPath();
+        context.arc(0, 0, size * .28, 0, Math.PI * 2);
+        context.fill();
+      }
+    }
+
+    const ringProgress = clamp(impact.ageMs / 500, 0, 1);
+    if (ringProgress < 1) {
+      const radius = (guarded ? 35 : 48) + ringProgress * (opening ? 74 : 48);
+      context.globalAlpha = (1 - ringProgress) * (guarded ? .48 : .8);
+      if (ring?.complete && ring.naturalWidth > 0) {
+        context.drawImage(ring, -radius, -radius, radius * 2, radius * 2);
+      } else {
+        context.strokeStyle = accent;
+        context.lineWidth = opening ? 5 : 3;
+        context.beginPath();
+        context.arc(0, 0, radius, 0, Math.PI * 2);
+        context.stroke();
+      }
+    }
+
+    const drawSlash = (delayMs: number, angleOffset: number) => {
+      const age = impact.ageMs - delayMs;
+      if (age < 0 || age >= 580) return;
+      const slashProgress = clamp(age / 580, 0, 1);
+      const size = (guarded ? 128 : opening ? 252 : 208) * (.76 + slashProgress * .34);
+      context.save();
+      context.rotate(reducedMotion ? angleOffset : baseAngle + angleOffset);
+      context.globalAlpha = Math.sin(Math.min(1, slashProgress * 5) * Math.PI / 2)
+        * Math.pow(1 - slashProgress, .56) * (guarded ? .62 : 1);
+      context.shadowColor = accent;
+      context.shadowBlur = opening ? 20 : 13;
+      if (slash?.complete && slash.naturalWidth > 0) {
+        context.drawImage(slash, -size / 2, -size / 2, size, size);
+      } else {
+        context.strokeStyle = accent;
+        context.lineWidth = opening ? 9 : 6;
+        context.beginPath();
+        context.arc(0, 0, size * .36, -.8, .8);
+        context.stroke();
+      }
+      context.restore();
+    };
+    drawSlash(0, 0);
+    if (opening) drawSlash(60, Math.PI / 2);
+
+    if (!reducedMotion && impact.ageMs < 430) {
+      const shardProgress = clamp(impact.ageMs / 430, 0, 1);
+      for (let index = 0; index < 6; index += 1) {
+        const angle = baseAngle + index * Math.PI / 3 + (impact.serial % 5) * .11;
+        const distance = 22 + shardProgress * (guarded ? 38 : 72);
+        context.save();
+        context.rotate(angle);
+        context.translate(distance, 0);
+        context.rotate(Math.PI / 2);
+        context.globalAlpha = Math.pow(1 - shardProgress, 1.3) * (guarded ? .5 : .9);
+        if (spark?.complete && spark.naturalWidth > 0) {
+          context.drawImage(spark, -6, -12, 12, 24);
+        } else {
+          context.fillStyle = index % 2 ? accent : "#ff76b8";
+          context.fillRect(-2, -7, 4, 14);
+        }
+        context.restore();
+      }
+    }
+
+    if (impact.ageMs < 330) {
+      const crossProgress = clamp(impact.ageMs / 330, 0, 1);
+      const spread = (guarded ? 32 : 48) + crossProgress * (opening ? 42 : 28);
+      context.globalAlpha = Math.pow(1 - crossProgress, .7) * (guarded ? .5 : .86);
+      context.strokeStyle = accent;
+      context.shadowColor = accent;
+      context.shadowBlur = 18;
+      context.lineWidth = opening ? 6 : 4;
+      context.beginPath();
+      context.moveTo(-spread, -spread * .38);
+      context.lineTo(spread, spread * .38);
+      context.moveTo(spread * .52, -spread);
+      context.lineTo(-spread * .52, spread);
+      context.stroke();
+      context.shadowBlur = 0;
+    }
+
+    const textProgress = clamp((impact.ageMs - 45) / 675, 0, 1);
+    context.globalCompositeOperation = "source-over";
+    context.globalAlpha = 1 - Math.pow(textProgress, 3);
+    context.fillStyle = accent;
+    context.strokeStyle = "rgba(3,7,12,.88)";
+    context.lineWidth = 5;
+    context.font = opening ? "900 28px ui-monospace, monospace" : "900 23px ui-monospace, monospace";
     context.textAlign = "center";
-    context.fillText(impact.multiplier > 1 ? `×2  -${impact.damage.toFixed(1)}` : impact.multiplier < 1 ? `GUARD  -${impact.damage.toFixed(1)}` : `-${impact.damage.toFixed(1)}`, 0, -42 - progress * 10);
+    context.textBaseline = "middle";
+    const label = opening
+      ? `WEAK! ×2  -${impact.damage.toFixed(1)}`
+      : guarded
+        ? `GUARD 35%  -${impact.damage.toFixed(1)}`
+        : `DIRECT HIT  -${impact.damage.toFixed(1)}`;
+    const textY = 72 - (reducedMotion ? 0 : textProgress * 30);
+    context.strokeText(label, 0, textY);
+    context.fillText(label, 0, textY);
   }
   context.restore();
 }
@@ -533,7 +678,7 @@ function drawWorld(
   images: Map<string, HTMLImageElement>,
   focusHeld: boolean,
   playerImpact: PlayerImpact | null,
-  attackImpact: AttackImpact | null,
+  attackImpacts: readonly AttackImpact[],
   reducedMotion: boolean,
 ) {
   if (world.mode === "field" || world.mode === "collapse") drawFieldBackground(context, images);
@@ -546,8 +691,8 @@ function drawWorld(
     if (playerImpact) drawPlayerImpact(context, playerImpact, images, reducedMotion);
     drawPlayerCore(context, world, focusHeld, reducedMotion);
   }
-  if (attackImpact) drawAttackImpact(context, attackImpact, reducedMotion);
   drawCollapse(context, world, reducedMotion);
+  attackImpacts.forEach((impact) => drawAttackImpact(context, impact, images, reducedMotion));
 
   if (world.mode === "whiteout") {
     context.fillStyle = "#ffffff";
@@ -575,7 +720,7 @@ export function BulletHellFinale({
   const keysRef = useRef(new Set<string>());
   const virtualRef = useRef(new Set<VirtualDirection>());
   const playerImpactRef = useRef<PlayerImpact | null>(null);
-  const attackImpactRef = useRef<AttackImpact | null>(null);
+  const attackImpactsRef = useRef<AttackImpact[]>([]);
   const reducedMotionRef = useRef(false);
   const frameRef = useRef<number | null>(null);
   const lastFrameRef = useRef(0);
@@ -612,7 +757,7 @@ export function BulletHellFinale({
       imagesRef.current,
       keysRef.current.has("shift") || virtualRef.current.has("focus"),
       playerImpactRef.current,
-      attackImpactRef.current,
+      attackImpactsRef.current,
       reducedMotionRef.current,
     );
   }, [loadout]);
@@ -696,9 +841,11 @@ export function BulletHellFinale({
     const next = attackFinaleBoss(before, x, y, performance.now());
     worldRef.current = next;
     const event = next.attackEvent;
-    if (event) attackImpactRef.current = { ...event, ageMs: 0 };
+    if (event && event.kind !== "rate-limited") {
+      attackImpactsRef.current = [...attackImpactsRef.current, { ...event, ageMs: 0 }].slice(-MAX_ATTACK_IMPACTS);
+    }
     if (event?.kind === "hit") {
-      playMonsterHitSound(4, event.multiplier > 1 ? 1.18 : 1);
+      playMonsterHitSound(4, 1);
       if (event.multiplier > 1) playCombatProcSound({ combo: true });
       setAnnouncement(event.multiplier > 1
         ? `코어 노출 타격. ${event.damage.toFixed(1)} 피해, 두 배 공격 성공.`
@@ -772,10 +919,9 @@ export function BulletHellFinale({
         playerImpactRef.current.ageMs += elapsed;
         if (playerImpactRef.current.ageMs >= 460) playerImpactRef.current = null;
       }
-      if (attackImpactRef.current) {
-        attackImpactRef.current.ageMs += elapsed;
-        if (attackImpactRef.current.ageMs >= 320) attackImpactRef.current = null;
-      }
+      attackImpactsRef.current = attackImpactsRef.current
+        .map((impact) => ({ ...impact, ageMs: impact.ageMs + elapsed }))
+        .filter((impact) => impact.ageMs < (impact.kind === "hit" ? ATTACK_IMPACT_LIFETIME_MS : 180));
 
       const pressed = keysRef.current;
       const virtual = virtualRef.current;
@@ -873,7 +1019,7 @@ export function BulletHellFinale({
     const world = createFinaleWorld(loadout, { preview: mode === "preview", seed });
     worldRef.current = world;
     playerImpactRef.current = null;
-    attackImpactRef.current = null;
+    attackImpactsRef.current = [];
     whiteoutStartedAtRef.current = null;
     resultSoundRef.current = null;
     previousModeRef.current = world.mode;
@@ -889,7 +1035,7 @@ export function BulletHellFinale({
     const world = restartFinalePhaseTwo(worldRef.current);
     worldRef.current = world;
     playerImpactRef.current = null;
-    attackImpactRef.current = null;
+    attackImpactsRef.current = [];
     resultSoundRef.current = null;
     previousModeRef.current = world.mode;
     previousCycleRef.current = world.cycle;
@@ -905,7 +1051,7 @@ export function BulletHellFinale({
     const world = forceFinaleMode(worldRef.current, nextMode);
     worldRef.current = world;
     playerImpactRef.current = null;
-    attackImpactRef.current = null;
+    attackImpactsRef.current = [];
     whiteoutStartedAtRef.current = null;
     resultSoundRef.current = null;
     previousModeRef.current = world.mode;
@@ -945,7 +1091,7 @@ export function BulletHellFinale({
     previousModeRef.current = world.mode;
     previousCycleRef.current = world.cycle;
     playerImpactRef.current = null;
-    attackImpactRef.current = null;
+    attackImpactsRef.current = [];
     setHud(snapshotFromWorld(world));
     setAnnouncement("개발자 장면 이동: 첫 CORE OPEN 공격 기회.");
     setScene("running");

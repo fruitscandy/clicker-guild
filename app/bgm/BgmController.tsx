@@ -41,8 +41,9 @@ function finaleMusicSignalFromDocument(): FinaleMusicSignal {
 }
 
 function sceneFromDocument(finaleMusic = finaleMusicSignalFromDocument()): BgmSceneId {
-  if (finaleMusic === "phase-one" || finaleMusic === "collapse") return "boss";
-  if (finaleMusic === "phase-two" || finaleMusic === "destruction" || finaleMusic === "whiteout") return "finale";
+  // The finale is one continuous boss encounter. Its visual genre changes,
+  // but its music keeps the regular boss-flow track instead of swapping songs.
+  if (finaleMusic !== "none") return "boss";
 
   const dialog = document.querySelector<HTMLElement>("[role='dialog'][aria-modal='true']");
   if (dialog?.textContent?.includes("GUILD EXPEDITION ATLAS")) return "field-select";
@@ -69,7 +70,7 @@ export default function BgmController({ children }: { children: ReactNode }) {
   const fadeGeneration = useRef(0);
   const desiredScene = useRef<BgmSceneId>("guild");
   const desiredTrack = useRef<BgmTrackId>("guild-hearth");
-  const sceneCursors = useRef<Record<BgmSceneId, number>>({ guild: 0, "field-select": 0, battle: 0, boss: 0, finale: 0 });
+  const sceneCursors = useRef<Record<BgmSceneId, number>>({ guild: 0, "field-select": 0, battle: 0, boss: 0 });
   const playingTrack = useRef<BgmTrackId | null>(null);
   const settingsRef = useRef(settings);
   const finaleMusicSignalRef = useRef<FinaleMusicSignal>("none");
