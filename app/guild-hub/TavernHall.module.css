@@ -34,10 +34,9 @@
 
 .recruitCounter {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
-  gap: 14px;
-  max-width: 1080px;
-  margin: 0 auto;
+  grid-template-columns: minmax(0, 1.2fr) minmax(360px, .8fr);
+  align-items: start;
+  gap: 16px;
 }
 
 .recruitPitch,
@@ -51,7 +50,7 @@
   box-shadow: 0 12px 30px rgba(10, 7, 6, .34);
 }
 .recruitPitch::after { position: absolute; right: -40px; top: -70px; width: 240px; height: 240px; background: radial-gradient(circle, rgba(235, 181, 78, .14), transparent 68%); content: ""; pointer-events: none; }
-.contractSeal { position: absolute; right: 22px; top: 18px; display: grid; place-items: center; width: 58px; height: 58px; color: #f4d18b; background: #5f3026; border: 2px solid #a66a42; border-radius: 50%; box-shadow: inset 0 0 0 5px #372019, 0 4px 0 #160e0c; font: 1000 19px Georgia, serif; }
+.contractSeal { position: absolute; right: 22px; top: 18px; display: grid; place-items: center; width: 58px; height: 58px; color: #ffe0a0; background: radial-gradient(circle, #81462f 0 38%, #4b2921 40% 61%, #241713 63%); border: 2px solid #b97846; border-radius: 50%; box-shadow: inset 0 0 0 3px rgba(245, 190, 100, .18), 0 4px 0 #160e0c, 0 0 22px rgba(225, 148, 62, .12); font: 1000 25px/1 Georgia, serif; text-shadow: 0 0 12px rgba(255, 215, 135, .7); }
 .recruitPitch h4 { margin: 5px 0 8px; color: #fff0c9; font: 700 26px Georgia, "Noto Serif KR", serif; }
 .recruitPitch > p { max-width: 590px; margin: 0; color: #bfb0a1; font-size: 10px; line-height: 1.65; }
 
@@ -77,7 +76,9 @@
 }
 .rateBoard::after { position:absolute; right:-42px; top:-42px; width:150px; height:150px; background:radial-gradient(circle,rgba(231,174,77,.14),transparent 67%); content:""; pointer-events:none; }
 .rateBoardHeader { position:relative; z-index:1; display:grid; grid-template-columns:38px 1fr auto; align-items:center; gap:10px; padding:0 0 12px; border-bottom:1px solid rgba(223,177,97,.22); }
-.oddsSeal { display:grid; place-items:center; width:36px; height:36px; color:#2b1c17; background:linear-gradient(145deg,#f3d493,#aa7038); border:1px solid #ffd992; border-radius:50%; box-shadow:0 3px 0 #38231a,inset 0 0 0 3px rgba(73,42,27,.24); font:1000 14px Georgia,serif; }
+.oddsSeal { display:grid; grid-template-columns:repeat(3,4px); grid-template-rows:repeat(3,4px); place-content:center; gap:3px; width:36px; height:36px; background:linear-gradient(145deg,#f3d493,#aa7038); border:1px solid #ffd992; border-radius:9px; box-shadow:0 3px 0 #38231a,inset 0 0 0 3px rgba(73,42,27,.2); transform:rotate(-5deg); }
+.oddsSeal i { width:4px; height:4px; background:#4a2b1e; border-radius:50%; box-shadow:inset 0 1px rgba(255,255,255,.18); }
+.oddsSeal i:nth-child(1) { grid-area:1/1; }.oddsSeal i:nth-child(2) { grid-area:1/3; }.oddsSeal i:nth-child(3) { grid-area:2/2; }.oddsSeal i:nth-child(4) { grid-area:3/1; }.oddsSeal i:nth-child(5) { grid-area:3/3; }
 .rateBoardHeader > div { display:grid; min-width:0; }
 .rateBoardHeader small { color:#c7924e; font-size:6px; font-weight:1000; letter-spacing:.14em; }
 .rateBoardHeader strong { margin-top:2px; color:#fff0cd; font:700 15px Georgia,"Noto Serif KR",serif; }
@@ -85,7 +86,7 @@
 .rateBoardHeader > b { padding:6px 8px; color:#ffdfa0; background:#201716; border:1px solid #785138; border-radius:5px; font-size:8px; letter-spacing:.06em; }
 .rateLegend { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:7px; margin:10px 2px 7px; color:#827166; font-size:5px; font-weight:1000; letter-spacing:.14em; }
 .rateLegend i { height:1px; background:linear-gradient(90deg,#76665b,#d79c4b,#ffe58f); }
-.rateBoard ol { position:relative; z-index:1; display:grid; gap:5px; margin:0; padding:0; list-style:none; }
+.rateBoard ol { position:relative; z-index:1; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px 7px; margin:0; padding:0; list-style:none; }
 .rateBoard li { display:grid; grid-template-columns:45px 1fr 43px; align-items:center; gap:7px; padding:5px 7px; background:rgba(10,8,8,.34); border:1px solid rgba(255,234,194,.07); border-radius:6px; }
 .rateBoard li > b { display:flex; align-items:baseline; gap:3px; color:var(--rank-color); }
 .rateBoard li > b span { font:1000 13px Georgia,serif; text-shadow:0 0 10px color-mix(in srgb,var(--rank-color),transparent 35%); }
@@ -97,7 +98,7 @@
 .rateBoard > p b { color:#e1bd78; font-size:7px; }
 .rateBoard > p span { color:#8f8075; }
 
-.resultSection { position:relative; max-width:1080px; margin:18px auto 0; overflow:hidden; padding-top:16px; border-top:1px solid #4a372e; }
+.resultSection { position:relative; margin:16px 0 0; overflow:hidden; padding-top:14px; border-top:1px solid #4a372e; }
 .resultHeading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .resultHeading > div { display: grid; }
 .resultHeading span { color: #d5a45b; font-size: 7px; font-weight: 1000; letter-spacing: .12em; }
@@ -190,7 +191,7 @@
 
 @media (max-width:560px) {
   .header { padding:17px 14px; }.headerStats { grid-template-columns:repeat(2,1fr); }.header h3 { font-size:24px; }
-  .recruitPitch,.rateBoard { padding:14px; }.contractSeal { width:48px; height:48px; }.rateBoardHeader { grid-template-columns:34px 1fr; }.rateBoardHeader > b { grid-column:2; justify-self:start; }.rateBoard li { grid-template-columns:42px 1fr 39px; }
+  .recruitPitch,.rateBoard { padding:14px; }.contractSeal { width:48px; height:48px; }.rateBoardHeader { grid-template-columns:34px 1fr; }.rateBoardHeader > b { grid-column:2; justify-self:start; }.rateBoard ol { grid-template-columns:1fr; }.rateBoard li { grid-template-columns:42px 1fr 39px; }
   .recruitActions { grid-template-columns:1fr; }.resultHeading,.partyHeading,.rosterHeading { align-items:stretch; flex-direction:column; }.resultGrid { grid-template-columns:1fr 1fr; }.resultPortrait { height:160px; }
   .partySlots,.ownedRoster { grid-template-columns:1fr; }.partySlot { grid-template-columns:96px 1fr; }.emptySlot { min-height:88px; }
   .rankProgress { grid-template-columns:repeat(4,1fr); }.saleDialog { padding:16px; }.saleDialog h4 { font-size:18px; }

@@ -60,6 +60,7 @@ export function GuildBuildingHub(props: GuildBuildingHubProps) {
             key={facility.id}
             className={`${styles.facility} ${styles[facility.id]} ${props.activeFacility === facility.id ? styles.active : ""}`}
             onClick={() => props.onSelect(facility.id)}
+            data-tutorial={facility.id === "tavern" ? "facility-tavern" : facility.id === "forge" ? "facility-forge" : undefined}
             aria-pressed={props.activeFacility === facility.id}
           >
             {facility.id === "tavern"

@@ -30,6 +30,8 @@ test("uses discounted one and ten contract recruitment with transparent rank odd
   assert.match(tavern, /onRecruit\(1\)/);
   assert.match(tavern, /onRecruit\(10\)/);
   assert.match(tavern, /등급별 영입 확률/);
+  assert.match(tavern, /finn-portrait\.webp/);
+  assert.doesNotMatch(tavern, />契<|className=\{styles\.oddsSeal\}>%/);
   assert.match(tavern, /중복 정산/);
   assert.match(tavern, /REVEAL_STAGGER_MS/);
   assert.match(tavern, /playGuildRecruitRevealSound/);
@@ -48,6 +50,7 @@ test("uses discounted one and ten contract recruitment with transparent rank odd
   assert.match(styles, /\.revealSlash/);
   assert.match(styles, /\.saleDialogBackdrop/);
   assert.match(styles, /\.rateBoardHeader/);
+  assert.match(styles, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(styles, /prefers-reduced-motion/);
 });
 

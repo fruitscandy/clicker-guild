@@ -1,0 +1,172 @@
+.tutorial {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  pointer-events: none;
+  color: #fff0cf;
+  font-family: Georgia, "Noto Serif KR", serif;
+}
+
+.blocker,
+.fullBlocker {
+  position: fixed;
+  z-index: 0;
+  background: rgba(3, 5, 5, .82);
+  backdrop-filter: blur(2px) saturate(.65);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.fullBlocker { inset: 0; }
+
+.spotlight {
+  position: fixed;
+  z-index: 1;
+  border: 3px solid #ffd175;
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 4px rgba(104, 61, 27, .76),
+    0 0 28px rgba(255, 186, 73, .92),
+    inset 0 0 20px rgba(255, 207, 111, .2);
+  pointer-events: none;
+  animation: spotlightPulse 1.15s ease-in-out infinite alternate;
+}
+
+.spotlight::after {
+  position: absolute;
+  right: 12px;
+  bottom: -19px;
+  width: 26px;
+  height: 26px;
+  background: #ffd175;
+  border: 3px solid #4c2a17;
+  border-radius: 50% 50% 50% 4px;
+  box-shadow: 0 0 18px rgba(255, 192, 78, .7);
+  content: "";
+  transform: rotate(45deg);
+  animation: pointerBounce .72s ease-in-out infinite alternate;
+}
+
+.guideCard {
+  position: fixed;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 12px;
+  min-height: 148px;
+  padding: 16px;
+  color: #f7ead1;
+  background:
+    linear-gradient(145deg, rgba(81, 45, 27, .98), rgba(29, 24, 21, .98)),
+    #241a16;
+  border: 2px solid #d79b50;
+  border-radius: 12px;
+  box-shadow: 0 14px 44px rgba(0, 0, 0, .62), inset 0 1px rgba(255, 230, 172, .18);
+  pointer-events: auto;
+}
+
+.centerCard {
+  left: 50%;
+  top: 50%;
+  width: min(390px, calc(100vw - 28px));
+  transform: translate(-50%, -50%);
+}
+
+.guideSeal {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 52px;
+  color: #5e351c;
+  background: linear-gradient(145deg, #ffe7a0, #c47b36);
+  clip-path: polygon(50% 0, 100% 18%, 87% 82%, 50% 100%, 13% 82%, 0 18%);
+  font-size: 23px;
+  font-weight: 900;
+}
+
+.guideCopy { display: grid; gap: 6px; min-width: 0; }
+.guideCopy small { color: #e0a95c; font: 900 9px/1 Arial, sans-serif; letter-spacing: .12em; }
+.guideCopy strong { color: #fff0ca; font-size: 21px; line-height: 1.18; letter-spacing: -.035em; }
+.guideCopy p { margin: 0; color: #ded1bc; font: 700 12px/1.55 Arial, "Noto Sans KR", sans-serif; }
+.guideCopy em { color: #ffc978; font: 800 11px/1.45 Arial, "Noto Sans KR", sans-serif; font-style: normal; }
+
+.guideActions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.guideActions button {
+  min-height: 34px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: 900 10px/1 Arial, "Noto Sans KR", sans-serif;
+}
+
+.advanceButton {
+  min-width: 138px;
+  padding: 0 16px;
+  color: #432616;
+  background: linear-gradient(#ffe09a, #c9873e);
+  border: 1px solid #ffdea0;
+  box-shadow: 0 4px 0 #6f3f21;
+}
+
+.skipButton {
+  padding: 0 10px;
+  color: #baaa94;
+  background: rgba(12, 12, 11, .36);
+  border: 1px solid rgba(222, 199, 157, .25);
+}
+
+.guideActions button:hover,
+.guideActions button:focus-visible {
+  filter: brightness(1.12);
+  outline: 2px solid #ffe7ab;
+  outline-offset: 2px;
+}
+
+.complete .guideCard {
+  grid-template-columns: 58px 1fr;
+  padding: 22px;
+  border-color: #f0bd67;
+  box-shadow: 0 18px 64px rgba(0, 0, 0, .7), 0 0 52px rgba(224, 153, 64, .26);
+}
+
+.complete .guideSeal { width: 56px; height: 64px; font-size: 29px; }
+.complete .skipButton { display: none; }
+
+@keyframes spotlightPulse {
+  to { filter: brightness(1.22); box-shadow: 0 0 0 5px rgba(104, 61, 27, .82), 0 0 40px rgba(255, 186, 73, 1), inset 0 0 28px rgba(255, 207, 111, .3); }
+}
+
+@keyframes pointerBounce {
+  to { transform: translateY(7px) rotate(45deg); }
+}
+
+@media (max-width: 560px) {
+  .guideCard {
+    grid-template-columns: 40px 1fr;
+    gap: 10px;
+    min-height: 132px;
+    padding: 13px;
+    border-radius: 10px;
+  }
+
+  .guideSeal { width: 38px; height: 44px; font-size: 19px; }
+  .guideCopy strong { font-size: 18px; }
+  .guideCopy p { font-size: 11px; }
+  .guideCopy em { font-size: 10px; }
+  .guideActions { justify-content: space-between; }
+  .guideActions button { min-height: 32px; font-size: 9px; }
+  .complete .guideCard { grid-template-columns: 48px 1fr; padding: 18px; }
+  .complete .guideSeal { width: 46px; height: 54px; font-size: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spotlight,
+  .spotlight::after { animation: none; }
+}
