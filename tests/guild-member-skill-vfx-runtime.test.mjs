@@ -19,7 +19,8 @@ test("connects every guild member skill manifest entry to the runtime resolver",
   }
   assert.match(resolverSource, /MEMBER_ANIMATION_SKILLS\[memberId\]/);
   assert.match(resolverSource, /\/assets\/vfx\/guild-members/);
-  assert.match(resolverSource, /GUILD_MEMBER_SKILL_VFX_DURATION_MS = 1050/);
+  assert.match(resolverSource, /GUILD_MEMBER_BASIC_VFX_DURATION_MS = 520/);
+  assert.match(resolverSource, /GUILD_MEMBER_SKILL_VFX_DURATION_MS = 840/);
 });
 
 test("renders member-specific art for both basic attacks and skills with a safe fallback", async () => {
@@ -32,8 +33,10 @@ test("renders member-specific art for both basic attacks and skills with a safe 
   assert.match(game, /effect\.skill \? "is-skill" : "is-basic"/);
   assert.match(game, /memberVfxSource \? <>/);
   assert.match(game, /className="member-skill-vfx-art"/);
+  assert.match(game, /className="member-skill-vfx-impact"/);
+  assert.match(game, /className="member-skill-vfx-trail"/);
   assert.match(game, /className="member-projectile primary"/);
-  assert.match(game, /skill \? GUILD_MEMBER_SKILL_VFX_DURATION_MS : 720/);
+  assert.match(game, /skill \? GUILD_MEMBER_SKILL_VFX_DURATION_MS : GUILD_MEMBER_BASIC_VFX_DURATION_MS/);
   assert.match(css, /\.member-skill-vfx-art/);
   assert.match(css, /\.member-weapon-fx\.is-basic \.member-skill-vfx-art/);
   assert.match(css, /@keyframes memberBasicVfxArt/);
