@@ -1060,6 +1060,7 @@ export function BulletHellFinale({
   const lastFrameRef = useRef(0);
   const lastHudRef = useRef(0);
   const whiteoutStartedAtRef = useRef<number | null>(null);
+  const onVictoryRef = useRef(onVictory);
   const resultSoundRef = useRef<"victory" | "defeat" | null>(null);
   const defeatHandledRef = useRef(false);
   const pageFractureRef = useRef<ActivePageFracture | null>(null);
@@ -1105,6 +1106,10 @@ export function BulletHellFinale({
   useEffect(() => {
     sceneRef.current = scene;
   }, [scene]);
+
+  useEffect(() => {
+    onVictoryRef.current = onVictory;
+  }, [onVictory]);
 
   useEffect(() => {
     onModeChange?.(hud.mode);
@@ -1486,6 +1491,12 @@ export function BulletHellFinale({
             playStageClearSound(true);
           }
           setHud(snapshotFromWorld(world));
+          if (presentation === "embedded") {
+            sceneRef.current = "departing";
+            setScene("departing");
+            onVictoryRef.current();
+            return;
+          }
           setScene("victory");
           return;
         }
@@ -1498,7 +1509,7 @@ export function BulletHellFinale({
       if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
       frameRef.current = null;
     };
-  }, [completeDefeat, onDefeat, renderCanvas, scene, settlePageFracture, updatePageFracture]);
+  }, [completeDefeat, onDefeat, presentation, renderCanvas, scene, settlePageFracture, updatePageFracture]);
 
   const trackFinaleWeaponCursor = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     if (event.pointerType !== "mouse") return;
