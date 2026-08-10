@@ -9,10 +9,7 @@ export type WeaponAttackEffectState = {
   variant: number;
   damage: number;
   critical: boolean;
-  combo: boolean;
   shockwave: boolean;
-  momentum: number;
-  executionCount: number;
   hitCount: number;
   x: number;
   y: number;
@@ -101,7 +98,7 @@ export function WeaponAttackEffect({ effect, glyph, formatNumber }: WeaponAttack
       aria-hidden="true"
     ><i /></span>
     <span
-      className={`${styles.effect} ${effect.critical ? styles.critical : ""} ${effect.executionCount ? styles.execution : ""} ${effect.momentum ? styles.momentum : ""}`}
+      className={`${styles.effect} ${effect.critical ? styles.critical : ""}`}
       style={style}
       data-weapon-tier={tier}
       data-effect-motif={weaponEffect.key}
@@ -128,15 +125,10 @@ export function WeaponAttackEffect({ effect, glyph, formatNumber }: WeaponAttack
             "--dust-delay": `${index * 24}ms`,
           } as CSSProperties} />)}
         </span>
-        {effect.momentum > 0 && <i className={styles.momentumMark} />}
         {effect.critical && <i className={styles.criticalNotch} />}
-        {effect.executionCount > 0 && <i className={styles.executionCut} />}
         {effect.shockwave && <span className={styles.shockwavePulse}><i /><i /></span>}
       </>}
-      {effect.hitCount > 0 && (effect.combo ? <span className={styles.comboDamage}>
-        <strong>{`−${formatNumber(Math.ceil(effect.damage / 2))}`}</strong>
-        <strong>{`−${formatNumber(Math.floor(effect.damage / 2))}`}</strong>
-      </span> : <strong className={styles.damage}>{`−${formatNumber(effect.damage)}`}</strong>)}
+      {effect.hitCount > 0 && <strong className={styles.damage}>{`−${formatNumber(effect.damage)}`}</strong>}
     </span>
   </>;
 }

@@ -69,17 +69,14 @@ test("distinguishes direct attacks from triggered guild upgrade effects", async 
 
   assert.match(game, /activeCombatProcs/);
   assert.match(game, /attackUpgradeStatuses/);
-  assert.match(game, /executionCount/);
-  assert.match(game, /executionTargets/);
   assert.match(game, /shockwaveClicksRemaining/);
-  assert.match(game, /comboClicksRemaining/);
+  assert.match(game, /playerAutoAttackIntervalMs/);
+  assert.match(game, /lastPlayerAutoAttackAt/);
   assert.match(game, /<WeaponAttackEffect/);
   assert.match(weaponEffect, /shockwavePulse/);
   assert.match(weaponEffect, /criticalNotch/);
   assert.match(weaponEffect, /data-effect-motif/);
-  assert.match(weaponEffect, /executionCut/);
-  assert.match(game, /execution-finisher/);
-  assert.match(weaponEffect, /comboDamage/);
+  assert.doesNotMatch(weaponEffect, /executionCut|comboDamage|momentumMark/);
   assert.match(weaponEffectCss, /motifCrosscut/);
   assert.match(weaponEffectCss, /motifAbyss/);
   assert.match(weaponEffectCss, /motifMyriad/);
@@ -87,7 +84,7 @@ test("distinguishes direct attacks from triggered guild upgrade effects", async 
   assert.doesNotMatch(game, /fx-pattern-label/);
   assert.doesNotMatch(game, /combat-proc-popover/);
   assert.match(game, /UPGRADE_ICON_BY_KEY\[upgrade\.key\]/);
-  for (const key of ["range", "critical", "shockwave", "combo", "execution", "momentum"]) {
+  for (const key of ["range", "critical", "shockwave", "autoAttack"]) {
     assert.match(game, new RegExp(`key: "${key}"`));
   }
   assert.match(game, /일반 직접 공격/);
@@ -95,8 +92,6 @@ test("distinguishes direct attacks from triggered guild upgrade effects", async 
   assert.match(css, /\.shockwave-activation-emblem/);
   assert.match(css, /\.field-click-fx\.is-critical \.fx-damage/);
   assert.match(css, /@keyframes criticalDamageSlam/);
-  assert.match(css, /@keyframes comboSlashSecond/);
-  assert.match(css, /@keyframes executionTargetFall/);
   assert.match(css, /\.attack-upgrade-monitor > span\.triggered/);
 });
 
@@ -118,21 +113,19 @@ test("routes guild management through buildings and gates four-way research", as
   assert.match(game, /activeFacility === "forge"/);
   assert.doesNotMatch(game, /activeFacility === "training"/);
   assert.doesNotMatch(progression, /"training"/);
-  assert.match(progression, /researchDepth: 7/);
+  assert.match(progression, /researchDepth: 5/);
   assert.match(progression, /inferHallLevelFromNodes/);
   assert.match(hub, /길드 건물 선택/);
   assert.match(hub, /forgeBuildingArt/);
-  assert.match(researchMap, /길드 공세/);
-  assert.match(researchMap, /연계 전술/);
-  assert.match(researchMap, /원정 지원/);
-  assert.match(researchMap, /길드 경영/);
+  assert.match(researchMap, /플레이어 공격/);
+  assert.match(researchMap, /토벌 지원/);
+  assert.match(researchMap, /길드 성장/);
   assert.match(researchMap, /본관 Lv\.\$\{requiredHallLevel\} 필요/);
   assert.match(researchMap, /upgradeIconForNode/);
   assert.match(game, /UPGRADE_ICON_BY_KEY/);
-  assert.equal(iconAssets.filter((file) => file.endsWith(".webp")).length, 12);
-  for (const key of ["range", "critical", "combo", "execution", "shockwave", "momentum", "time", "scout", "guild", "gold", "tavern", "loot"]) {
-    assert.match(iconConfig, new RegExp(`${key}: "/assets/upgrades/${key}\\.webp"`));
-  }
+  assert.ok(iconAssets.filter((file) => file.endsWith(".webp")).length >= 8);
+  for (const key of ["range", "critical", "shockwave", "time", "guild", "gold", "tavern"]) assert.match(iconConfig, new RegExp(`${key}: "/assets/upgrades/${key}\\.webp"`));
+  assert.match(iconConfig, /autoAttack: "\/assets\/upgrades\/momentum\.webp"/);
 });
 
 test("separates guild passive weapons from the player's forge click weapon", async () => {
@@ -242,7 +235,7 @@ test("keeps developer upgrade experiments temporary and independent from gold", 
   assert.match(developerPanel, /저장 영향 없음/);
   assert.match(developerPanel, /모두 0/);
   assert.match(developerPanel, /모두 최대/);
-  assert.match(upgradeState, /export const UPGRADE_KEYS/);
+  assert.match(upgradeState, /UPGRADE_CAPS, UPGRADE_KEYS/);
   assert.match(upgradeState, /maximumUpgradeLevels/);
   assert.match(upgradeState, /clampUpgradeLevel/);
 });

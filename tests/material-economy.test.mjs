@@ -8,6 +8,9 @@ import {
   onePassCombatSeconds,
   shortRunStageGold,
 } from "../app/economy-balance.ts";
+import { PLAYER_WEAPON_BALANCE } from "../app/game-balance.ts";
+import { CITADEL_RESEARCH_COST, CORE_UPGRADE_NODES } from "../app/guild-upgrades.ts";
+import { GUILD_HALL_STAGES } from "../app/guild-hub/guild-progression.ts";
 import { allStageMaterials, REGION_MATERIAL_REWARDS, weaponMaterialRecipe } from "../app/stage-materials.ts";
 
 test("keeps the 30-wave combat budget below the 20-minute session cap", () => {
@@ -44,7 +47,16 @@ test("one clear preserves the compact but generous gold curve", () => {
     return shortRunStageGold(Math.floor(index / 3), (stage - 1) % 3 + 1);
   }).reduce((sum, gold) => sum + gold, 160);
 
+  const coreProgressionCost = [
+    ...PLAYER_WEAPON_BALANCE.map((weapon) => weapon.cost),
+    ...GUILD_HALL_STAGES.map((hall) => hall.upgradeCost ?? 0),
+    ...CORE_UPGRADE_NODES.map((node) => node.cost),
+    CITADEL_RESEARCH_COST,
+  ].reduce((sum, cost) => sum + cost, 0);
+
   assert.equal(onePassGold, 292660);
-  assert.ok(onePassGold >= 281255, "one clear should fund all core weapon, research, and hall costs");
+  assert.equal(coreProgressionCost, 280570);
+  assert.ok(onePassGold >= coreProgressionCost, "one clear should fund all core weapon, research, and hall costs");
+  assert.ok(onePassGold - coreProgressionCost < 15000, "special attacks and gacha should still require choices");
   assert.ok(onePassGold < 310000, "gold should still require choices during the run");
 });

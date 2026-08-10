@@ -20,8 +20,11 @@ test("documents every upgrade family and its purchase requirements", async () =>
     readFile(new URL("../app/guild-hub/ResearchMap.module.css", import.meta.url), "utf8"),
   ]);
 
-  for (const family of ["range", "crit", "shockwave", "combo", "execute", "momentum", "time", "scout", "loot", "guild", "gold", "tavern"]) {
+  for (const family of ["range", "crit", "shockwave", "auto", "time", "guild", "gold", "tavern"]) {
     assert.match(researchMap, new RegExp(`\\b${family}: \\{ summary:`));
+  }
+  for (const removedFamily of ["combo", "execute", "momentum", "scout", "loot"]) {
+    assert.doesNotMatch(researchMap, new RegExp(`\\b${removedFamily}: \\{ summary:`));
   }
 
   assert.match(researchMap, /연구 비용/);

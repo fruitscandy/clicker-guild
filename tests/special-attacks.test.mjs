@@ -87,7 +87,7 @@ test("CC0 파티클 원본과 서로 다른 세 전장 연출이 연결된다", 
   assert.match(layer, /TornadoEffect/);
   assert.match(layer, /MeteorEffect/);
   assert.match(layer, /specialMonsterClassName/);
-  assert.match(panel, /특수 비술/);
+  assert.match(panel, /특수 공격/);
   assert.match(audio, /playLightning/);
   assert.match(audio, /playTornado/);
   assert.match(audio, /playMeteor/);

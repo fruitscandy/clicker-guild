@@ -50,9 +50,9 @@ export function SpecialResearchPanel({
       <header className={styles.heading}>
         <span className={styles.headingSeal} aria-hidden="true"><i />秘</span>
         <span className={styles.headingCopy}>
-          <small>SPECIAL ARCANA · FIELD AUTOMATION</small>
-          <strong id="special-research-title">특수 비술</strong>
-          <p>연구한 비술은 전투 중 자동으로 충전되어 밀집한 몬스터 무리를 향해 발동합니다.</p>
+          <small>SPECIAL ATTACK · FIELD AUTOMATION</small>
+          <strong id="special-research-title">특수 공격</strong>
+          <p>번개·토네이도·메테오는 각각 해금되며 전투 중 자동으로 충전되어 몬스터 무리를 향해 발동합니다.</p>
         </span>
         <span className={styles.progressBadge}><b>{completed}</b> / 3 해금</span>
       </header>
@@ -114,7 +114,7 @@ export function SpecialResearchPanel({
           );
         })}
       </div>
-      <p className={styles.footnote}><b>자동 비술 규칙</b> 전투가 시작되면 각 비술이 독립적으로 충전됩니다. 플레이어 무기 강화는 공격력만 높이고 비술의 범위·주기는 바꾸지 않습니다.</p>
+      <p className={styles.footnote}><b>특수 공격 규칙</b> 전투가 시작되면 세 공격이 독립적으로 충전됩니다. 플레이어 무기 공격력이 피해 기준이 되지만 범위와 발동 주기는 고정됩니다.</p>
     </section>
   );
 }

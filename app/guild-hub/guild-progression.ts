@@ -32,7 +32,7 @@ export const GUILD_HALL_STAGES: readonly GuildHallStage[] = [
     description: "원정·전투·경영 연구가 균형 있게 확장되는 길드촌",
     researchDepth: 3,
     upgradeCost: 7_600,
-    requiredResearch: 20,
+    requiredResearch: 18,
   },
   {
     level: 4,
@@ -40,7 +40,7 @@ export const GUILD_HALL_STAGES: readonly GuildHallStage[] = [
     description: "고급 훈련과 장거리 원정을 지원하는 대형 본부",
     researchDepth: 4,
     upgradeCost: 21_000,
-    requiredResearch: 31,
+    requiredResearch: 28,
   },
   {
     level: 5,
@@ -48,13 +48,13 @@ export const GUILD_HALL_STAGES: readonly GuildHallStage[] = [
     description: "대륙의 강자들이 모여드는 방어형 길드 요새",
     researchDepth: 5,
     upgradeCost: 58_000,
-    requiredResearch: 39,
+    requiredResearch: 38,
   },
   {
     level: 6,
     name: "전설의 길드 성채",
     description: "모든 연구 계통을 완성할 수 있는 대륙 최고의 성채",
-    researchDepth: 7,
+    researchDepth: 5,
     upgradeCost: null,
     requiredResearch: null,
   },
@@ -69,7 +69,7 @@ export const GUILD_FACILITIES: ReadonlyArray<{
   { id: "hall", title: "길드 본관", subtitle: "건물 승급과 해금 관리", glyph: "G" },
   { id: "tavern", title: "방랑자의 잔", subtitle: "고용과 파티 편성", glyph: "잔" },
   { id: "forge", title: "불꽃 대장간", subtitle: "플레이어 무기 제작과 강화", glyph: "鍛" },
-  { id: "research", title: "길드 강화소", subtitle: "4방향 발전 연구", glyph: "✦" },
+  { id: "research", title: "길드 강화소", subtitle: "핵심 강화와 특수 공격", glyph: "✦" },
 ] as const;
 
 export function guildHallStage(level: number) {

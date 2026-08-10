@@ -54,7 +54,7 @@ export const SPECIAL_ATTACKS: Record<SpecialAttackKind, SpecialAttackDefinition>
   lightning: {
     kind: "lightning",
     nodeId: "special-lightning-2",
-    title: "번개 강타",
+    title: "번개",
     subtitle: "천뢰의 인장",
     description: "6.8초마다 밀집한 적에게 연쇄 번개가 떨어져 최대 7체를 감전시킵니다.",
     glyph: "雷",
@@ -90,9 +90,9 @@ export const SPECIAL_ATTACKS: Record<SpecialAttackKind, SpecialAttackDefinition>
   meteor: {
     kind: "meteor",
     nodeId: "special-meteor-4",
-    title: "운석 충돌",
-    subtitle: "멸성의 낙하",
-    description: "15.5초마다 운석이 낙하해 대폭발 피해를 주고 적을 전장 안쪽으로 날려 보냅니다.",
+    title: "메테오",
+    subtitle: "운석 충돌",
+    description: "15.5초마다 메테오가 낙하해 대폭발 피해를 주고 적을 전장 안쪽으로 날려 보냅니다.",
     glyph: "隕",
     cost: 12_000,
     hallLevel: 4,

@@ -51,9 +51,10 @@ test("all 15 weapons select one unique effect motif without tier accumulation", 
     assert.match(effectStyles, new RegExp(`\\.${motifName}\\b`));
   }
 
-  for (const combatState of ["combo", "critical", "execution", "shockwave", "momentum"]) {
+  for (const combatState of ["critical", "shockwave"]) {
     assert.match(effectSource, new RegExp(combatState, "i"));
   }
+  assert.doesNotMatch(effectSource, /combo|execution|momentum/i);
 });
 
 test("the effect uses physical painted assets without the retired neon libraries", () => {
