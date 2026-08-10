@@ -200,21 +200,38 @@ test("stacks visible boss-hit feedback without letting rate-limited clicks erase
 });
 
 test("renders opaque rotating asset cards and the exact guild mask above impacts", async () => {
-  const component = await readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8");
+  const [component, engine] = await Promise.all([
+    readFile(new URL("app/bullet-hell/BulletHellFinale.tsx", root), "utf8"),
+    readFile(new URL("app/bullet-hell/engine.ts", root), "utf8"),
+  ]);
 
   assert.match(component, /const size = FINALE_GUILD_SIZE/);
   assert.match(component, /const asset = finaleBulletAsset\(bullet\.spriteIndex\)/);
   assert.doesNotMatch(component, /BULLET_ASSET_BY_SOURCE|bullet\.asset/);
-  assert.match(component, /const cardSize = finaleBulletCardSize\(asset\)/);
+  assert.match(component, /const cardSize = bullet\.cardSize/);
+  assert.doesNotMatch(component, /finaleBulletCardSize|FINALE_BULLET_CARD_SIZE_BY_KIND/);
+  assert.match(engine, /FINALE_ASSET_BULLET_CARD_SIZE = 80/);
+  assert.match(engine, /cardSize: FINALE_ASSET_BULLET_CARD_SIZE/);
+  assert.match(engine, /function rotatedCardIntersectsCircle/);
+  assert.doesNotMatch(engine, /visualRadius/);
   assert.match(component, /context\.fillStyle = telegraph \? "#a81258" : "#d91b73"/);
   assert.match(component, /context\.fillRect\(-halfCard, -halfCard, cardSize, cardSize\)/);
   assert.match(component, /Math\.min\(contentSize \/ image\.naturalWidth, contentSize \/ image\.naturalHeight\)/);
-  assert.match(component, /context\.rotate\(reducedMotion \? 0 : bullet\.rotation\)/);
+  assert.match(component, /context\.rotate\(bullet\.rotation\)/);
   assert.match(component, /const cells = finaleGuildMaskCells\(loadout\.hallLevel\)/);
   assert.match(component, /traceGuildMaskCells\(context, cells\)/);
   assert.match(component, /traceGuildMaskCells\(context, boundaryCells\)/);
   assert.doesNotMatch(component, /function drawPlayerCore/);
   assert.doesNotMatch(component, /흰 점이 실제 피격점/);
+  assert.match(component, /회전하는 핑크 카드가 길드의 발광 실루엣에 닿으면 피격됩니다/);
+
+  const drawBulletStart = component.indexOf("function drawBullet(");
+  const drawBulletEnd = component.indexOf("function drawPlayerImpact(", drawBulletStart);
+  assert.ok(drawBulletStart >= 0 && drawBulletEnd > drawBulletStart, "drawBullet block should exist");
+  const drawBulletBlock = component.slice(drawBulletStart, drawBulletEnd);
+  assert.doesNotMatch(drawBulletBlock, /rotate\(reducedMotion \? 0/);
+  assert.doesNotMatch(drawBulletBlock, /context\.arc\(/);
+  assert.doesNotMatch(drawBulletBlock, /rgba\(9,3,12,\.72\)|strokeStyle = "#ffffff"/);
 
   const bodyLayer = component.indexOf("drawGuildBody(context, world, loadout, images, reducedMotion);");
   const enemyLayer = component.indexOf("world.bullets.forEach((bullet) => drawBullet(context, bullet, images, reducedMotion));");

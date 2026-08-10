@@ -1,7 +1,7 @@
 export const FINALE_WIDTH = 960;
 export const FINALE_HEIGHT = 600;
 
-export const FINALE_BULLET_CAP = 6;
+export const FINALE_BULLET_CAP = 5;
 export const FINALE_CLICK_INTERVAL_MS = 125;
 export const FINALE_TELEGRAPH_MS = 650;
 export const FINALE_DODGE_MS = 6_000;
@@ -16,8 +16,7 @@ export const FINALE_BOSS_ANCHOR_Y = 184;
 export const FINALE_PLAYER_START_X = FINALE_WIDTH / 2;
 export const FINALE_PLAYER_START_Y = FINALE_HEIGHT - 72;
 export const FINALE_GUILD_SIZE = 90;
-export const FINALE_ASSET_BULLET_CORE_RADIUS = 8;
-export const FINALE_ASSET_BULLET_VISUAL_RADIUS = 44;
+export const FINALE_ASSET_BULLET_CARD_SIZE = 80;
 
 const FIXED_STEP_MS = 16;
 const MAX_UPDATE_MS = 512;
@@ -26,11 +25,10 @@ const DEFAULT_SEED = 0xc0de_2026;
 const PHASE_ONE_HP = 16;
 const PHASE_TWO_HP = 42;
 const DODGE_CLICK_MULTIPLIER = 0.35;
-const ASSET_VOLLEY_MIN = 5;
 const ASSET_VOLLEY_SPEED_MIN = 112;
 const ASSET_VOLLEY_SPEED_RANGE = 24;
 const ASSET_VOLLEY_AIM_JITTER = 56;
-const ASSET_VOLLEY_RESPAWN_MS = 900;
+const ASSET_BULLET_SPAWN_MS = 520;
 const GUILD_MASK_GRID_SIZE = 24;
 const GUILD_MASK_CELL_SIZE = FINALE_GUILD_SIZE / GUILD_MASK_GRID_SIZE;
 const GUILD_MASK_CELL_RADIUS = GUILD_MASK_CELL_SIZE * 0.42;
@@ -179,8 +177,7 @@ export type FinaleBullet = {
   vy: number;
   ax: number;
   ay: number;
-  radius: number;
-  visualRadius: number;
+  cardSize: number;
   rotation: number;
   spriteIndex: number;
   spin: number;
@@ -710,55 +707,51 @@ function addBullet(
   world.nextBulletId += 1;
 }
 
-function spawnAssetVolley(world: FinaleWorld) {
-  const count = ASSET_VOLLEY_MIN + Math.floor(random(world) * 2);
-  const edgeOffset = Math.floor(random(world) * 3);
-  for (let index = 0; index < count; index += 1) {
-    const edge = (edgeOffset + index) % 3;
-    const lane = random(world);
-    let x = FINALE_ASSET_BULLET_VISUAL_RADIUS;
-    let y = ARENA_TOP + FINALE_ASSET_BULLET_VISUAL_RADIUS;
-    if (edge === 0) {
-      x += lane * (FINALE_WIDTH - FINALE_ASSET_BULLET_VISUAL_RADIUS * 2);
-    } else {
-      x = edge === 1 ? FINALE_ASSET_BULLET_VISUAL_RADIUS : FINALE_WIDTH - FINALE_ASSET_BULLET_VISUAL_RADIUS;
-      y += lane * (FINALE_HEIGHT - ARENA_TOP - FINALE_ASSET_BULLET_VISUAL_RADIUS * 2);
-    }
-
-    const targetX = world.player.x + (random(world) * 2 - 1) * ASSET_VOLLEY_AIM_JITTER;
-    const targetY = world.player.y + (random(world) * 2 - 1) * ASSET_VOLLEY_AIM_JITTER;
-    const angle = Math.atan2(targetY - y, targetX - x);
-    const speed = ASSET_VOLLEY_SPEED_MIN + random(world) * ASSET_VOLLEY_SPEED_RANGE;
-    const spinSample = random(world) * 2 - 1;
-    const spin = (spinSample < 0 ? -1 : 1) * (0.65 + Math.abs(spinSample) * 0.9);
-    const spriteIndex = Math.floor(random(world) * 0x1_0000_0000);
-    addBullet(world, {
-      x,
-      y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      ax: 0,
-      ay: 0,
-      radius: FINALE_ASSET_BULLET_CORE_RADIUS,
-      visualRadius: FINALE_ASSET_BULLET_VISUAL_RADIUS,
-      rotation: angle,
-      spin,
-      turnRate: 0,
-      telegraphMs: world.stats.warningMs,
-      lifetimeMs: 6_500,
-      damage: 1,
-      kind: "error",
-      spriteIndex,
-    });
+function spawnAssetBullet(world: FinaleWorld) {
+  const halfCard = FINALE_ASSET_BULLET_CARD_SIZE / 2;
+  const edge = Math.floor(random(world) * 3);
+  const lane = random(world);
+  let x = halfCard;
+  let y = ARENA_TOP + halfCard;
+  if (edge === 0) {
+    x += lane * (FINALE_WIDTH - FINALE_ASSET_BULLET_CARD_SIZE);
+  } else {
+    x = edge === 1 ? halfCard : FINALE_WIDTH - halfCard;
+    y += lane * (FINALE_HEIGHT - ARENA_TOP - FINALE_ASSET_BULLET_CARD_SIZE);
   }
+
+  const targetX = world.player.x + (random(world) * 2 - 1) * ASSET_VOLLEY_AIM_JITTER;
+  const targetY = world.player.y + (random(world) * 2 - 1) * ASSET_VOLLEY_AIM_JITTER;
+  const angle = Math.atan2(targetY - y, targetX - x);
+  const speed = ASSET_VOLLEY_SPEED_MIN + random(world) * ASSET_VOLLEY_SPEED_RANGE;
+  const spinSample = random(world) * 2 - 1;
+  const spin = (spinSample < 0 ? -1 : 1) * (0.65 + Math.abs(spinSample) * 0.9);
+  const spriteIndex = Math.floor(random(world) * 0x1_0000_0000);
+  addBullet(world, {
+    x,
+    y,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
+    ax: 0,
+    ay: 0,
+    cardSize: FINALE_ASSET_BULLET_CARD_SIZE,
+    rotation: angle,
+    spin,
+    turnRate: 0,
+    telegraphMs: world.stats.warningMs,
+    lifetimeMs: 6_500,
+    damage: 1,
+    kind: "error",
+    spriteIndex,
+  });
 }
 
 function updatePatterns(world: FinaleWorld, deltaMs: number) {
   if (world.cycle !== "dodge") return;
   world.boss.attackCooldownMs -= deltaMs;
-  if (world.boss.attackCooldownMs <= 0 && world.bullets.length === 0) {
-    spawnAssetVolley(world);
-    world.boss.attackCooldownMs = ASSET_VOLLEY_RESPAWN_MS;
+  if (world.boss.attackCooldownMs <= 0 && world.bullets.length < FINALE_BULLET_CAP) {
+    spawnAssetBullet(world);
+    world.boss.attackCooldownMs += ASSET_BULLET_SPAWN_MS;
   }
 }
 
@@ -797,21 +790,52 @@ function moveBullets(world: FinaleWorld, deltaMs: number) {
   void deltaSeconds;
 }
 
+function rotatedCardIntersectsCircle(
+  bullet: FinaleBullet,
+  circleX: number,
+  circleY: number,
+  circleRadius: number,
+) {
+  const angle = finiteOr(bullet.rotation, 0);
+  const cosine = Math.cos(angle);
+  const sine = Math.sin(angle);
+  const dx = circleX - bullet.x;
+  const dy = circleY - bullet.y;
+  const localX = dx * cosine + dy * sine;
+  const localY = -dx * sine + dy * cosine;
+  const halfCard = Math.max(0, finiteOr(bullet.cardSize, 0)) / 2;
+  const closestX = clamp(localX, -halfCard, halfCard);
+  const closestY = clamp(localY, -halfCard, halfCard);
+  const separationX = localX - closestX;
+  const separationY = localY - closestY;
+  const radius = Math.max(0, circleRadius);
+  return separationX * separationX + separationY * separationY <= radius * radius;
+}
+
+function cardIntersectsGuild(
+  world: FinaleWorld,
+  bullet: FinaleBullet,
+  guildMask: readonly FinaleGuildMaskCell[],
+  padding = 0,
+) {
+  return guildMask.some((cell) => rotatedCardIntersectsCircle(
+    bullet,
+    world.player.x + cell.x,
+    world.player.y + cell.y,
+    cell.radius + padding,
+  ));
+}
+
 function collideBulletsWithPlayer(world: FinaleWorld) {
   const survivors: FinaleBullet[] = [];
   const guildMask = finaleGuildMaskCells(world.loadout.hallLevel);
+  const grazePadding = Math.max(0, world.stats.grazeRadius - world.stats.hitRadius);
   for (const bullet of world.bullets) {
     if (bullet.ageMs < bullet.telegraphMs) {
       survivors.push(bullet);
       continue;
     }
-    const intersectsGuild = guildMask.some((cell) => {
-      const cellWorld = { x: world.player.x + cell.x, y: world.player.y + cell.y };
-      const hitDistance = cell.radius + bullet.radius;
-      return distanceSquared(cellWorld, bullet) <= hitDistance * hitDistance;
-    });
-    const distance = Math.sqrt(distanceSquared(world.player, bullet));
-    const grazeDistance = world.stats.grazeRadius + bullet.radius;
+    const intersectsGuild = cardIntersectsGuild(world, bullet, guildMask);
     if (intersectsGuild && world.player.invulnerableMs <= 0) {
       const shielded = world.player.shield > 0;
       world.playerHit = true;
@@ -833,7 +857,7 @@ function collideBulletsWithPlayer(world: FinaleWorld) {
       }
       continue;
     }
-    if (!bullet.grazed && !intersectsGuild && distance <= grazeDistance) {
+    if (!bullet.grazed && !intersectsGuild && cardIntersectsGuild(world, bullet, guildMask, grazePadding)) {
       bullet.grazed = true;
       world.grazes += 1;
       world.score += 40;

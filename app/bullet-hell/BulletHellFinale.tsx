@@ -23,7 +23,6 @@ import {
   FINALE_GUILD_ATLAS,
   FINALE_VFX_ASSETS,
   finaleBulletAsset,
-  finaleBulletCardSize,
 } from "./assets";
 import {
   GLITCH_BOSS_BODY_RADIUS,
@@ -689,20 +688,19 @@ function drawBullet(
   const image = images.get(asset.source);
   const telegraph = bullet.ageMs < bullet.telegraphMs;
   const warningProgress = clamp(bullet.ageMs / Math.max(1, bullet.telegraphMs), 0, 1);
-  const cardSize = finaleBulletCardSize(asset);
+  const cardSize = bullet.cardSize;
   const halfCard = cardSize / 2;
 
   context.save();
   context.translate(bullet.x, bullet.y);
-  context.rotate(reducedMotion ? 0 : bullet.rotation);
+  context.rotate(bullet.rotation);
   if (telegraph) {
     context.globalAlpha = .2 + warningProgress * .42;
     context.strokeStyle = warningProgress > .72 ? "#fff1ad" : "#ff7fb6";
     context.lineWidth = 2;
     context.setLineDash([4, 5]);
-    context.beginPath();
-    context.arc(0, 0, halfCard + 7 - warningProgress * 4, 0, Math.PI * 2);
-    context.stroke();
+    const warningHalf = halfCard + 7 - warningProgress * 4;
+    context.strokeRect(-warningHalf, -warningHalf, warningHalf * 2, warningHalf * 2);
   }
 
   context.globalAlpha = 1;
@@ -728,17 +726,6 @@ function drawBullet(
     context.fillStyle = "#ffe1ef";
     context.fillRect(-cardSize * .2, -cardSize * .2, cardSize * .4, cardSize * .4);
   }
-
-  context.globalAlpha = telegraph ? .64 : .94;
-  context.fillStyle = "rgba(9,3,12,.72)";
-  context.beginPath();
-  context.arc(0, 0, bullet.radius + 2.5, 0, Math.PI * 2);
-  context.fill();
-  context.strokeStyle = "#ffffff";
-  context.lineWidth = 2;
-  context.beginPath();
-  context.arc(0, 0, bullet.radius, 0, Math.PI * 2);
-  context.stroke();
   context.restore();
 }
 
@@ -1717,7 +1704,7 @@ export function BulletHellFinale({
 
     {mode === "preview" && showCombatChrome && <div className={styles.quickTools} aria-label="개발자 장면 이동 도구"><span>DEV</span><div>{(["field", "collapse", "bulletHell", "destruction", "whiteout"] as FinaleMode[]).map((target) => <button className={styles.phaseButton} key={target} type="button" onClick={() => jumpToMode(target)}>{target}</button>)}<button className={styles.phaseButton} type="button" onClick={jumpToOpening}>CORE OPEN</button><button className={styles.phaseButton} type="button" onClick={forceDefeat}>DEFEAT</button><button className={styles.phaseButton} type="button" onClick={restartAll}>RESET</button></div></div>}
 
-    <p id="finale-controls" className={styles.srOnly}>보스를 클릭하거나 Enter로 공격합니다. 2페이즈에서는 WASD 또는 방향키로 길드 본관을 움직이고 Shift로 정밀 이동합니다. 발광 윤곽선 안의 길드 본관 전체가 실제 피격영역입니다.</p>
+    <p id="finale-controls" className={styles.srOnly}>보스를 클릭하거나 Enter로 공격합니다. 2페이즈에서는 WASD 또는 방향키로 길드 본관을 움직이고 Shift로 정밀 이동합니다. 회전하는 핑크 카드가 길드의 발광 실루엣에 닿으면 피격됩니다.</p>
     <p className={styles.srOnly} aria-live="polite">{announcement}</p>
   </div>;
 
