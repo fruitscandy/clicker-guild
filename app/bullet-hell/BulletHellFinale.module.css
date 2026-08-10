@@ -851,3 +851,408 @@
   .shell,
   .screen { min-height: 100dvh; }
 }
+
+/* Seamless finale presentation. The campaign surface is mounted inside the
+   existing Stage 10-3 arena so its layout box never changes during the reveal. */
+.battleSurface {
+  --glitch-cyan: #63f4ff;
+  --glitch-magenta: #ff4cae;
+  --guild-gold: #f0bd61;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  overflow: hidden;
+  color: #eefcff;
+  background: transparent;
+  font-family: Inter, "Noto Sans KR", system-ui, sans-serif;
+  isolation: isolate;
+  touch-action: none;
+}
+
+.battleSurface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(180deg, transparent 0 3px, rgba(99, 244, 255, .07) 3px 4px);
+  mix-blend-mode: screen;
+  transition: opacity .35s ease;
+}
+
+.embeddedSurface {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.standaloneSurface {
+  min-height: max(560px, calc(100svh - 132px));
+}
+
+.battleSurface[data-finale-mode="collapse"] {
+  background: radial-gradient(circle at 50% 35%, rgba(9, 12, 18, .25), rgba(0, 0, 0, .88));
+  animation: finaleSurfaceFracture 1.8s steps(8, end) both;
+}
+
+.battleSurface[data-finale-mode="bulletHell"],
+.battleSurface[data-finale-mode="destruction"],
+.battleSurface[data-finale-mode="whiteout"] {
+  background: #000;
+}
+
+.battleSurface[data-finale-mode="bulletHell"]::after,
+.battleSurface[data-finale-mode="destruction"]::after {
+  opacity: .28;
+}
+
+.battleSurface .canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  cursor: crosshair;
+}
+
+.battleSurface .canvas:focus-visible {
+  box-shadow: inset 0 0 0 3px rgba(255, 239, 169, .72);
+}
+
+.bossOverlay,
+.guildOverlay {
+  position: absolute;
+  z-index: 11;
+  pointer-events: none;
+  color: #effeff;
+  background: linear-gradient(145deg, rgba(5, 9, 14, .89), rgba(11, 15, 22, .7));
+  border: 1px solid rgba(111, 232, 242, .3);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, .35), inset 0 1px rgba(255, 255, 255, .06);
+  backdrop-filter: blur(3px);
+}
+
+.bossOverlay {
+  top: 12px;
+  left: 50%;
+  width: min(560px, 68%);
+  padding: 8px 12px 9px;
+  transform: translateX(-50%);
+}
+
+.bossOverlay > span,
+.guildOverlay > span {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  font: 800 9px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .08em;
+}
+
+.bossOverlay b,
+.guildOverlay b {
+  color: #fff4d4;
+}
+
+.bossOverlay em {
+  color: #77eff7;
+  font-size: 8px;
+  font-style: normal;
+}
+
+.bossOverlay strong,
+.guildOverlay strong {
+  color: #fff;
+  font-size: 10px;
+}
+
+.bossOverlay .bossBar,
+.guildBar {
+  position: relative;
+  width: 100%;
+  height: 7px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, .72);
+  border: 1px solid rgba(255, 115, 176, .32);
+}
+
+.bossOverlay .bossBar i,
+.guildBar i {
+  display: block;
+  width: var(--boss-hp, 100%);
+  height: 100%;
+  background: linear-gradient(90deg, #bb234f, #ff5daa 52%, #7beef5);
+  box-shadow: 0 0 12px rgba(255, 79, 163, .55);
+  transition: width .12s linear;
+}
+
+.bossOverlay > small {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  overflow: hidden;
+  color: #9bc8cc;
+  font: 800 7px/1 ui-monospace, monospace;
+  letter-spacing: .12em;
+}
+
+.bossOverlay > small > i {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: var(--meter, 0%);
+  height: 1px;
+  background: var(--glitch-cyan);
+}
+
+.bossOverlay > small.openingSignal {
+  color: #ffe894;
+  text-shadow: 0 0 8px rgba(255, 223, 109, .58);
+}
+
+.guildOverlay {
+  right: 14px;
+  bottom: 78px;
+  width: min(230px, 34%);
+  padding: 9px 10px;
+  border-color: rgba(95, 231, 240, .42);
+}
+
+.guildOverlay > span {
+  grid-template-columns: 1fr auto;
+}
+
+.guildOverlay .guildBar {
+  border-color: rgba(107, 230, 239, .34);
+}
+
+.guildOverlay .guildBar i {
+  width: var(--guild-hp, 100%);
+  background: linear-gradient(90deg, #c58635, #f4cb6c 55%, #94f2ed);
+}
+
+.guildOverlay .hullRow {
+  margin-top: 7px;
+  gap: 3px;
+}
+
+.guildOverlay .hullCell {
+  width: 15px;
+  height: 8px;
+}
+
+.guildOverlay > small {
+  display: block;
+  margin-top: 6px;
+  color: #8fdde2;
+  font: 800 7px/1 ui-monospace, monospace;
+  letter-spacing: .12em;
+}
+
+.pauseButton {
+  position: absolute;
+  z-index: 12;
+  top: 13px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: rgba(225, 250, 252, .78);
+  background: rgba(6, 12, 18, .62);
+  border: 1px solid rgba(113, 223, 232, .25);
+  cursor: pointer;
+}
+
+.battleSurface .cinematicLabel {
+  z-index: 16;
+}
+
+.battleSurface .quickTools {
+  position: absolute;
+  z-index: 14;
+  left: 50%;
+  bottom: 7px;
+  max-width: calc(100% - 290px);
+  margin: 0;
+  padding: 5px 7px;
+  opacity: .72;
+  transform: translateX(-50%);
+}
+
+.screen {
+  width: min(1500px, calc(100% - 24px));
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: 0 28px 32px;
+}
+
+.stageToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 82px;
+  padding: 12px 18px;
+  color: #ead9b1;
+  background: linear-gradient(90deg, rgba(30, 27, 20, .94), rgba(35, 31, 22, .8));
+  border: 1px solid rgba(177, 146, 82, .28);
+}
+
+.stageToolbar small,
+.stageToolbar span {
+  color: #a79570;
+  font: 800 8px/1.2 ui-monospace, monospace;
+  letter-spacing: .12em;
+}
+
+.stageToolbar h2 {
+  margin: 4px 0 0;
+  color: #f0dfba;
+  font: 700 22px/1 Georgia, "Noto Serif KR", serif;
+}
+
+.stageToolbar h2 b {
+  color: #c59a48;
+}
+
+.standaloneHost {
+  position: relative;
+  width: 100%;
+  min-height: max(560px, calc(100svh - 132px));
+  overflow: hidden;
+  background: url("/assets/fields/field-10-ancient-dragon-sanctuary-hq.webp") center / cover no-repeat;
+  border: 1px solid rgba(172, 139, 75, .32);
+}
+
+:global(.game-shell.finale-active .arena) {
+  cursor: crosshair;
+}
+
+:global(.game-shell.finale-active[data-finale-mode="bulletHell"]),
+:global(.game-shell.finale-active[data-finale-mode="destruction"]),
+:global(.game-shell.finale-active[data-finale-mode="whiteout"]) {
+  background: #000 !important;
+}
+
+:global(.game-shell.finale-active .arena > .monster-pack),
+:global(.game-shell.finale-active .arena > .member-weapon-layer),
+:global(.game-shell.finale-active .arena > .gold-loot-layer),
+:global(.game-shell.finale-active .arena > .loot-tally),
+:global(.game-shell.finale-active .arena > .swarm-hud),
+:global(.game-shell.finale-active .arena > .field-click-guide),
+:global(.game-shell.finale-active .arena > [data-weapon-tier]) {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+:global(.game-shell.finale-active > .topbar),
+:global(.game-shell.finale-active .field-toolbar),
+:global(.game-shell.finale-active .battle-sidebar),
+:global(.game-shell.finale-active .environment-tag),
+:global(.game-shell.finale-active .battle-banner) {
+  transform-origin: 50% 50%;
+  transition: opacity .32s ease, filter .32s ease, transform .32s ease;
+}
+
+:global(.game-shell.finale-active[data-finale-mode="collapse"] > .topbar),
+:global(.game-shell.finale-active[data-finale-mode="collapse"] .field-toolbar),
+:global(.game-shell.finale-active[data-finale-mode="collapse"] .battle-sidebar),
+:global(.game-shell.finale-active[data-finale-mode="collapse"] .environment-tag),
+:global(.game-shell.finale-active[data-finale-mode="collapse"] .battle-banner) {
+  animation: finaleChromeFracture 1.8s steps(8, end) both;
+}
+
+:global(.game-shell.finale-active[data-finale-mode="bulletHell"] > .topbar),
+:global(.game-shell.finale-active[data-finale-mode="destruction"] > .topbar),
+:global(.game-shell.finale-active[data-finale-mode="whiteout"] > .topbar),
+:global(.game-shell.finale-active[data-finale-mode="bulletHell"] .field-toolbar),
+:global(.game-shell.finale-active[data-finale-mode="destruction"] .field-toolbar),
+:global(.game-shell.finale-active[data-finale-mode="whiteout"] .field-toolbar),
+:global(.game-shell.finale-active[data-finale-mode="bulletHell"] .battle-sidebar),
+:global(.game-shell.finale-active[data-finale-mode="destruction"] .battle-sidebar),
+:global(.game-shell.finale-active[data-finale-mode="whiteout"] .battle-sidebar),
+:global(.game-shell.finale-active[data-finale-mode="bulletHell"] .environment-tag),
+:global(.game-shell.finale-active[data-finale-mode="destruction"] .environment-tag),
+:global(.game-shell.finale-active[data-finale-mode="whiteout"] .environment-tag),
+:global(.game-shell.finale-active[data-finale-mode="bulletHell"] .battle-banner),
+:global(.game-shell.finale-active[data-finale-mode="destruction"] .battle-banner),
+:global(.game-shell.finale-active[data-finale-mode="whiteout"] .battle-banner) {
+  visibility: hidden;
+  opacity: 0;
+  filter: contrast(2) saturate(.2);
+}
+
+@keyframes finaleChromeFracture {
+  0% { opacity: 1; clip-path: inset(0); transform: none; filter: none; }
+  20% { opacity: .88; clip-path: inset(4% 0 50%); transform: translate(7px, -2px); filter: contrast(1.8) hue-rotate(48deg); }
+  43% { opacity: .7; clip-path: inset(46% 0 16%); transform: translate(-9px, 3px) skewX(2deg); }
+  68% { opacity: .38; clip-path: inset(71% 0 3%); transform: translate(13px, -4px); filter: contrast(2.4) hue-rotate(-45deg); }
+  100% { opacity: 0; clip-path: inset(49% 0 49%); transform: translateY(8px) scaleX(.92); filter: brightness(2); }
+}
+
+@keyframes finaleSurfaceFracture {
+  0%, 100% { transform: none; }
+  18% { transform: translateX(-2px); }
+  22% { transform: translateX(3px); }
+  47% { transform: translate(-3px, 1px); }
+  51% { transform: translate(2px, -1px); }
+}
+
+@media (max-width: 1180px) {
+  .screen { padding-inline: 18px; }
+  .standaloneHost,
+  .standaloneSurface { min-height: 630px; }
+}
+
+@media (max-width: 820px) {
+  .screen { width: 100%; padding-inline: 10px; }
+  .standaloneHost,
+  .standaloneSurface { min-height: 600px; }
+  .bossOverlay { width: min(500px, calc(100% - 92px)); }
+  .battleSurface[data-finale-mode="bulletHell"] .touchControls {
+    display: grid;
+    grid-template-columns: repeat(3, 36px);
+    grid-template-rows: repeat(3, 36px);
+    left: 8px;
+    bottom: 8px;
+  }
+  .guildOverlay { right: 8px; bottom: 70px; width: min(190px, 42%); }
+  .battleSurface .quickTools { max-width: calc(100% - 16px); bottom: 4px; }
+}
+
+@media (max-width: 560px) {
+  .standaloneHost,
+  .standaloneSurface { min-height: 530px; }
+  .stageToolbar { min-height: 68px; padding: 9px 11px; }
+  .stageToolbar h2 { font-size: 17px; }
+  .bossOverlay { top: 7px; width: calc(100% - 72px); padding: 6px 8px; }
+  .bossOverlay > span { gap: 5px; font-size: 7px; }
+  .bossOverlay em { font-size: 6px; }
+  .guildOverlay { width: 150px; }
+  .pauseButton { top: 7px; right: 7px; width: 27px; height: 27px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battleSurface[data-finale-mode="collapse"],
+  :global(.game-shell.finale-active[data-finale-mode="collapse"] > .topbar),
+  :global(.game-shell.finale-active[data-finale-mode="collapse"] .field-toolbar),
+  :global(.game-shell.finale-active[data-finale-mode="collapse"] .battle-sidebar),
+  :global(.game-shell.finale-active[data-finale-mode="collapse"] .environment-tag),
+  :global(.game-shell.finale-active[data-finale-mode="collapse"] .battle-banner) {
+    animation: none !important;
+  }
+}
+
+@supports (height: 100dvh) {
+  .standaloneHost,
+  .standaloneSurface { min-height: max(560px, calc(100dvh - 132px)); }
+}

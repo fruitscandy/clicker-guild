@@ -27,7 +27,6 @@ import {
   attackFinaleBoss,
   createFinaleWorld,
   deriveFinaleStats,
-  FINALE_BULLET_CAP,
   FINALE_HEIGHT,
   FINALE_WIDTH,
   forceFinaleMode,
@@ -41,8 +40,6 @@ import {
 } from "./engine";
 import styles from "./BulletHellFinale.module.css";
 
-const CAMPAIGN_REVEAL_MS = 1_850;
-const PREVIEW_REVEAL_MS = 480;
 const WHITEOUT_HOLD_MS = 1_550;
 const ATTACK_IMPACT_LIFETIME_MS = 720;
 const MAX_ATTACK_IMPACTS = 6;
@@ -96,7 +93,9 @@ type HudSnapshot = {
 export type BulletHellFinaleProps = {
   loadout: FinaleLoadout;
   mode: "campaign" | "preview";
+  presentation?: "standalone" | "embedded";
   seed?: number;
+  onModeChange?: (mode: FinaleMode) => void;
   onExit: () => void;
   onVictory: () => void;
 };
@@ -209,7 +208,7 @@ function drawNullBackground(context: CanvasRenderingContext2D, world: FinaleWorl
 
 function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reducedMotion: boolean) {
   if (world.mode === "whiteout") return;
-  const { x, y, hp, maxHp } = world.boss;
+  const { x, y } = world.boss;
   const seconds = reducedMotion ? 0 : world.elapsedMs / 1_000;
   const field = world.mode === "field" || world.mode === "collapse";
   const opening = world.mode === "bulletHell" && world.cycle === "opening";
@@ -217,6 +216,11 @@ function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reduced
     ? clamp(world.modeElapsedMs / world.stats.destructionDurationMs, 0, 1)
     : 0;
   const pulse = reducedMotion ? 1 : 1 + Math.sin(seconds * 4.1) * .035;
+  const emergence = world.mode === "field" ? clamp(world.elapsedMs / 900, 0, 1) : 1;
+  const emergenceEase = 1 - Math.pow(1 - emergence, 3);
+  const emergenceJitter = !reducedMotion && emergence < 1
+    ? Math.sin(world.elapsedMs * .12) * (1 - emergence) * 13
+    : 0;
   const hitStrength = clamp(world.boss.flashMs / BOSS_HIT_FLASH_MS, 0, 1);
   const hitPhase = 1 - hitStrength;
   const recoil = reducedMotion
@@ -227,12 +231,12 @@ function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reduced
   const dangerColor = field ? "#8f302a" : "#ff4cae";
 
   context.save();
-  context.translate(x + recoil, y);
+  context.translate(x + recoil + emergenceJitter, y);
   context.scale(
-    pulse * (1 + destructionProgress * .16) * (1 + squash),
-    pulse * (1 + destructionProgress * .16) * (1 - squash * .72),
+    pulse * (1 + destructionProgress * .16) * (1 + squash) * (.72 + emergenceEase * .28),
+    pulse * (1 + destructionProgress * .16) * (1 - squash * .72) * (.72 + emergenceEase * .28),
   );
-  context.globalAlpha = 1 - destructionProgress * .82;
+  context.globalAlpha = emergenceEase * (1 - destructionProgress * .82);
 
   const aura = context.createRadialGradient(0, 0, 12, 0, 0, opening ? 136 : 114);
   aura.addColorStop(0, opening ? "rgba(255,238,143,.55)" : field ? "rgba(147,48,40,.35)" : "rgba(88,229,240,.36)");
@@ -313,9 +317,6 @@ function drawBoss(context: CanvasRenderingContext2D, world: FinaleWorld, reduced
   context.font = field ? "900 26px Georgia, serif" : "900 20px ui-monospace, monospace";
   context.fillText(field ? "消" : opening ? "OPEN" : "NULL", 0, -2);
   context.shadowBlur = 0;
-  context.font = "800 8px ui-monospace, monospace";
-  context.fillStyle = field ? "#f4dfb7" : "#d9fbff";
-  context.fillText(`${Math.ceil(hp / Math.max(1, maxHp) * 100)}%`, 0, 28);
 
   if (opening) {
     context.fillStyle = "#fff0a8";
@@ -680,9 +681,13 @@ function drawWorld(
   playerImpact: PlayerImpact | null,
   attackImpacts: readonly AttackImpact[],
   reducedMotion: boolean,
+  preserveHostField: boolean,
 ) {
-  if (world.mode === "field" || world.mode === "collapse") drawFieldBackground(context, images);
-  else drawNullBackground(context, world, reducedMotion);
+  if (world.mode === "field" || world.mode === "collapse") {
+    if (!preserveHostField) drawFieldBackground(context, images);
+  } else {
+    drawNullBackground(context, world, reducedMotion);
+  }
 
   drawBoss(context, world, reducedMotion);
   if (world.mode === "bulletHell") {
@@ -708,7 +713,9 @@ function drawWorld(
 export function BulletHellFinale({
   loadout,
   mode,
+  presentation = "standalone",
   seed = 20260810,
+  onModeChange,
   onExit,
   onVictory,
 }: BulletHellFinaleProps) {
@@ -729,10 +736,10 @@ export function BulletHellFinale({
   const resultSoundRef = useRef<"victory" | "defeat" | null>(null);
   const previousModeRef = useRef<FinaleMode>(initialWorld.mode);
   const previousCycleRef = useRef(initialWorld.cycle);
-  const sceneRef = useRef<FinaleScene>("intro");
-  const [scene, setScene] = useState<FinaleScene>("intro");
+  const sceneRef = useRef<FinaleScene>("running");
+  const [scene, setScene] = useState<FinaleScene>("running");
   const [hud, setHud] = useState(() => snapshotFromWorld(initialWorld));
-  const [announcement, setAnnouncement] = useState("10-3의 기록 뒤에서 낯선 관리자가 모습을 드러냅니다.");
+  const [announcement, setAnnouncement] = useState("마지막 스테이지에 기록 말소자가 모습을 드러냅니다.");
   const stats = useMemo(() => deriveFinaleStats(loadout), [loadout]);
   const bossPercent = hud.bossMaxHp ? clamp(hud.bossHp / hud.bossMaxHp * 100, 0, 100) : 0;
   const cyclePercent = hud.mode === "bulletHell"
@@ -744,12 +751,21 @@ export function BulletHellFinale({
     sceneRef.current = scene;
   }, [scene]);
 
+  useEffect(() => {
+    onModeChange?.(hud.mode);
+  }, [hud.mode, onModeChange]);
+
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const context = canvas.getContext("2d");
     if (!context) return;
-    context.setTransform(canvas.width / FINALE_WIDTH, 0, 0, canvas.height / FINALE_HEIGHT, 0, 0);
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    const scale = Math.min(canvas.width / FINALE_WIDTH, canvas.height / FINALE_HEIGHT);
+    const offsetX = (canvas.width - FINALE_WIDTH * scale) / 2;
+    const offsetY = (canvas.height - FINALE_HEIGHT * scale) / 2;
+    context.setTransform(scale, 0, 0, scale, offsetX, offsetY);
     drawWorld(
       context,
       worldRef.current,
@@ -759,8 +775,9 @@ export function BulletHellFinale({
       playerImpactRef.current,
       attackImpactsRef.current,
       reducedMotionRef.current,
+      presentation === "embedded",
     );
-  }, [loadout]);
+  }, [loadout, presentation]);
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -774,7 +791,6 @@ export function BulletHellFinale({
       canvas.width = width;
       canvas.height = height;
     }
-    canvas.getContext("2d")?.setTransform(width / FINALE_WIDTH, 0, 0, height / FINALE_HEIGHT, 0, 0);
     renderCanvas();
   }, [renderCanvas]);
 
@@ -822,19 +838,12 @@ export function BulletHellFinale({
     };
   }, [resizeCanvas]);
 
-  const beginEncounter = useCallback(() => {
-    unlockBattleAudio();
-    playExpeditionStartSound(true);
-    setScene("running");
-    setAnnouncement("1페이즈. 화면의 기록 말소자를 직접 클릭해 공격하세요.");
-    requestAnimationFrame(() => canvasRef.current?.focus({ preventScroll: true }));
-  }, []);
-
   useEffect(() => {
-    if (scene !== "intro") return;
-    const timer = window.setTimeout(beginEncounter, mode === "preview" ? PREVIEW_REVEAL_MS : CAMPAIGN_REVEAL_MS);
-    return () => window.clearTimeout(timer);
-  }, [beginEncounter, mode, scene]);
+    unlockBattleAudio();
+    if (mode === "preview") playExpeditionStartSound(true);
+    const frame = requestAnimationFrame(() => canvasRef.current?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
+  }, [mode]);
 
   const applyBossAttack = useCallback((x: number, y: number) => {
     const before = worldRef.current;
@@ -1009,8 +1018,11 @@ export function BulletHellFinale({
     event.preventDefault();
     unlockBattleAudio();
     const rect = event.currentTarget.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / Math.max(1, rect.width) * FINALE_WIDTH;
-    const y = (event.clientY - rect.top) / Math.max(1, rect.height) * FINALE_HEIGHT;
+    const scale = Math.max(.001, Math.min(rect.width / FINALE_WIDTH, rect.height / FINALE_HEIGHT));
+    const offsetX = (rect.width - FINALE_WIDTH * scale) / 2;
+    const offsetY = (rect.height - FINALE_HEIGHT * scale) / 2;
+    const x = (event.clientX - rect.left - offsetX) / scale;
+    const y = (event.clientY - rect.top - offsetY) / scale;
     applyBossAttack(x, y);
     event.currentTarget.focus({ preventScroll: true });
   };
@@ -1112,9 +1124,100 @@ export function BulletHellFinale({
   };
 
   const hullCells = Array.from({ length: Math.max(1, hud.playerMaxHp) }, (_, index) => index < hud.playerHp);
-  const timeText = `${Math.floor(hud.elapsedMs / 60_000).toString().padStart(2, "0")}:${Math.floor(hud.elapsedMs / 1_000 % 60).toString().padStart(2, "0")}`;
   const phaseLabel = hud.mode === "field" || hud.mode === "collapse" ? "PHASE 1" : "PHASE 2";
   const phaseTwo = hud.mode === "bulletHell" || hud.mode === "destruction" || hud.mode === "whiteout";
+  const guildPercent = hud.playerMaxHp ? clamp(hud.playerHp / hud.playerMaxHp * 100, 0, 100) : 0;
+
+  const battleSurface = <div
+    ref={arenaRef}
+    className={`${styles.battleSurface} ${presentation === "embedded" ? styles.embeddedSurface : styles.standaloneSurface}`}
+    data-finale-scene={scene}
+    data-finale-mode={hud.mode}
+    data-finale-music={musicSignal}
+    role="application"
+    aria-label="기록 말소자 최종 결전"
+  >
+    <canvas
+      ref={canvasRef}
+      className={styles.canvas}
+      tabIndex={0}
+      onPointerDown={handleArenaPointerDown}
+      aria-describedby="finale-controls"
+      aria-label={hud.mode === "field" ? "마지막 스테이지에 그대로 등장한 기록 말소자를 클릭 공격하는 전장" : "WASD로 길드 건물을 움직이며 기록 말소자를 클릭 공격하는 탄막 전장"}
+    />
+
+    <div className={styles.bossOverlay} data-finale-overlay="boss">
+      <span><b>기록 말소자</b><em>{hud.mode === "bulletHell" && hud.cycle === "opening" ? "CORE OPEN ×2" : phaseLabel}</em><strong>{Math.ceil(bossPercent)}%</strong></span>
+      <div
+        className={styles.bossBar}
+        role="progressbar"
+        aria-label="기록 말소자 체력"
+        aria-valuemin={0}
+        aria-valuemax={hud.bossMaxHp}
+        aria-valuenow={Math.max(0, hud.bossHp)}
+        aria-valuetext={`${Math.ceil(bossPercent)}퍼센트`}
+        style={{ "--boss-hp": `${bossPercent}%` } as CSSProperties}
+      ><i /></div>
+      {hud.mode === "bulletHell" && <small className={hud.cycle === "opening" ? styles.openingSignal : ""}>
+        {hud.cycle === "opening" ? "CORE OPEN" : "DODGE"} · {(hud.cycleRemainingMs / 1_000).toFixed(1)}s
+        <i style={{ "--meter": `${cyclePercent}%` } as CSSProperties} />
+      </small>}
+    </div>
+
+    {phaseTwo && <div className={styles.guildOverlay} data-finale-overlay="guild">
+      <span><b>길드 본관</b><strong>{hud.playerHp}/{hud.playerMaxHp}</strong></span>
+      <div
+        className={styles.guildBar}
+        role="progressbar"
+        aria-label="길드 본관 내구도"
+        aria-valuemin={0}
+        aria-valuemax={hud.playerMaxHp}
+        aria-valuenow={hud.playerHp}
+        aria-valuetext={`내구도 ${hud.playerHp}/${hud.playerMaxHp}, 방어막 ${hud.shield}`}
+        style={{ "--guild-hp": `${guildPercent}%` } as CSSProperties}
+      ><i /></div>
+      <div className={styles.hullRow} aria-hidden="true">
+        {hullCells.map((active, index) => <i key={index} className={`${styles.hullCell} ${active ? styles.active : ""}`} />)}
+      </div>
+      <small>SHIELD <b>{hud.shield}</b></small>
+    </div>}
+
+    {scene === "running" && <button className={styles.pauseButton} type="button" onClick={() => setScene("paused")} aria-label="전투 일시정지">Ⅱ</button>}
+    {hud.mode === "collapse" && <div className={styles.cinematicLabel}><strong>FIELD // FRACTURE</strong></div>}
+    {hud.mode === "destruction" && <div className={styles.cinematicLabel}><strong>CORE // BREAK</strong></div>}
+    {scene === "running" && hud.mode === "whiteout" && <div className={styles.whiteout} aria-hidden="true"><span>FINAL RECORD RESTORED</span></div>}
+
+    {scene === "paused" && <div className={styles.pauseCurtain}><strong>전투 일시정지</strong><small>P 또는 ESC로 계속</small><button className={styles.primaryAction} type="button" onClick={() => setScene("running")}>계속하기</button></div>}
+
+    {(scene === "victory" || scene === "defeat") && <div className={`${styles.result} ${scene === "defeat" ? styles.defeatResult : ""}`} role="dialog" aria-modal="true">
+      <span className={styles.resultCode}>{scene === "victory" ? "FINAL RECORD RESTORED" : "GUILD HALL SYNC LOST"}</span>
+      <h2>{scene === "victory" ? <>최종 보스 격파<em>길드의 엔딩을 되찾았다</em></> : <>동기화 실패<em>이것은 게임 오버가 아닙니다</em></>}</h2>
+      <p>{scene === "victory" ? `기록 말소자가 파괴되었습니다. 직접 공격 ${hud.clicksLanded}회, 근접 회피 ${hud.grazes}회.` : "Stage 10-3 완료 기록은 안전합니다. 2페이즈 시작점에서 바로 재시도합니다."}</p>
+      <div className={styles.actionRow}>
+        {scene === "victory" ? <button className={styles.primaryAction} type="button" onClick={onVictory}>{mode === "preview" ? "시험 설정으로 돌아가기" : "엔딩 확정"}</button> : <button className={styles.primaryAction} type="button" onClick={retryPhaseTwo}>2페이즈 즉시 재시도</button>}
+        <button className={styles.secondaryAction} type="button" onClick={scene === "victory" && mode === "preview" ? restartAll : onExit}>{scene === "victory" && mode === "preview" ? "처음부터 다시 보기" : "길드로 돌아가기"}</button>
+      </div>
+    </div>}
+
+    <div className={styles.touchControls} aria-label="터치 이동 패드">
+      {(["up", "left", "focus", "right", "down"] as VirtualDirection[]).map((direction) => <button
+        key={direction}
+        type="button"
+        data-direction={direction}
+        aria-label={direction === "up" ? "위로 이동" : direction === "down" ? "아래로 이동" : direction === "left" ? "왼쪽으로 이동" : direction === "right" ? "오른쪽으로 이동" : "정밀 이동"}
+        onPointerDown={(event) => setVirtualDirection(direction, true, event)}
+        onPointerUp={(event) => setVirtualDirection(direction, false, event)}
+        onPointerCancel={(event) => setVirtualDirection(direction, false, event)}
+      >{direction === "up" ? "▲" : direction === "down" ? "▼" : direction === "left" ? "◀" : direction === "right" ? "▶" : "FOCUS"}</button>)}
+    </div>
+
+    {mode === "preview" && <div className={styles.quickTools} aria-label="개발자 장면 이동 도구"><span>DEV</span><div>{(["field", "collapse", "bulletHell", "destruction", "whiteout"] as FinaleMode[]).map((target) => <button className={styles.phaseButton} key={target} type="button" onClick={() => jumpToMode(target)}>{target}</button>)}<button className={styles.phaseButton} type="button" onClick={jumpToOpening}>CORE OPEN</button><button className={styles.phaseButton} type="button" onClick={forceDefeat}>DEFEAT</button><button className={styles.phaseButton} type="button" onClick={restartAll}>RESET</button></div></div>}
+
+    <p id="finale-controls" className={styles.srOnly}>보스를 클릭하거나 Enter로 공격합니다. 2페이즈에서는 WASD 또는 방향키로 길드 본관을 움직이고 Shift로 정밀 이동합니다. 흰 점이 실제 피격점입니다.</p>
+    <p className={styles.srOnly} aria-live="polite">{announcement}</p>
+  </div>;
+
+  if (presentation === "embedded") return battleSurface;
 
   return (
     <main
@@ -1123,130 +1226,12 @@ export function BulletHellFinale({
       data-finale-mode={hud.mode}
       data-finale-music={musicSignal}
     >
-      <section className={`field-screen ${styles.screen}`} role="application" aria-label="기록 말소자 최종 결전">
-        <div className={`battle-banner ${styles.bossMarker}`}><span>BOSS</span></div>
-        <header className={styles.topHud}>
-          <div className={styles.identity}>
-            <small>FINAL EXPEDITION · GUILD HALL</small>
-            <strong>길드 본관 Lv.{loadout.hallLevel}</strong>
-            <span>다른 성장 요소는 결전에서 초기화</span>
-          </div>
-          <div className={styles.bossReadout}>
-            <small>{phaseLabel} · ENDING EVENT</small>
-            <strong>기록 말소자 // THE ARCHIVIST</strong>
-            <em>{hud.mode === "bulletHell" && hud.cycle === "opening" ? "CORE OPEN ×2" : phaseLabel}</em>
-            <div className={styles.bossBar} style={{ "--boss-hp": `${bossPercent}%` } as CSSProperties}><i /></div>
-          </div>
-          <div className={styles.scoreBlock}>
-            <small>DIRECT CLICK RECORD</small>
-            <strong>{hud.clicksLanded}</strong>
-            <span>{timeText} · MISS {hud.clicksMissed}</span>
-          </div>
+      <section className={`field-screen ${styles.screen}`} aria-label="최종 스테이지 전투">
+        <header className={styles.stageToolbar}>
+          <div><small>CURRENT EXPEDITION · GUILD SURVIVOR</small><h2>고대 용의 성소 <b>3/3</b></h2></div>
+          <span>기록 말소자</span>
         </header>
-
-        <div className={styles.battleGrid}>
-          <aside className={styles.sidePanel} aria-label="결전 상태">
-            <section className={styles.dataCard}>
-              <span className={styles.sectionLabel}>{phaseTwo ? "GUILD HULL" : "PHASE ONE"}</span>
-              {phaseTwo ? <>
-                <div className={styles.hullRow} aria-label={`내구도 ${hud.playerHp}/${hud.playerMaxHp}`}>
-                  {hullCells.map((active, index) => <i key={index} className={`${styles.hullCell} ${active ? styles.active : ""}`} />)}
-                </div>
-                <div className={styles.shieldLine}><span>방어막 <b>{hud.shield} CHARGE</b></span></div>
-              </> : <div className={styles.patternName}><strong>직접 클릭 전투</strong><span>기존 필드처럼 보스 문양을 마우스나 터치로 눌러 공격합니다.</span></div>}
-            </section>
-            <section className={styles.dataCard}>
-              <span className={styles.sectionLabel}>{phaseTwo ? "BATTLE RHYTHM" : "ATTACK CONTRACT"}</span>
-              {hud.mode === "bulletHell" ? <>
-                <div className={styles.patternName}><strong>{hud.cycle === "opening" ? "CORE OPEN · 공격 기회" : "DODGE · 회피 구간"}</strong><span>{hud.cycle === "opening" ? "탄막 정지 · 클릭 피해 2배" : "안전 통로 탐색 · 닫힌 코어 피해 35%"}</span></div>
-                <div className={styles.meter} style={{ "--meter": `${cyclePercent}%` } as CSSProperties}><i /></div>
-                <p className={styles.signalText}>{(hud.cycleRemainingMs / 1_000).toFixed(1)}s · BULLETS {hud.bullets}/{FINALE_BULLET_CAP}</p>
-              </> : <div className={styles.statList}><span>공격 방식 <b>보스 직접 클릭</b></span><span>자동 공격 <b>없음</b></span><span>클릭 상한 <b>초당 8회</b></span></div>}
-            </section>
-          </aside>
-
-          <div className={styles.arenaColumn}>
-            <div ref={arenaRef} className={styles.arenaFrame}>
-              <span className={styles.arenaLabel}><i /> {hud.mode === "field" ? "STAGE 10-3 · RECORD INTERRUPTION" : "NULL FIELD · FINALE"}</span>
-              <canvas
-                ref={canvasRef}
-                className={styles.canvas}
-                tabIndex={0}
-                onPointerDown={handleArenaPointerDown}
-                aria-label={hud.mode === "field" ? "화면의 기록 말소자를 직접 클릭해 공격하는 전장" : "WASD로 길드 건물을 움직이고 기록 말소자를 직접 클릭하는 탄막 전장"}
-              />
-
-              {scene === "intro" && <div className={styles.intro} role="dialog" aria-modal="true" aria-labelledby="finale-intro-title">
-                <span className={styles.introCode}>STAGE 10-3 CLEAR // ARCHIVE ACCESS DENIED</span>
-                <h1 id="finale-intro-title">기록 말소자 등장<em>엔딩을 되찾기 위한 마지막 결전</em></h1>
-                <p>{mode === "preview" ? "첫 전투는 익숙한 방식입니다. 보스를 직접 클릭해 공격하세요. 필드가 무너지면 길드 본관을 WASD로 움직여 탄막을 피하고, 코어가 열릴 때 다시 클릭 공격을 몰아칩니다." : "10-3의 마지막 기록을 가로막은 관리자가 나타났습니다. 익숙한 필드에서 보스 문양을 직접 클릭해 공격하세요."}</p>
-                <div className={styles.actionRow}><button className={styles.primaryAction} type="button" onClick={beginEncounter}>보스를 직접 공격한다</button><button className={styles.secondaryAction} type="button" onClick={onExit}>길드로 돌아가기</button></div>
-              </div>}
-
-              {scene === "running" && hud.mode === "field" && <div className={styles.clickGuide}><b>보스 문양을 직접 클릭</b><span>자동공격 없음 · ENTER 키도 공격 가능</span></div>}
-              {scene === "running" && hud.mode === "bulletHell" && <div className={`${styles.cycleCallout} ${hud.cycle === "opening" ? styles.opening : ""}`}><b>{hud.cycle === "opening" ? "CORE OPEN" : "DODGE"}</b><span>{hud.cycle === "opening" ? "지금 클릭하면 피해 ×2" : "WASD 이동 · 닫힌 코어 피해 35%"}</span></div>}
-              {hud.mode === "collapse" && <div className={styles.cinematicLabel}><strong>FIELD COLLAPSE</strong><span>전투 규칙을 재구성합니다</span></div>}
-              {hud.mode === "destruction" && <div className={styles.cinematicLabel}><strong>CORE BREAK</strong><span>기록 말소자가 파괴되고 있습니다</span></div>}
-              {scene === "running" && hud.mode === "whiteout" && <div className={styles.whiteout} aria-hidden="true"><span>FINAL RECORD RESTORED</span></div>}
-
-              {scene === "paused" && <div className={styles.pauseCurtain}><strong>전투 일시정지</strong><small>P 또는 ESC로 계속</small><button className={styles.primaryAction} type="button" onClick={() => setScene("running")}>계속하기</button></div>}
-
-              {(scene === "victory" || scene === "defeat") && <div className={`${styles.result} ${scene === "defeat" ? styles.defeatResult : ""}`} role="dialog" aria-modal="true">
-                <span className={styles.resultCode}>{scene === "victory" ? "FINAL RECORD RESTORED" : "GUILD HALL SYNC LOST"}</span>
-                <h2>{scene === "victory" ? <>최종 보스 격파<em>길드의 엔딩을 되찾았다</em></> : <>동기화 실패<em>이것은 게임 오버가 아닙니다</em></>}</h2>
-                <p>{scene === "victory" ? `기록 말소자가 파괴되었습니다. 직접 공격 ${hud.clicksLanded}회, 근접 회피 ${hud.grazes}회를 기록했습니다.` : "Stage 10-3 완료와 저장 진행도는 안전합니다. 1페이즈를 반복하지 않고 2페이즈 시작점에서 바로 재시도합니다."}</p>
-                <div className={styles.actionRow}>
-                  {scene === "victory" ? <button className={styles.primaryAction} type="button" onClick={onVictory}>{mode === "preview" ? "시험 설정으로 돌아가기" : "엔딩 확정"}</button> : <button className={styles.primaryAction} type="button" onClick={retryPhaseTwo}>2페이즈 즉시 재시도</button>}
-                  <button className={styles.secondaryAction} type="button" onClick={scene === "victory" && mode === "preview" ? restartAll : onExit}>{scene === "victory" && mode === "preview" ? "처음부터 다시 보기" : "길드로 돌아가기"}</button>
-                </div>
-              </div>}
-
-              <div className={styles.touchControls} aria-label="터치 이동 패드">
-                {(["up", "left", "focus", "right", "down"] as VirtualDirection[]).map((direction) => <button
-                  key={direction}
-                  type="button"
-                  data-direction={direction}
-                  aria-label={direction === "up" ? "위로 이동" : direction === "down" ? "아래로 이동" : direction === "left" ? "왼쪽으로 이동" : direction === "right" ? "오른쪽으로 이동" : "정밀 이동"}
-                  onPointerDown={(event) => setVirtualDirection(direction, true, event)}
-                  onPointerUp={(event) => setVirtualDirection(direction, false, event)}
-                  onPointerCancel={(event) => setVirtualDirection(direction, false, event)}
-                >{direction === "up" ? "▲" : direction === "down" ? "▼" : direction === "left" ? "◀" : direction === "right" ? "▶" : "FOCUS"}</button>)}
-              </div>
-            </div>
-
-            {mode === "preview" && <div className={styles.quickTools} aria-label="개발자 장면 이동 도구"><span>DEV SCENE JUMP</span><div>{(["field", "collapse", "bulletHell", "destruction", "whiteout"] as FinaleMode[]).map((target) => <button className={styles.phaseButton} key={target} type="button" onClick={() => jumpToMode(target)}>{target}</button>)}<button className={styles.phaseButton} type="button" onClick={jumpToOpening}>CORE OPEN</button><button className={styles.phaseButton} type="button" onClick={forceDefeat}>DEFEAT</button><button className={styles.phaseButton} type="button" onClick={restartAll}>RESET</button></div></div>}
-          </div>
-
-          <aside className={styles.sidePanel} aria-label="결전 규칙과 조작">
-            <section className={styles.dataCard}>
-              <span className={styles.sectionLabel}>NORMALIZED FINALE</span>
-              <div className={styles.statList}>
-                <span>반영 성장 <b>길드 본관 Lv.{loadout.hallLevel}</b></span>
-                <span>클릭 피해 <b>{stats.clickDamage.toFixed(2)}</b></span>
-                <span>무기·강화·파티 <b>초기화</b></span>
-                <span>자동공격 <b>없음</b></span>
-                <span>실제 피격점 <b>흰 점 {stats.hitRadius}px</b></span>
-              </div>
-            </section>
-            <section className={styles.dataCard}>
-              <span className={styles.sectionLabel}>CONTROL CONTRACT</span>
-              <div className={styles.controlHelp}>
-                <span><kbd>CLICK</kbd><b>보스 직접 공격</b></span>
-                <span><kbd>WASD</kbd><b>2페이즈 이동</b></span>
-                <span><kbd>SHIFT</kbd><b>정밀 이동</b></span>
-                <span><kbd>P / ESC</kbd><b>일시정지</b></span>
-              </div>
-            </section>
-            <section className={styles.dataCard}>
-              <span className={styles.sectionLabel}>CURRENT SIGNAL</span>
-              <div className={styles.patternName}><strong>{hud.patternName}</strong><span>안전 통로와 0.65초 예고를 보고 이동하세요. 제한시간과 광폭화는 없습니다.</span></div>
-              <p className={styles.signalText}>SCORE {hud.score.toLocaleString("ko-KR")} · GRAZE {hud.grazes}</p>
-            </section>
-          </aside>
-        </div>
-
-        <footer className={styles.bottomRail}><span><strong>판정 안내</strong> 길드 건물 전체가 아니라 중앙의 선명한 흰 점만 실제 피격점입니다. 적탄은 건물 위에 표시됩니다.</span><span>ENDING EVENT BUILD · SEED {seed}</span></footer>
-        <p className={styles.srOnly} aria-live="assertive">{announcement}</p>
+        <div className={styles.standaloneHost}>{battleSurface}</div>
       </section>
     </main>
   );
