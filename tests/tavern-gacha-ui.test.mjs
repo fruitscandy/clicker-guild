@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("uses discounted one and ten contract recruitment with transparent rank odds", async () => {
+test("uses discounted one and ten recruitment with a minimal rank odds UI", async () => {
   const [balance, tavern, styles, game, audio] = await Promise.all([
     readFile(new URL("../app/tavern-gacha.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/guild-hub/TavernHall.tsx", import.meta.url), "utf8"),
@@ -30,6 +30,12 @@ test("uses discounted one and ten contract recruitment with transparent rank odd
   assert.match(tavern, /onRecruit\(1\)/);
   assert.match(tavern, /onRecruit\(10\)/);
   assert.match(tavern, /등급별 영입 확률/);
+  assert.match(tavern, /<b>\{rank\}<\/b><strong>\{formatRecruitRate\(rates\[rank\]\)\}<\/strong>/);
+  assert.doesNotMatch(tavern, /계약 종|CONTRACT|headerStats|contractSeal|oddsSeal|rateLegend/);
+  assert.doesNotMatch(tavern, /여관 단계|길드 명부|보유 골드|여관 Lv\.|모든 등급 등장/);
+  assert.doesNotMatch(tavern, /아직 울리지 않은|카드형 초상화가 펼쳐집니다/);
+  assert.match(game, /<b>원정 진척<\/b>/);
+  assert.doesNotMatch(game, /15분 원정 진척/);
   assert.match(tavern, /finn-portrait\.webp/);
   assert.doesNotMatch(tavern, />契<|className=\{styles\.oddsSeal\}>%/);
   assert.match(tavern, /중복 정산/);
@@ -52,7 +58,8 @@ test("uses discounted one and ten contract recruitment with transparent rank odd
   assert.match(styles, /\.rankS/);
   assert.match(styles, /\.revealSlash/);
   assert.match(styles, /\.saleDialogBackdrop/);
-  assert.match(styles, /\.rateBoardHeader/);
+  assert.match(styles, /\.rateBoardTitle/);
+  assert.doesNotMatch(styles, /\.headerStats|\.contractSeal|\.oddsSeal|\.rateLegend|\.emptyResult/);
   assert.match(styles, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(styles, /prefers-reduced-motion/);
 });

@@ -53,7 +53,8 @@ test("guides a new guild from the first hunt through the first weapon craft", as
   assert.match(hub, /facility-tavern/);
   assert.match(hub, /facility-forge/);
   assert.match(tavern, /data-tutorial="recruit-ten"/);
-  assert.match(tavern, /튜토리얼 최초 1회 · 0 G/);
+  assert.match(tavern, /최초 1회 · 0 G/);
+  assert.doesNotMatch(tavern, /튜토리얼 최초 1회/);
   assert.match(tavern, /data-tutorial="recruit-results"/);
   assert.match(forge, /data-tutorial="forge-upgrade"/);
 
