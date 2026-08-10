@@ -4,9 +4,9 @@ export const MEMBER_ASSIST_FACTOR = 0.68;
 
 export const TARGET_RUN_MINUTES = { min: 10, max: 20 } as const;
 export const TARGET_CLEAR_SECONDS = {
-  pressure: { min: 18, max: 25 },
-  massacre: { min: 5, max: 10 },
-  boss: { min: 15, max: 20 },
+  opening: { min: 6, max: 15 },
+  escalation: { min: 10, max: 22 },
+  boss: { min: 15, max: 30 },
 } as const;
 
 // Conservative first-clear route after hiring one F-rank member. Each entry is
@@ -32,7 +32,7 @@ export const PLAYER_WEAPON_BALANCE = [
 ] as const;
 
 const PACK_HP_MULTIPLIER = { regular: 1.42, boss: 1.7 } as const;
-const HP_PER_CLICK_DAMAGE = { pressure: 220, massacre: 128, boss: 250 } as const;
+const HP_PER_CLICK_DAMAGE = { opening: 100, escalation: 210, boss: 250 } as const;
 
 function clampStage(stage: number) {
   return Math.min(30, Math.max(1, Math.round(stage)));
@@ -62,7 +62,7 @@ export function stageBaseHpFor(stage: number) {
   const localStage = (safeStage - 1) % 3 + 1;
   const tier = expectedWeaponTierForStage(safeStage);
   const damage = BASE_CLICK_DAMAGE * weaponBalanceForTier(tier).damageScale;
-  const encounter = localStage === 1 ? "pressure" : localStage === 2 ? "massacre" : "boss";
+  const encounter = localStage === 1 ? "opening" : localStage === 2 ? "escalation" : "boss";
   const totalPackHp = Math.round(damage * HP_PER_CLICK_DAMAGE[encounter]);
   return Math.round(totalPackHp / (encounter === "boss" ? PACK_HP_MULTIPLIER.boss : PACK_HP_MULTIPLIER.regular));
 }
