@@ -44,6 +44,11 @@ test("documents every upgrade family and its purchase requirements", async () =>
   assert.match(researchMap, /id="guild-special-node-slot"/);
   assert.match(researchMap, /className=\{styles\.citadelDock\}/);
   assert.match(researchMap, /!node\.id\.startsWith\("special-"\)/);
+  assert.match(researchMap, /data-upgrade-progress=\{progress \? `\$\{progress\.completed\}\/\$\{progress\.total\}`/);
+  assert.match(researchMap, /familyNodes\.find\(\(node\) => !purchased\.has\(node\.id\)\)/);
+  assert.match(researchMap, /completed: familyCompleted, total: familyNodes\.length/);
+  assert.doesNotMatch(researchMap, /familyNodes\.map\(\(node\) => renderNode\(node\)\)/);
+  assert.match(styles, /\.levelProgress/);
 });
 
 test("mounts disconnected special attacks inside the same board and opens a purchase modal", async () => {
