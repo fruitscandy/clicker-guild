@@ -759,7 +759,20 @@ body {
 .member-weapon-fx > b { position:absolute; left:-16px; top:-16px; z-index:4; display:grid; place-items:center; width:32px; height:32px; color:#fff8da; background:color-mix(in srgb,var(--weapon-color) 72%,#261d19); border:2px solid #fff2bd; border-radius:50%; box-shadow:0 0 16px var(--weapon-color); opacity:0; font-size:10px; animation:memberWeaponBadge .7s ease-out both; }
 .member-weapon-fx > small { position:absolute; left:50%; top:-56px; z-index:5; padding:4px 7px; color:#fff4d4; background:rgba(37,26,23,.9); border:1px solid var(--weapon-color); border-radius:4px; box-shadow:0 3px 9px rgba(0,0,0,.3); opacity:0; transform:translateX(-50%); white-space:nowrap; font-size:7px; font-weight:1000; animation:memberWeaponLabel .72s ease-out both; }
 .member-projectile,.member-weapon-impact { position:absolute; left:0; top:0; display:block; opacity:0; }
-.member-weapon-fx.is-skill { filter:brightness(1.18) saturate(1.2); }.member-weapon-fx.is-skill > b { width:40px; height:40px; margin:-4px; font-size:13px; }
+.member-weapon-fx.is-skill { filter:brightness(1.08) saturate(1.08); }
+.member-weapon-fx.is-skill > small { top:-67px; z-index:7; border-color:color-mix(in srgb,var(--weapon-color) 58%,#fff3bd); background:rgba(24,20,25,.86); box-shadow:0 4px 14px rgba(0,0,0,.42),0 0 12px color-mix(in srgb,var(--weapon-color) 48%,transparent); animation-duration:1.05s; }
+.member-skill-vfx-bloom { position:absolute; left:0; top:0; z-index:2; display:block; width:160px; height:160px; margin:-80px; background:radial-gradient(circle,rgba(255,255,255,.7) 0 4%,color-mix(in srgb,var(--weapon-color) 52%,transparent) 20%,transparent 68%); border:2px solid color-mix(in srgb,var(--weapon-color) 68%,#fff); border-radius:50%; box-shadow:0 0 32px color-mix(in srgb,var(--weapon-color) 62%,transparent),inset 0 0 24px color-mix(in srgb,var(--weapon-color) 38%,transparent); opacity:0; animation:memberSkillVfxBloom 1.05s ease-out both; }
+.member-skill-vfx-art { position:absolute; left:0; top:0; z-index:4; display:block; width:clamp(220px,34vw,380px); max-width:none; height:auto; transform:translate(-50%,-50%); transform-origin:center; filter:drop-shadow(0 0 9px rgba(255,255,255,.7)) drop-shadow(0 0 22px color-mix(in srgb,var(--weapon-color) 70%,transparent)); user-select:none; animation:memberSkillVfxArt 1.05s cubic-bezier(.16,.75,.2,1) both; }
+
+@keyframes memberSkillVfxArt { 0%{opacity:0;transform:translate(-50%,-50%) scale(.38) rotate(-7deg);filter:blur(7px) brightness(1.55) saturate(1.25)} 16%{opacity:1;transform:translate(-50%,-50%) scale(1.08) rotate(1deg);filter:blur(0) brightness(1.28) saturate(1.16) drop-shadow(0 0 13px rgba(255,255,255,.72)) drop-shadow(0 0 26px var(--weapon-color))} 68%{opacity:1;transform:translate(-50%,-50%) scale(1);filter:brightness(1.08) saturate(1.08) drop-shadow(0 0 8px rgba(255,255,255,.5)) drop-shadow(0 0 20px var(--weapon-color))} 100%{opacity:0;transform:translate(-50%,-50%) scale(1.16) rotate(2deg);filter:blur(2px) brightness(.92) saturate(.9)} }
+@keyframes memberSkillVfxBloom { 0%{opacity:0;transform:scale(.2) rotate(-18deg)} 20%{opacity:.88;transform:scale(.82) rotate(0)} 58%{opacity:.5;transform:scale(1.15) rotate(10deg)} 100%{opacity:0;transform:scale(1.62) rotate(20deg)} }
+
+@media (prefers-reduced-motion: reduce) {
+  .member-skill-vfx-art { animation:memberSkillVfxArtReduced 1.05s ease-out both; }
+  .member-skill-vfx-bloom { animation:memberSkillVfxBloomReduced 1.05s ease-out both; }
+}
+@keyframes memberSkillVfxArtReduced { 0%,100%{opacity:0;transform:translate(-50%,-50%)} 14%,76%{opacity:1;transform:translate(-50%,-50%)} }
+@keyframes memberSkillVfxBloomReduced { 0%,100%{opacity:0} 18%,65%{opacity:.62} }
 
 .weapon-style-vanguard .member-projectile { width:13px; height:112px; margin:-56px -6px; background:linear-gradient(90deg,transparent,#fff 25% 48%,var(--weapon-color) 70%,transparent); clip-path:polygon(50% 0,100% 17%,68% 82%,91% 89%,50% 100%,9% 89%,32% 82%,0 17%); filter:drop-shadow(0 0 7px #fff) drop-shadow(0 0 15px var(--weapon-color)); transform-origin:center; }
 .weapon-style-vanguard .member-projectile.primary { animation:memberSwordOne .58s cubic-bezier(.12,.72,.18,1) both; }.weapon-style-vanguard .member-projectile.secondary { animation:memberSwordTwo .58s .08s cubic-bezier(.12,.72,.18,1) both; }
